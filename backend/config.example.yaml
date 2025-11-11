@@ -1,0 +1,26 @@
+app:
+  name: "Stumpf.Works NAS"
+  version: "0.1.0-alpha"
+  environment: "development" # development | production
+
+server:
+  host: "0.0.0.0"
+  port: 8080
+  readTimeout: "15s"
+  writeTimeout: "15s"
+  idleTimeout: "60s"
+
+database:
+  driver: "sqlite"
+  path: "./data/stumpfworks.db"
+
+auth:
+  jwtSecret: "${STUMPFWORKS_AUTH_JWTSECRET}" # Set via environment variable in production
+  jwtExpirationHours: 24
+  jwtRefreshHours: 168 # 7 days
+  bcryptCost: 12
+  sessionTimeout: "24h"
+
+logging:
+  level: "info" # debug | info | warn | error
+  development: true
