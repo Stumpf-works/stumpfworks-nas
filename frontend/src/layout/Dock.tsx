@@ -1,47 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useWindowStore } from '@/store';
-import { Dashboard } from '@/apps/Dashboard/Dashboard';
-
-// Registered apps
-const registeredApps = [
-  {
-    id: 'dashboard',
-    name: 'Dashboard',
-    icon: '📊',
-    component: Dashboard,
-    defaultSize: { width: 900, height: 600 },
-    minSize: { width: 600, height: 400 },
-  },
-  {
-    id: 'storage',
-    name: 'Storage',
-    icon: '💾',
-    component: () => <div className="p-4">Storage Manager (Coming Soon)</div>,
-    defaultSize: { width: 800, height: 600 },
-  },
-  {
-    id: 'files',
-    name: 'Files',
-    icon: '📁',
-    component: () => <div className="p-4">File Station (Coming Soon)</div>,
-    defaultSize: { width: 900, height: 700 },
-  },
-  {
-    id: 'users',
-    name: 'Users',
-    icon: '👥',
-    component: () => <div className="p-4">User Manager (Coming Soon)</div>,
-    defaultSize: { width: 700, height: 500 },
-  },
-  {
-    id: 'settings',
-    name: 'Settings',
-    icon: '⚙️',
-    component: () => <div className="p-4">Settings (Coming Soon)</div>,
-    defaultSize: { width: 800, height: 600 },
-  },
-];
+import { registeredApps } from '@/apps';
 
 interface DockIconProps {
   app: typeof registeredApps[0];

@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useWindowStore } from '@/store';
+import { getAppById } from '@/apps';
 import type { Window as WindowType } from '@/types';
 
 interface WindowProps {
@@ -13,29 +14,26 @@ export default function Window({ window }: WindowProps) {
   const minimizeWindow = useWindowStore((state) => state.minimizeWindow);
   const maximizeWindow = useWindowStore((state) => state.maximizeWindow);
   const updateWindowPosition = useWindowStore((state) => state.updateWindowPosition);
-  const updateWindowSize = useWindowStore((state) => state.updateWindowSize);
 
   const [isHoveringTitleBar, setIsHoveringTitleBar] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
   const windowRef = useRef<HTMLDivElement>(null);
 
   const handleMouseDown = () => {
     focusWindow(window.id);
   };
 
-  const handleDrag = (event: any, info: any) => {
-    setIsDragging(true);
+  const handleDrag = (_event: any, info: any) => {
     updateWindowPosition(window.id, {
       x: window.position.x + info.delta.x,
       y: window.position.y + info.delta.y,
     });
   };
 
-  const handleDragEnd = () => {
-    setIsDragging(false);
-  };
-
   const isMaximized = window.state === 'maximized';
+
+  // Get the app component
+  const app = getAppById(window.appId);
+  const AppComponent = app?.component;
 
   return (
     <motion.div
@@ -53,9 +51,8 @@ export default function Window({ window }: WindowProps) {
       drag={!isMaximized}
       dragMomentum={false}
       dragElastic={0}
-      dragConstraints={{ left: 0, top: 0, right: window.innerWidth - 400, bottom: window.innerHeight - 300 }}
+      dragConstraints={{ left: 0, top: 0, right: 1000, bottom: 600 }}
       onDrag={handleDrag}
-      onDragEnd={handleDragEnd}
       onMouseDown={handleMouseDown}
       style={{
         position: 'absolute',
@@ -110,6 +107,7 @@ export default function Window({ window }: WindowProps) {
 
         {/* Title */}
         <div className="absolute left-1/2 transform -translate-x-1/2 text-sm font-medium text-gray-700 dark:text-gray-300">
+          {window.icon && <span className="mr-2">{window.icon}</span>}
           {window.title}
         </div>
 
@@ -117,11 +115,14 @@ export default function Window({ window }: WindowProps) {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-auto">
-        {/* Window content will be rendered here dynamically */}
-        <div className="w-full h-full">
-          {/* Placeholder for now */}
-        </div>
+      <div className="flex-1 overflow-hidden">
+        {AppComponent ? (
+          <AppComponent />
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-gray-500">App not found</p>
+          </div>
+        )}
       </div>
     </motion.div>
   );
