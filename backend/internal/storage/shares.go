@@ -183,7 +183,10 @@ func DeleteShare(id string) error {
 func configureSMBShare(share *models.Share) error {
 	// Check if Samba is installed
 	if _, err := exec.LookPath("smbd"); err != nil {
-		return fmt.Errorf("Samba not installed")
+		logger.Warn("Samba not installed - share created but network access disabled",
+			zap.String("share", share.Name),
+			zap.String("note", "Install Samba to enable network access: apt install samba"))
+		return nil // Don't fail - share will work locally for File Manager
 	}
 
 	// Build Samba configuration
@@ -245,7 +248,10 @@ func removeSMBShare(share *models.Share) error {
 func configureNFSShare(share *models.Share) error {
 	// Check if NFS is installed
 	if _, err := exec.LookPath("exportfs"); err != nil {
-		return fmt.Errorf("NFS not installed")
+		logger.Warn("NFS not installed - share created but network access disabled",
+			zap.String("share", share.Name),
+			zap.String("note", "Install NFS to enable network access: apt install nfs-kernel-server"))
+		return nil // Don't fail - share will work locally for File Manager
 	}
 
 	// Build export entry
