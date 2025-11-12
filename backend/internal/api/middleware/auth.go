@@ -7,9 +7,7 @@ import (
 
 	"github.com/Stumpf-works/stumpfworks-nas/internal/users"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/errors"
-	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/utils"
-	"go.uber.org/zap"
 )
 
 type contextKey string

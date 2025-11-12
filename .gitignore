@@ -32,6 +32,7 @@ backend/*.exe
 backend/*.dll
 backend/*.so
 backend/*.dylib
+backend/stumpfworks-server
 backend/vendor/
 backend/go.work
 backend/go.work.sum
