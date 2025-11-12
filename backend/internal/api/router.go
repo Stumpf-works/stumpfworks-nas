@@ -57,6 +57,13 @@ func NewRouter(cfg *config.Config) http.Handler {
 			// System routes
 			r.Get("/system/info", handlers.GetSystemInfo)
 			r.Get("/system/metrics", handlers.GetSystemMetrics)
+			r.Get("/system/updates", handlers.CheckForUpdates)
+
+			// Admin-only system routes
+			r.Route("/system", func(r chi.Router) {
+				r.Use(mw.AdminOnly)
+				r.Post("/updates", handlers.ApplyUpdates)
+			})
 
 			// User routes (admin only for now)
 			r.Route("/users", func(r chi.Router) {

@@ -29,3 +29,27 @@ func GetSystemMetrics(w http.ResponseWriter, r *http.Request) {
 
 	utils.RespondSuccess(w, metrics)
 }
+
+// CheckForUpdates checks if system updates are available
+func CheckForUpdates(w http.ResponseWriter, r *http.Request) {
+	updateInfo, err := system.CheckForUpdates()
+	if err != nil {
+		utils.RespondError(w, errors.InternalServerError("Failed to check for updates", err))
+		return
+	}
+
+	utils.RespondSuccess(w, updateInfo)
+}
+
+// ApplyUpdates applies available system updates (admin only)
+func ApplyUpdates(w http.ResponseWriter, r *http.Request) {
+	err := system.PerformUpdate()
+	if err != nil {
+		utils.RespondError(w, errors.InternalServerError("Failed to apply updates", err))
+		return
+	}
+
+	utils.RespondSuccess(w, map[string]string{
+		"message": "System updated successfully. Please restart the server to apply changes.",
+	})
+}
