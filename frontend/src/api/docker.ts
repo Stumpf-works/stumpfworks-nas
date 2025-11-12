@@ -62,6 +62,31 @@ export interface PullImageRequest {
   image: string;
 }
 
+export interface ComposeService {
+  name: string;
+  image: string;
+  status: string;
+  containers: string[];
+}
+
+export interface ComposeStack {
+  name: string;
+  path: string;
+  status: string;
+  services: ComposeService[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateStackRequest {
+  name: string;
+  compose: string;
+}
+
+export interface UpdateStackRequest {
+  compose: string;
+}
+
 // API
 export const dockerApi = {
   // Containers
@@ -127,6 +152,64 @@ export const dockerApi = {
   // Networks
   async listNetworks(): Promise<ApiResponse<DockerNetwork[]>> {
     const response = await client.get('/docker/networks');
+    return response.data;
+  },
+
+  // Stacks
+  async listStacks(): Promise<ApiResponse<ComposeStack[]>> {
+    const response = await client.get('/docker/stacks');
+    return response.data;
+  },
+
+  async getStack(name: string): Promise<ApiResponse<ComposeStack>> {
+    const response = await client.get(`/docker/stacks/${name}`);
+    return response.data;
+  },
+
+  async createStack(request: CreateStackRequest): Promise<ApiResponse<any>> {
+    const response = await client.post('/docker/stacks', request);
+    return response.data;
+  },
+
+  async updateStack(name: string, request: UpdateStackRequest): Promise<ApiResponse<any>> {
+    const response = await client.put(`/docker/stacks/${name}`, request);
+    return response.data;
+  },
+
+  async deleteStack(name: string): Promise<ApiResponse<any>> {
+    const response = await client.delete(`/docker/stacks/${name}`);
+    return response.data;
+  },
+
+  async deployStack(name: string): Promise<ApiResponse<any>> {
+    const response = await client.post(`/docker/stacks/${name}/deploy`);
+    return response.data;
+  },
+
+  async stopStack(name: string): Promise<ApiResponse<any>> {
+    const response = await client.post(`/docker/stacks/${name}/stop`);
+    return response.data;
+  },
+
+  async restartStack(name: string): Promise<ApiResponse<any>> {
+    const response = await client.post(`/docker/stacks/${name}/restart`);
+    return response.data;
+  },
+
+  async removeStack(name: string, removeVolumes: boolean = false): Promise<ApiResponse<any>> {
+    const response = await client.post(`/docker/stacks/${name}/remove`, null, {
+      params: { volumes: removeVolumes },
+    });
+    return response.data;
+  },
+
+  async getStackLogs(name: string): Promise<ApiResponse<string>> {
+    const response = await client.get(`/docker/stacks/${name}/logs`);
+    return response.data;
+  },
+
+  async getStackCompose(name: string): Promise<ApiResponse<string>> {
+    const response = await client.get(`/docker/stacks/${name}/compose`);
     return response.data;
   },
 };
