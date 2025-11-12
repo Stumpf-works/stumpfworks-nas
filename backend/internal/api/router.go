@@ -118,6 +118,41 @@ func NewRouter(cfg *config.Config) http.Handler {
 				})
 			})
 
+			// File Management routes
+			r.Route("/files", func(r chi.Router) {
+				// File browsing and info
+				r.Get("/browse", handlers.BrowseFiles)
+				r.Get("/info", handlers.GetFileInfo)
+				r.Get("/download", handlers.DownloadFile)
+				r.Get("/usage", handlers.GetDiskUsage)
+
+				// File operations (write access required)
+				r.Post("/upload", handlers.UploadFile)
+				r.Post("/mkdir", handlers.CreateDirectory)
+				r.Post("/rename", handlers.RenameFile)
+				r.Post("/copy", handlers.CopyFiles)
+				r.Post("/move", handlers.MoveFiles)
+				r.Delete("/delete", handlers.DeleteFiles)
+
+				// Chunked upload
+				r.Post("/upload/start", handlers.StartChunkedUpload)
+				r.Post("/upload/{sessionId}/chunk/{chunkIndex}", handlers.UploadChunk)
+				r.Post("/upload/finalize", handlers.FinalizeUpload)
+				r.Delete("/upload/{sessionId}", handlers.CancelUpload)
+				r.Get("/upload/{sessionId}", handlers.GetUploadSession)
+
+				// Archives
+				r.Post("/archive/create", handlers.CreateArchive)
+				r.Post("/archive/extract", handlers.ExtractArchive)
+
+				// Permissions (admin only)
+				r.Group(func(r chi.Router) {
+					r.Use(mw.AdminOnly)
+					r.Get("/permissions", handlers.GetFilePermissions)
+					r.Post("/permissions", handlers.ChangeFilePermissions)
+				})
+			})
+
 			// Network routes (will implement in next phase)
 			// r.Route("/network", func(r chi.Router) {
 			// 	r.Get("/interfaces", handlers.ListInterfaces)
