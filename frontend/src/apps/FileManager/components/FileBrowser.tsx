@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FileInfo, formatFileSize, getFileIcon } from '@/api/files';
+import { FileInfo, formatFileSize } from '@/api/files';
+import FileThumbnail from './FileThumbnail';
 
 interface FileBrowserProps {
   files: FileInfo[];
@@ -86,7 +87,9 @@ const FileBrowser: React.FC<FileBrowserProps> = ({
                 : 'border-transparent hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800'
             }`}
           >
-            <div className="text-5xl mb-2">{getFileIcon(file)}</div>
+            <div className="mb-2">
+              <FileThumbnail file={file} size="medium" />
+            </div>
             <div className="text-sm text-center break-all line-clamp-2 text-gray-700 dark:text-gray-300">
               {file.name}
             </div>
@@ -157,8 +160,10 @@ const FileBrowser: React.FC<FileBrowserProps> = ({
                 : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'
             }`}
           >
-            <div className="w-8 text-2xl">{getFileIcon(file)}</div>
-            <div className="flex-1 truncate text-gray-700 dark:text-gray-300">{file.name}</div>
+            <div className="w-8 flex items-center justify-center">
+              <FileThumbnail file={file} size="small" />
+            </div>
+            <div className="flex-1 truncate text-gray-700 dark:text-gray-300 ml-2">{file.name}</div>
             <div className="w-24 text-right text-sm text-gray-500 dark:text-gray-400">
               {file.isDir ? '—' : formatFileSize(file.size)}
             </div>
