@@ -187,11 +187,11 @@ export default function Window({ window }: WindowProps) {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-hidden bg-white dark:bg-gray-900">
+      <div className="flex-1 overflow-hidden">
         {AppComponent ? (
           <AppComponent />
         ) : (
-          <div className="flex items-center justify-center h-full">
+          <div className="flex items-center justify-center h-full bg-white dark:bg-gray-900">
             <p className="text-gray-500 dark:text-gray-400">App not found</p>
           </div>
         )}
