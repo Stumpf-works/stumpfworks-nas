@@ -75,11 +75,48 @@ func NewRouter(cfg *config.Config) http.Handler {
 				r.Delete("/{id}", handlers.DeleteUser)
 			})
 
-			// Storage routes (will implement in next phase)
-			// r.Route("/storage", func(r chi.Router) {
-			// 	r.Get("/disks", handlers.ListDisks)
-			// 	r.Get("/volumes", handlers.ListVolumes)
-			// })
+			// Storage routes
+			r.Route("/storage", func(r chi.Router) {
+				// Statistics and overview
+				r.Get("/stats", handlers.GetStorageStats)
+				r.Get("/health", handlers.GetAllDiskHealth)
+				r.Get("/io", handlers.GetDiskIOStats)
+				r.Get("/io/monitor", handlers.GetIOMonitorStats)
+
+				// Disks
+				r.Get("/disks", handlers.ListDisks)
+				r.Get("/disks/{name}", handlers.GetDisk)
+				r.Get("/disks/{name}/smart", handlers.GetDiskSMART)
+				r.Get("/disks/{name}/health", handlers.GetDiskHealth)
+				r.Get("/disks/{name}/io", handlers.GetDiskIOStatsForDisk)
+
+				// Volumes
+				r.Get("/volumes", handlers.ListVolumes)
+				r.Get("/volumes/{id}", handlers.GetVolume)
+
+				// Shares
+				r.Get("/shares", handlers.ListShares)
+				r.Get("/shares/{id}", handlers.GetShare)
+
+				// Admin-only storage operations
+				r.Group(func(r chi.Router) {
+					r.Use(mw.AdminOnly)
+
+					// Disk operations
+					r.Post("/disks/format", handlers.FormatDisk)
+
+					// Volume operations
+					r.Post("/volumes", handlers.CreateVolume)
+					r.Delete("/volumes/{id}", handlers.DeleteVolume)
+
+					// Share operations
+					r.Post("/shares", handlers.CreateShare)
+					r.Put("/shares/{id}", handlers.UpdateShare)
+					r.Delete("/shares/{id}", handlers.DeleteShare)
+					r.Post("/shares/{id}/enable", handlers.EnableShare)
+					r.Post("/shares/{id}/disable", handlers.DisableShare)
+				})
+			})
 
 			// Network routes (will implement in next phase)
 			// r.Route("/network", func(r chi.Router) {

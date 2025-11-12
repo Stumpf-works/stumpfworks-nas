@@ -1,0 +1,352 @@
+package handlers
+
+import (
+	"net/http"
+	"time"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/storage"
+	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
+	"github.com/Stumpf-works/stumpfworks-nas/pkg/utils"
+	"go.uber.org/zap"
+)
+
+// ===== Disk Handlers =====
+
+// ListDisks lists all available disks
+func ListDisks(w http.ResponseWriter, r *http.Request) {
+	disks, err := storage.ListDisks()
+	if err != nil {
+		logger.Error("Failed to list disks", zap.Error(err))
+		utils.RespondError(w, http.StatusInternalServerError, "Failed to list disks", err)
+		return
+	}
+
+	utils.RespondSuccess(w, disks)
+}
+
+// GetDisk retrieves information about a specific disk
+func GetDisk(w http.ResponseWriter, r *http.Request) {
+	diskName := chi.URLParam(r, "name")
+
+	disk, err := storage.GetDiskInfo(diskName)
+	if err != nil {
+		logger.Error("Failed to get disk info", zap.String("disk", diskName), zap.Error(err))
+		utils.RespondError(w, http.StatusNotFound, "Disk not found", err)
+		return
+	}
+
+	utils.RespondSuccess(w, disk)
+}
+
+// FormatDisk formats a disk with the specified filesystem
+func FormatDisk(w http.ResponseWriter, r *http.Request) {
+	var req storage.FormatDiskRequest
+	if err := utils.ParseJSON(r, &req); err != nil {
+		utils.RespondError(w, http.StatusBadRequest, "Invalid request", err)
+		return
+	}
+
+	if err := storage.FormatDisk(&req); err != nil {
+		logger.Error("Failed to format disk", zap.String("disk", req.Disk), zap.Error(err))
+		utils.RespondError(w, http.StatusInternalServerError, "Failed to format disk", err)
+		return
+	}
+
+	utils.RespondSuccess(w, map[string]string{
+		"message": "Disk formatted successfully",
+	})
+}
+
+// GetDiskSMART retrieves SMART data for a disk
+func GetDiskSMART(w http.ResponseWriter, r *http.Request) {
+	diskName := chi.URLParam(r, "name")
+
+	smart, err := storage.GetSMARTData(diskName)
+	if err != nil {
+		logger.Error("Failed to get SMART data", zap.String("disk", diskName), zap.Error(err))
+		utils.RespondError(w, http.StatusInternalServerError, "Failed to get SMART data", err)
+		return
+	}
+
+	utils.RespondSuccess(w, smart)
+}
+
+// GetDiskHealth retrieves health assessment for a disk
+func GetDiskHealth(w http.ResponseWriter, r *http.Request) {
+	diskName := chi.URLParam(r, "name")
+
+	health, err := storage.AssessDiskHealth(diskName)
+	if err != nil {
+		logger.Error("Failed to assess disk health", zap.String("disk", diskName), zap.Error(err))
+		utils.RespondError(w, http.StatusInternalServerError, "Failed to assess disk health", err)
+		return
+	}
+
+	utils.RespondSuccess(w, health)
+}
+
+// ===== Volume Handlers =====
+
+// ListVolumes lists all storage volumes
+func ListVolumes(w http.ResponseWriter, r *http.Request) {
+	volumes, err := storage.ListVolumes()
+	if err != nil {
+		logger.Error("Failed to list volumes", zap.Error(err))
+		utils.RespondError(w, http.StatusInternalServerError, "Failed to list volumes", err)
+		return
+	}
+
+	utils.RespondSuccess(w, volumes)
+}
+
+// GetVolume retrieves information about a specific volume
+func GetVolume(w http.ResponseWriter, r *http.Request) {
+	volumeID := chi.URLParam(r, "id")
+
+	volume, err := storage.GetVolume(volumeID)
+	if err != nil {
+		logger.Error("Failed to get volume", zap.String("id", volumeID), zap.Error(err))
+		utils.RespondError(w, http.StatusNotFound, "Volume not found", err)
+		return
+	}
+
+	utils.RespondSuccess(w, volume)
+}
+
+// CreateVolume creates a new storage volume
+func CreateVolume(w http.ResponseWriter, r *http.Request) {
+	var req storage.CreateVolumeRequest
+	if err := utils.ParseJSON(r, &req); err != nil {
+		utils.RespondError(w, http.StatusBadRequest, "Invalid request", err)
+		return
+	}
+
+	volume, err := storage.CreateVolume(&req)
+	if err != nil {
+		logger.Error("Failed to create volume", zap.String("name", req.Name), zap.Error(err))
+		utils.RespondError(w, http.StatusInternalServerError, "Failed to create volume", err)
+		return
+	}
+
+	utils.RespondSuccess(w, volume)
+}
+
+// DeleteVolume deletes a storage volume
+func DeleteVolume(w http.ResponseWriter, r *http.Request) {
+	volumeID := chi.URLParam(r, "id")
+
+	if err := storage.DeleteVolume(volumeID); err != nil {
+		logger.Error("Failed to delete volume", zap.String("id", volumeID), zap.Error(err))
+		utils.RespondError(w, http.StatusInternalServerError, "Failed to delete volume", err)
+		return
+	}
+
+	utils.RespondSuccess(w, map[string]string{
+		"message": "Volume deleted successfully",
+	})
+}
+
+// ===== Share Handlers =====
+
+// ListShares lists all network shares
+func ListShares(w http.ResponseWriter, r *http.Request) {
+	shares, err := storage.ListShares()
+	if err != nil {
+		logger.Error("Failed to list shares", zap.Error(err))
+		utils.RespondError(w, http.StatusInternalServerError, "Failed to list shares", err)
+		return
+	}
+
+	utils.RespondSuccess(w, shares)
+}
+
+// GetShare retrieves information about a specific share
+func GetShare(w http.ResponseWriter, r *http.Request) {
+	shareID := chi.URLParam(r, "id")
+
+	share, err := storage.GetShare(shareID)
+	if err != nil {
+		logger.Error("Failed to get share", zap.String("id", shareID), zap.Error(err))
+		utils.RespondError(w, http.StatusNotFound, "Share not found", err)
+		return
+	}
+
+	utils.RespondSuccess(w, share)
+}
+
+// CreateShare creates a new network share
+func CreateShare(w http.ResponseWriter, r *http.Request) {
+	var req storage.CreateShareRequest
+	if err := utils.ParseJSON(r, &req); err != nil {
+		utils.RespondError(w, http.StatusBadRequest, "Invalid request", err)
+		return
+	}
+
+	share, err := storage.CreateShare(&req)
+	if err != nil {
+		logger.Error("Failed to create share", zap.String("name", req.Name), zap.Error(err))
+		utils.RespondError(w, http.StatusInternalServerError, "Failed to create share", err)
+		return
+	}
+
+	utils.RespondSuccess(w, share)
+}
+
+// UpdateShare updates an existing share
+func UpdateShare(w http.ResponseWriter, r *http.Request) {
+	shareID := chi.URLParam(r, "id")
+
+	var req storage.CreateShareRequest
+	if err := utils.ParseJSON(r, &req); err != nil {
+		utils.RespondError(w, http.StatusBadRequest, "Invalid request", err)
+		return
+	}
+
+	share, err := storage.UpdateShare(shareID, &req)
+	if err != nil {
+		logger.Error("Failed to update share", zap.String("id", shareID), zap.Error(err))
+		utils.RespondError(w, http.StatusInternalServerError, "Failed to update share", err)
+		return
+	}
+
+	utils.RespondSuccess(w, share)
+}
+
+// DeleteShare deletes a network share
+func DeleteShare(w http.ResponseWriter, r *http.Request) {
+	shareID := chi.URLParam(r, "id")
+
+	if err := storage.DeleteShare(shareID); err != nil {
+		logger.Error("Failed to delete share", zap.String("id", shareID), zap.Error(err))
+		utils.RespondError(w, http.StatusInternalServerError, "Failed to delete share", err)
+		return
+	}
+
+	utils.RespondSuccess(w, map[string]string{
+		"message": "Share deleted successfully",
+	})
+}
+
+// EnableShare enables a network share
+func EnableShare(w http.ResponseWriter, r *http.Request) {
+	shareID := chi.URLParam(r, "id")
+
+	if err := storage.EnableShare(shareID); err != nil {
+		logger.Error("Failed to enable share", zap.String("id", shareID), zap.Error(err))
+		utils.RespondError(w, http.StatusInternalServerError, "Failed to enable share", err)
+		return
+	}
+
+	utils.RespondSuccess(w, map[string]string{
+		"message": "Share enabled successfully",
+	})
+}
+
+// DisableShare disables a network share
+func DisableShare(w http.ResponseWriter, r *http.Request) {
+	shareID := chi.URLParam(r, "id")
+
+	if err := storage.DisableShare(shareID); err != nil {
+		logger.Error("Failed to disable share", zap.String("id", shareID), zap.Error(err))
+		utils.RespondError(w, http.StatusInternalServerError, "Failed to disable share", err)
+		return
+	}
+
+	utils.RespondSuccess(w, map[string]string{
+		"message": "Share disabled successfully",
+	})
+}
+
+// ===== Storage Statistics Handlers =====
+
+// GetStorageStats retrieves overall storage statistics
+func GetStorageStats(w http.ResponseWriter, r *http.Request) {
+	stats, err := storage.GetStorageStats()
+	if err != nil {
+		logger.Error("Failed to get storage stats", zap.Error(err))
+		utils.RespondError(w, http.StatusInternalServerError, "Failed to get storage stats", err)
+		return
+	}
+
+	utils.RespondSuccess(w, stats)
+}
+
+// GetDiskIOStats retrieves I/O statistics for all disks
+func GetDiskIOStats(w http.ResponseWriter, r *http.Request) {
+	stats, err := storage.GetDiskIOStats()
+	if err != nil {
+		logger.Error("Failed to get disk I/O stats", zap.Error(err))
+		utils.RespondError(w, http.StatusInternalServerError, "Failed to get disk I/O stats", err)
+		return
+	}
+
+	utils.RespondSuccess(w, stats)
+}
+
+// GetDiskIOStatsForDisk retrieves I/O statistics for a specific disk
+func GetDiskIOStatsForDisk(w http.ResponseWriter, r *http.Request) {
+	diskName := chi.URLParam(r, "name")
+
+	stats, err := storage.GetDiskIOStatsForDisk(diskName)
+	if err != nil {
+		logger.Error("Failed to get disk I/O stats", zap.String("disk", diskName), zap.Error(err))
+		utils.RespondError(w, http.StatusNotFound, "Disk not found", err)
+		return
+	}
+
+	utils.RespondSuccess(w, stats)
+}
+
+// GetAllDiskHealth retrieves health assessment for all disks
+func GetAllDiskHealth(w http.ResponseWriter, r *http.Request) {
+	healthList, err := storage.GetAllDiskHealth()
+	if err != nil {
+		logger.Error("Failed to get disk health", zap.Error(err))
+		utils.RespondError(w, http.StatusInternalServerError, "Failed to get disk health", err)
+		return
+	}
+
+	utils.RespondSuccess(w, healthList)
+}
+
+// ===== WebSocket for Real-time Monitoring =====
+
+var ioMonitor *storage.DiskIOMonitor
+
+// StartIOMonitoring starts real-time I/O monitoring
+func StartIOMonitoring() {
+	if ioMonitor != nil {
+		return
+	}
+
+	ioMonitor = storage.NewDiskIOMonitor(time.Second * 2)
+	ioMonitor.Start()
+
+	logger.Info("Storage I/O monitoring started")
+}
+
+// StopIOMonitoring stops real-time I/O monitoring
+func StopIOMonitoring() {
+	if ioMonitor != nil {
+		ioMonitor.Stop()
+		ioMonitor = nil
+		logger.Info("Storage I/O monitoring stopped")
+	}
+}
+
+// GetIOMonitorStats retrieves the latest I/O monitoring stats
+func GetIOMonitorStats(w http.ResponseWriter, r *http.Request) {
+	if ioMonitor == nil {
+		utils.RespondError(w, http.StatusServiceUnavailable, "I/O monitoring not started", nil)
+		return
+	}
+
+	// Get stats with timeout
+	select {
+	case stats := <-ioMonitor.Stats():
+		utils.RespondSuccess(w, stats)
+	case <-time.After(5 * time.Second):
+		utils.RespondError(w, http.StatusRequestTimeout, "Timeout waiting for stats", nil)
+	}
+}

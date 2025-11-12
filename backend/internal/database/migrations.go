@@ -2,6 +2,7 @@ package database
 
 import (
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database/models"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/storage"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
 	"go.uber.org/zap"
 )
@@ -13,6 +14,7 @@ func RunMigrations() error {
 	// Auto-migrate models
 	if err := DB.AutoMigrate(
 		&models.User{},
+		&storage.ShareModel{},
 		// Add more models here as they are created
 	); err != nil {
 		return err

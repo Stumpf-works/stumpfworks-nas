@@ -1,0 +1,416 @@
+package storage
+
+import (
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/Stumpf-works/stumpfworks-nas/internal/database"
+	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
+	"go.uber.org/zap"
+	"gorm.io/gorm"
+)
+
+// ShareModel represents a share in the database
+type ShareModel struct {
+	gorm.Model
+	Name        string    `gorm:"uniqueIndex;size:255;not null"`
+	Path        string    `gorm:"size:500;not null"`
+	Type        string    `gorm:"size:10;not null"` // smb, nfs, ftp
+	Description string    `gorm:"size:500"`
+	Enabled     bool      `gorm:"default:true"`
+	ReadOnly    bool      `gorm:"default:false"`
+	Browseable  bool      `gorm:"default:true"`
+	GuestOK     bool      `gorm:"default:false"`
+	ValidUsers  string    `gorm:"size:1000"` // Comma-separated list
+}
+
+// TableName specifies the table name for ShareModel
+func (ShareModel) TableName() string {
+	return "shares"
+}
+
+// toShare converts ShareModel to Share
+func (s *ShareModel) toShare() *Share {
+	var validUsers []string
+	if s.ValidUsers != "" {
+		validUsers = strings.Split(s.ValidUsers, ",")
+	}
+
+	return &Share{
+		ID:          fmt.Sprintf("%d", s.ID),
+		Name:        s.Name,
+		Path:        s.Path,
+		Type:        ShareType(s.Type),
+		Description: s.Description,
+		Enabled:     s.Enabled,
+		ReadOnly:    s.ReadOnly,
+		Browseable:  s.Browseable,
+		GuestOK:     s.GuestOK,
+		ValidUsers:  validUsers,
+		CreatedAt:   s.CreatedAt,
+		UpdatedAt:   s.UpdatedAt,
+	}
+}
+
+// ListShares lists all network shares
+func ListShares() ([]Share, error) {
+	var models []ShareModel
+	if err := database.DB.Find(&models).Error; err != nil {
+		return nil, err
+	}
+
+	shares := make([]Share, len(models))
+	for i, model := range models {
+		shares[i] = *model.toShare()
+	}
+
+	return shares, nil
+}
+
+// GetShare retrieves a specific share by ID
+func GetShare(id string) (*Share, error) {
+	var model ShareModel
+	if err := database.DB.First(&model, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, fmt.Errorf("share not found")
+		}
+		return nil, err
+	}
+
+	return model.toShare(), nil
+}
+
+// CreateShare creates a new network share
+func CreateShare(req *CreateShareRequest) (*Share, error) {
+	logger.Info("Creating share",
+		zap.String("name", req.Name),
+		zap.String("type", string(req.Type)),
+		zap.String("path", req.Path))
+
+	// Validate path exists
+	if _, err := os.Stat(req.Path); os.IsNotExist(err) {
+		return nil, fmt.Errorf("path does not exist: %s", req.Path)
+	}
+
+	// Create database record
+	model := &ShareModel{
+		Name:        req.Name,
+		Path:        req.Path,
+		Type:        string(req.Type),
+		Description: req.Description,
+		Enabled:     true,
+		ReadOnly:    req.ReadOnly,
+		Browseable:  req.Browseable,
+		GuestOK:     req.GuestOK,
+		ValidUsers:  strings.Join(req.ValidUsers, ","),
+	}
+
+	if err := database.DB.Create(model).Error; err != nil {
+		return nil, fmt.Errorf("failed to create share in database: %w", err)
+	}
+
+	// Configure the share based on type
+	switch req.Type {
+	case ShareTypeSMB:
+		if err := configureSMBShare(model); err != nil {
+			database.DB.Delete(model)
+			return nil, fmt.Errorf("failed to configure SMB share: %w", err)
+		}
+	case ShareTypeNFS:
+		if err := configureNFSShare(model); err != nil {
+			database.DB.Delete(model)
+			return nil, fmt.Errorf("failed to configure NFS share: %w", err)
+		}
+	default:
+		return nil, fmt.Errorf("unsupported share type: %s", req.Type)
+	}
+
+	logger.Info("Share created successfully", zap.String("name", req.Name))
+
+	return model.toShare(), nil
+}
+
+// UpdateShare updates an existing share
+func UpdateShare(id string, req *CreateShareRequest) (*Share, error) {
+	var model ShareModel
+	if err := database.DB.First(&model, id).Error; err != nil {
+		return nil, err
+	}
+
+	// Update fields
+	model.Name = req.Name
+	model.Path = req.Path
+	model.Description = req.Description
+	model.ReadOnly = req.ReadOnly
+	model.Browseable = req.Browseable
+	model.GuestOK = req.GuestOK
+	model.ValidUsers = strings.Join(req.ValidUsers, ",")
+
+	if err := database.DB.Save(&model).Error; err != nil {
+		return nil, err
+	}
+
+	// Reconfigure the share
+	switch ShareType(model.Type) {
+	case ShareTypeSMB:
+		if err := configureSMBShare(&model); err != nil {
+			return nil, err
+		}
+	case ShareTypeNFS:
+		if err := configureNFSShare(&model); err != nil {
+			return nil, err
+		}
+	}
+
+	return model.toShare(), nil
+}
+
+// DeleteShare deletes a network share
+func DeleteShare(id string) error {
+	var model ShareModel
+	if err := database.DB.First(&model, id).Error; err != nil {
+		return err
+	}
+
+	// Remove configuration
+	switch ShareType(model.Type) {
+	case ShareTypeSMB:
+		if err := removeSMBShare(&model); err != nil {
+			return err
+		}
+	case ShareTypeNFS:
+		if err := removeNFSShare(&model); err != nil {
+			return err
+		}
+	}
+
+	// Delete from database
+	if err := database.DB.Delete(&model).Error; err != nil {
+		return err
+	}
+
+	logger.Info("Share deleted successfully", zap.String("name", model.Name))
+
+	return nil
+}
+
+// configureSMBShare configures a Samba share
+func configureSMBShare(share *ShareModel) error {
+	// Check if Samba is installed
+	if _, err := exec.LookPath("smbd"); err != nil {
+		return fmt.Errorf("Samba not installed")
+	}
+
+	// Build Samba configuration
+	config := fmt.Sprintf(`
+[%s]
+   path = %s
+   comment = %s
+   browseable = %s
+   read only = %s
+   guest ok = %s
+`, share.Name, share.Path, share.Description,
+		boolToYesNo(share.Browseable),
+		boolToYesNo(share.ReadOnly),
+		boolToYesNo(share.GuestOK))
+
+	if share.ValidUsers != "" {
+		config += fmt.Sprintf("   valid users = %s\n", strings.ReplaceAll(share.ValidUsers, ",", " "))
+	}
+
+	// Write to Samba config directory
+	configPath := filepath.Join("/etc/samba/shares.d", share.Name+".conf")
+	if err := os.MkdirAll("/etc/samba/shares.d", 0755); err != nil {
+		return err
+	}
+
+	if err := os.WriteFile(configPath, []byte(config), 0644); err != nil {
+		return err
+	}
+
+	// Ensure main smb.conf includes shares.d
+	ensureSambaInclude()
+
+	// Reload Samba
+	cmd := exec.Command("systemctl", "reload", "smbd")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		logger.Warn("Failed to reload Samba", zap.String("output", string(output)))
+	}
+
+	return nil
+}
+
+// removeSMBShare removes a Samba share configuration
+func removeSMBShare(share *ShareModel) error {
+	configPath := filepath.Join("/etc/samba/shares.d", share.Name+".conf")
+	if err := os.Remove(configPath); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+
+	// Reload Samba
+	cmd := exec.Command("systemctl", "reload", "smbd")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		logger.Warn("Failed to reload Samba", zap.String("output", string(output)))
+	}
+
+	return nil
+}
+
+// configureNFSShare configures an NFS export
+func configureNFSShare(share *ShareModel) error {
+	// Check if NFS is installed
+	if _, err := exec.LookPath("exportfs"); err != nil {
+		return fmt.Errorf("NFS not installed")
+	}
+
+	// Build NFS export options
+	options := []string{"rw", "sync", "no_subtree_check"}
+	if share.ReadOnly {
+		options = []string{"ro", "sync", "no_subtree_check"}
+	}
+
+	// Build export entry
+	export := fmt.Sprintf("%s *(rw,sync,no_subtree_check)\n", share.Path)
+	if share.ReadOnly {
+		export = fmt.Sprintf("%s *(ro,sync,no_subtree_check)\n", share.Path)
+	}
+
+	// Append to /etc/exports
+	file, err := os.OpenFile("/etc/exports", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	if _, err := file.WriteString(export); err != nil {
+		return err
+	}
+
+	// Reload NFS exports
+	cmd := exec.Command("exportfs", "-ra")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to reload exports: %s: %w", string(output), err)
+	}
+
+	return nil
+}
+
+// removeNFSShare removes an NFS export
+func removeNFSShare(share *ShareModel) error {
+	// This is a simplified version
+	// In production, you'd want to parse and rewrite /etc/exports properly
+
+	// Unexport
+	cmd := exec.Command("exportfs", "-u", "*:"+share.Path)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		logger.Warn("Failed to unexport", zap.String("output", string(output)))
+	}
+
+	return nil
+}
+
+// ensureSambaInclude ensures the main smb.conf includes shares.d directory
+func ensureSambaInclude() error {
+	smbConfPath := "/etc/samba/smb.conf"
+	includeDirective := "include = /etc/samba/shares.d/*.conf"
+
+	// Read current config
+	data, err := os.ReadFile(smbConfPath)
+	if err != nil {
+		return err
+	}
+
+	content := string(data)
+
+	// Check if include directive already exists
+	if strings.Contains(content, includeDirective) {
+		return nil
+	}
+
+	// Append include directive to [global] section
+	lines := strings.Split(content, "\n")
+	var newLines []string
+	addedInclude := false
+
+	for _, line := range lines {
+		newLines = append(newLines, line)
+
+		// Add include after [global] section
+		if strings.Contains(line, "[global]") && !addedInclude {
+			newLines = append(newLines, "   "+includeDirective)
+			addedInclude = true
+		}
+	}
+
+	// Write back
+	return os.WriteFile(smbConfPath, []byte(strings.Join(newLines, "\n")), 0644)
+}
+
+// boolToYesNo converts a boolean to yes/no string for Samba config
+func boolToYesNo(b bool) string {
+	if b {
+		return "yes"
+	}
+	return "no"
+}
+
+// EnableShare enables a share
+func EnableShare(id string) error {
+	return updateShareStatus(id, true)
+}
+
+// DisableShare disables a share
+func DisableShare(id string) error {
+	return updateShareStatus(id, false)
+}
+
+// updateShareStatus updates the enabled status of a share
+func updateShareStatus(id string, enabled bool) error {
+	var model ShareModel
+	if err := database.DB.First(&model, id).Error; err != nil {
+		return err
+	}
+
+	model.Enabled = enabled
+	if err := database.DB.Save(&model).Error; err != nil {
+		return err
+	}
+
+	// If disabling, remove the configuration
+	if !enabled {
+		switch ShareType(model.Type) {
+		case ShareTypeSMB:
+			return removeSMBShare(&model)
+		case ShareTypeNFS:
+			return removeNFSShare(&model)
+		}
+	} else {
+		// If enabling, reconfigure
+		switch ShareType(model.Type) {
+		case ShareTypeSMB:
+			return configureSMBShare(&model)
+		case ShareTypeNFS:
+			return configureNFSShare(&model)
+		}
+	}
+
+	return nil
+}
+
+// GetShareStats returns statistics about shares
+func GetShareStats() (int, error) {
+	var count int64
+	if err := database.DB.Model(&ShareModel{}).Count(&count).Error; err != nil {
+		return 0, err
+	}
+	return int(count), nil
+}
+
+// MigrateShares runs database migrations for shares
+func MigrateShares() error {
+	return database.DB.AutoMigrate(&ShareModel{})
+}
