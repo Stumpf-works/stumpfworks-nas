@@ -9,7 +9,7 @@ interface DropZoneProps {
 
 export default function DropZone({ onFilesDropped, children, disabled = false }: DropZoneProps) {
   const [isDragging, setIsDragging] = useState(false);
-  const [dragCounter, setDragCounter] = useState(0);
+  const [, setDragCounter] = useState(0); // Tracks nested drag events (value only used in setState callback)
 
   const handleDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault();

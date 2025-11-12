@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { FileInfo, browseFiles, BrowseResponse, uploadFile } from '@/api/files';
+import { FileInfo, browseFiles, BrowseResponse, uploadFile, downloadFile, deleteFiles, copyFiles, moveFiles } from '@/api/files';
 import Toolbar from './components/Toolbar';
 import Breadcrumbs from './components/Breadcrumbs';
 import FileBrowser from './components/FileBrowser';
@@ -33,6 +32,9 @@ const FileManager: React.FC = () => {
 
   // Context Menu
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; file: FileInfo | null } | null>(null);
+
+  // Clipboard for Copy/Cut/Paste
+  const [clipboard, setClipboard] = useState<{ files: string[]; operation: 'copy' | 'cut' } | null>(null);
 
   // Filter files based on search query
   const filteredFiles = React.useMemo(() => {
@@ -125,7 +127,6 @@ const FileManager: React.FC = () => {
     if (selectedFiles.size === 1) {
       const filePath = Array.from(selectedFiles)[0];
       // Download logic is in the API client
-      const { downloadFile } = require('../../api/files');
       downloadFile(filePath);
     }
   };
@@ -136,7 +137,6 @@ const FileManager: React.FC = () => {
     if (!confirm(`Delete ${selectedFiles.size} item(s)?`)) return;
 
     try {
-      const { deleteFiles } = require('../../api/files');
       await deleteFiles(Array.from(selectedFiles), true);
       setSelectedFiles(new Set());
       loadFiles();
@@ -198,7 +198,6 @@ const FileManager: React.FC = () => {
 
   const handleContextMenuDownload = () => {
     if (contextMenu?.file && !contextMenu.file.isDir) {
-      const { downloadFile } = require('../../api/files');
       downloadFile(contextMenu.file.path);
     }
   };
@@ -207,7 +206,6 @@ const FileManager: React.FC = () => {
     if (contextMenu?.file) {
       if (confirm(`Delete "${contextMenu.file.name}"?`)) {
         try {
-          const { deleteFiles } = require('../../api/files');
           await deleteFiles([contextMenu.file.path], true);
           loadFiles();
         } catch (err: any) {
@@ -222,6 +220,108 @@ const FileManager: React.FC = () => {
       setPermissionsFile(contextMenu.file);
     }
   };
+
+  // Clipboard Operations
+  const handleCopy = () => {
+    if (selectedFiles.size > 0) {
+      setClipboard({ files: Array.from(selectedFiles), operation: 'copy' });
+      console.log(`Copied ${selectedFiles.size} items`);
+    }
+  };
+
+  const handleCut = () => {
+    if (selectedFiles.size > 0) {
+      setClipboard({ files: Array.from(selectedFiles), operation: 'cut' });
+      console.log(`Cut ${selectedFiles.size} items`);
+    }
+  };
+
+  const handlePaste = async () => {
+    if (!clipboard || clipboard.files.length === 0) return;
+
+    try {
+      for (const sourcePath of clipboard.files) {
+        const fileName = sourcePath.split('/').pop() || '';
+        const destination = `${currentPath}/${fileName}`;
+
+        if (clipboard.operation === 'copy') {
+          await copyFiles(sourcePath, destination, false);
+        } else {
+          await moveFiles(sourcePath, destination, false);
+        }
+      }
+
+      if (clipboard.operation === 'cut') {
+        setClipboard(null); // Clear clipboard after cut
+      }
+
+      loadFiles();
+      console.log(`Pasted ${clipboard.files.length} items`);
+    } catch (err: any) {
+      alert('Paste failed: ' + err.message);
+    }
+  };
+
+  const handleSelectAll = () => {
+    const allPaths = new Set(filteredFiles.map(f => f.path));
+    setSelectedFiles(allPaths);
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedFiles(new Set());
+  };
+
+  // Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if typing in input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
+
+      // Ctrl+C / Cmd+C - Copy
+      if (cmdOrCtrl && e.key === 'c') {
+        e.preventDefault();
+        handleCopy();
+      }
+      // Ctrl+X / Cmd+X - Cut
+      else if (cmdOrCtrl && e.key === 'x') {
+        e.preventDefault();
+        handleCut();
+      }
+      // Ctrl+V / Cmd+V - Paste
+      else if (cmdOrCtrl && e.key === 'v') {
+        e.preventDefault();
+        handlePaste();
+      }
+      // Ctrl+A / Cmd+A - Select All
+      else if (cmdOrCtrl && e.key === 'a') {
+        e.preventDefault();
+        handleSelectAll();
+      }
+      // Delete / Backspace - Delete
+      else if ((e.key === 'Delete' || e.key === 'Backspace') && selectedFiles.size > 0) {
+        e.preventDefault();
+        handleDelete();
+      }
+      // Escape - Deselect
+      else if (e.key === 'Escape') {
+        handleDeselectAll();
+        setContextMenu(null);
+      }
+      // F5 - Refresh
+      else if (e.key === 'F5') {
+        e.preventDefault();
+        handleRefresh();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedFiles, clipboard, filteredFiles, currentPath]);
 
   return (
     <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900">
@@ -341,6 +441,8 @@ const FileManager: React.FC = () => {
           onClose={() => setContextMenu(null)}
           onOpen={handleContextMenuOpen}
           onDownload={handleContextMenuDownload}
+          onCopy={handleCopy}
+          onCut={handleCut}
           onDelete={handleContextMenuDelete}
           onPermissions={user?.role === 'admin' ? handleContextMenuPermissions : undefined}
           isAdmin={user?.role === 'admin'}
