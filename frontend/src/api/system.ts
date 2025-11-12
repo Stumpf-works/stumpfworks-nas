@@ -39,6 +39,14 @@ export interface SystemMetrics {
   timestamp: number;
 }
 
+export interface UpdateInfo {
+  available: boolean;
+  currentCommit: string;
+  latestCommit: string;
+  behindBy: number;
+  changeLog: string[];
+}
+
 export const systemApi = {
   getInfo: async () => {
     const response = await client.get<ApiResponse<SystemInfo>>('/system/info');
@@ -47,6 +55,16 @@ export const systemApi = {
 
   getMetrics: async () => {
     const response = await client.get<ApiResponse<SystemMetrics>>('/system/metrics');
+    return response.data;
+  },
+
+  checkUpdates: async () => {
+    const response = await client.get<ApiResponse<UpdateInfo>>('/system/updates');
+    return response.data;
+  },
+
+  applyUpdates: async () => {
+    const response = await client.post<ApiResponse<{ message: string }>>('/system/updates');
     return response.data;
   },
 };

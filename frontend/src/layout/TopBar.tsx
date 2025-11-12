@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuthStore, useSystemStore, useThemeStore } from '@/store';
 import { systemApi } from '@/api/system';
 import { motion } from 'framer-motion';
+import UpdateNotification from '@/components/UpdateNotification';
 
 export default function TopBar() {
   const user = useAuthStore((state) => state.user);
@@ -147,6 +148,9 @@ export default function TopBar() {
             </svg>
           )}
         </button>
+
+        {/* Update Notification */}
+        <UpdateNotification />
 
         {/* User */}
         {user && (
