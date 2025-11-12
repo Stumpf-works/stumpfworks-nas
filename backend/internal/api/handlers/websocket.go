@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/websocket"
-	"github.com/stumpfworks/nas/internal/api/websocket"
+	ws "github.com/stumpfworks/nas/internal/api/websocket"
 	"github.com/stumpfworks/nas/pkg/logger"
 	"go.uber.org/zap"
 )
@@ -26,7 +26,7 @@ func WebSocketHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := websocket.NewClient(conn)
+	client := ws.NewClient(conn)
 	go client.Read()
 	go client.Write()
 
