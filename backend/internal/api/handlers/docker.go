@@ -532,3 +532,81 @@ func (h *DockerHandler) PruneSystem(w http.ResponseWriter, r *http.Request) {
 	logger.Info("System pruned successfully")
 	utils.RespondSuccess(w, usage)
 }
+
+// UpdateContainerResources updates resource limits for a container
+func (h *DockerHandler) UpdateContainerResources(w http.ResponseWriter, r *http.Request) {
+	containerID := chi.URLParam(r, "id")
+
+	var req struct {
+		Memory     int64 `json:"memory"`      // Memory limit in bytes
+		MemorySwap int64 `json:"memorySwap"`  // Memory + Swap limit
+		CPUShares  int64 `json:"cpuShares"`   // CPU shares (relative weight)
+		CPUQuota   int64 `json:"cpuQuota"`    // CPU quota in microseconds
+		CPUPeriod  int64 `json:"cpuPeriod"`   // CPU period in microseconds
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.RespondError(w, errors.BadRequest("Invalid request body", err))
+		return
+	}
+
+	resources := container.Resources{
+		Memory:     req.Memory,
+		MemorySwap: req.MemorySwap,
+		CPUShares:  req.CPUShares,
+		CPUQuota:   req.CPUQuota,
+		CPUPeriod:  req.CPUPeriod,
+	}
+
+	if err := h.service.UpdateContainerResources(r.Context(), containerID, resources); err != nil {
+		logger.Error("Failed to update container resources", zap.Error(err), zap.String("containerID", containerID))
+		utils.RespondError(w, errors.InternalServerError("Failed to update container resources", err))
+		return
+	}
+
+	logger.Info("Container resources updated", zap.String("containerID", containerID))
+	utils.RespondSuccess(w, map[string]string{"message": "Container resources updated successfully"})
+}
+
+// ExecContainer executes a command in a container
+func (h *DockerHandler) ExecContainer(w http.ResponseWriter, r *http.Request) {
+	containerID := chi.URLParam(r, "id")
+
+	var req struct {
+		Command []string `json:"command"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.RespondError(w, errors.BadRequest("Invalid request body", err))
+		return
+	}
+
+	if len(req.Command) == 0 {
+		utils.RespondError(w, errors.BadRequest("Command is required", nil))
+		return
+	}
+
+	output, err := h.service.ExecContainer(r.Context(), containerID, req.Command)
+	if err != nil {
+		logger.Error("Failed to execute command in container", zap.Error(err), zap.String("containerID", containerID))
+		utils.RespondError(w, errors.InternalServerError("Failed to execute command", err))
+		return
+	}
+
+	logger.Info("Command executed in container", zap.String("containerID", containerID))
+	utils.RespondSuccess(w, map[string]string{"output": output})
+}
+
+// GetContainerTop gets running processes in a container
+func (h *DockerHandler) GetContainerTop(w http.ResponseWriter, r *http.Request) {
+	containerID := chi.URLParam(r, "id")
+
+	top, err := h.service.GetContainerTop(r.Context(), containerID)
+	if err != nil {
+		logger.Error("Failed to get container processes", zap.Error(err), zap.String("containerID", containerID))
+		utils.RespondError(w, errors.InternalServerError("Failed to get container processes", err))
+		return
+	}
+
+	utils.RespondSuccess(w, top)
+}
