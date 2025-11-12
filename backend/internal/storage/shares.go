@@ -14,6 +14,53 @@ import (
 	"gorm.io/gorm"
 )
 
+// findSmbdPath searches for smbd binary in common locations
+func findSmbdPath() (string, error) {
+	// Try exec.LookPath first (checks PATH)
+	if path, err := exec.LookPath("smbd"); err == nil {
+		return path, nil
+	}
+
+	// Check common installation paths
+	commonPaths := []string{
+		"/usr/sbin/smbd",
+		"/usr/bin/smbd",
+		"/sbin/smbd",
+		"/usr/local/sbin/smbd",
+	}
+
+	for _, path := range commonPaths {
+		if _, err := os.Stat(path); err == nil {
+			return path, nil
+		}
+	}
+
+	return "", fmt.Errorf("smbd not found in PATH or common locations")
+}
+
+// findExportfsPath searches for exportfs binary in common locations
+func findExportfsPath() (string, error) {
+	// Try exec.LookPath first (checks PATH)
+	if path, err := exec.LookPath("exportfs"); err == nil {
+		return path, nil
+	}
+
+	// Check common installation paths
+	commonPaths := []string{
+		"/usr/sbin/exportfs",
+		"/usr/bin/exportfs",
+		"/sbin/exportfs",
+	}
+
+	for _, path := range commonPaths {
+		if _, err := os.Stat(path); err == nil {
+			return path, nil
+		}
+	}
+
+	return "", fmt.Errorf("exportfs not found in PATH or common locations")
+}
+
 // toShare converts models.Share to Share
 func toShare(s *models.Share) *Share {
 	var validUsers []string
@@ -182,9 +229,16 @@ func DeleteShare(id string) error {
 // configureSMBShare configures a Samba share
 func configureSMBShare(share *models.Share) error {
 	// Check if Samba is installed
-	if _, err := exec.LookPath("smbd"); err != nil {
-		return fmt.Errorf("Samba not installed")
+	smbdPath, err := findSmbdPath()
+	if err != nil {
+		logger.Warn("Samba not installed - share created but network access disabled",
+			zap.String("share", share.Name),
+			zap.String("note", "Install Samba to enable network access: apt install samba"),
+			zap.Error(err))
+		return nil // Don't fail - share will work locally for File Manager
 	}
+
+	logger.Info("Found Samba", zap.String("path", smbdPath))
 
 	// Build Samba configuration
 	config := fmt.Sprintf(`
@@ -244,9 +298,16 @@ func removeSMBShare(share *models.Share) error {
 // configureNFSShare configures an NFS export
 func configureNFSShare(share *models.Share) error {
 	// Check if NFS is installed
-	if _, err := exec.LookPath("exportfs"); err != nil {
-		return fmt.Errorf("NFS not installed")
+	exportfsPath, err := findExportfsPath()
+	if err != nil {
+		logger.Warn("NFS not installed - share created but network access disabled",
+			zap.String("share", share.Name),
+			zap.String("note", "Install NFS to enable network access: apt install nfs-kernel-server"),
+			zap.Error(err))
+		return nil // Don't fail - share will work locally for File Manager
 	}
+
+	logger.Info("Found NFS", zap.String("path", exportfsPath))
 
 	// Build export entry
 	export := fmt.Sprintf("%s *(rw,sync,no_subtree_check)\n", share.Path)
