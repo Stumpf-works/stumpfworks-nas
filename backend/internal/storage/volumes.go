@@ -407,15 +407,54 @@ func createSingleVolume(req *CreateVolumeRequest) (*Volume, error) {
 		disk = "/dev/" + disk
 	}
 
-	// Format the disk
-	formatReq := &FormatDiskRequest{
-		Disk:       disk,
-		Filesystem: req.Filesystem,
-		Label:      req.Name,
+	// Validate disk exists
+	if _, err := os.Stat(disk); os.IsNotExist(err) {
+		return nil, fmt.Errorf("disk not found: %s", disk)
 	}
 
-	if err := FormatDisk(formatReq); err != nil {
-		return nil, fmt.Errorf("failed to format disk: %w", err)
+	// Check if disk already has a filesystem
+	existingFS := getExistingFilesystem(disk)
+	if existingFS != "" {
+		logger.Info("Disk already has a filesystem",
+			zap.String("disk", disk),
+			zap.String("filesystem", existingFS))
+
+		// If filesystem matches requested, skip formatting
+		if existingFS == req.Filesystem {
+			logger.Info("Filesystem matches requested type, skipping format",
+				zap.String("disk", disk),
+				zap.String("filesystem", existingFS))
+		} else {
+			// Different filesystem, need to format
+			logger.Warn("Disk has different filesystem, formatting will destroy data",
+				zap.String("disk", disk),
+				zap.String("existing", existingFS),
+				zap.String("requested", req.Filesystem))
+
+			formatReq := &FormatDiskRequest{
+				Disk:       disk,
+				Filesystem: req.Filesystem,
+				Label:      req.Name,
+				Force:      true,
+			}
+
+			if err := FormatDisk(formatReq); err != nil {
+				return nil, fmt.Errorf("failed to format disk: %w", err)
+			}
+		}
+	} else {
+		// No filesystem, format the disk
+		logger.Info("No filesystem detected, formatting disk", zap.String("disk", disk))
+
+		formatReq := &FormatDiskRequest{
+			Disk:       disk,
+			Filesystem: req.Filesystem,
+			Label:      req.Name,
+		}
+
+		if err := FormatDisk(formatReq); err != nil {
+			return nil, fmt.Errorf("failed to format disk: %w", err)
+		}
 	}
 
 	// Create mount point and mount
@@ -423,17 +462,29 @@ func createSingleVolume(req *CreateVolumeRequest) (*Volume, error) {
 		return nil, fmt.Errorf("failed to create mount point: %w", err)
 	}
 
+	// Mount the disk
 	cmd := exec.Command("mount", disk, req.MountPoint)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return nil, fmt.Errorf("failed to mount: %s: %w", string(output), err)
 	}
 
-	// Add to /etc/fstab for persistence
-	addToFstab(disk, req.MountPoint, req.Filesystem)
+	// Add to /etc/fstab for persistence (optional, could be dangerous in dev)
+	logger.Info("Skipping /etc/fstab update - not safe for development")
+	// addToFstab(disk, req.MountPoint, req.Filesystem)
 
-	logger.Info("Single volume created successfully", zap.String("name", req.Name))
+	logger.Info("Single volume created successfully", zap.String("name", req.Name), zap.String("mount", req.MountPoint))
 
 	return GetVolume(filepath.Base(disk))
+}
+
+// getExistingFilesystem checks if a disk/partition has an existing filesystem
+func getExistingFilesystem(disk string) string {
+	cmd := exec.Command("blkid", "-s", "TYPE", "-o", "value", disk)
+	output, err := cmd.Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(output))
 }
 
 // DeleteVolume deletes a storage volume
