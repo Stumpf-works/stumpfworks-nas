@@ -19,6 +19,7 @@ import (
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/docker"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/plugins"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/updates"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
 	"go.uber.org/zap"
 )
@@ -121,6 +122,15 @@ func main() {
 		logger.Info("Failed login tracking service initialized")
 	}
 
+	// Initialize Update service
+	if err := initializeUpdateService(); err != nil {
+		logger.Warn("Update service initialization failed",
+			zap.Error(err),
+			zap.String("message", "Update checking may be limited"))
+	} else {
+		logger.Info("Update service initialized")
+	}
+
 	// Create HTTP router
 	router := api.NewRouter(cfg)
 
@@ -207,5 +217,12 @@ func initializeAuditLog() error {
 // Returns error if service fails to initialize, but this is non-fatal
 func initializeFailedLoginService() error {
 	_, err := auth.InitializeFailedLoginService()
+	return err
+}
+
+// initializeUpdateService initializes the Update service
+// Returns error if service fails to initialize, but this is non-fatal
+func initializeUpdateService() error {
+	_, err := updates.Initialize()
 	return err
 }

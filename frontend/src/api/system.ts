@@ -47,6 +47,37 @@ export interface UpdateInfo {
   changeLog: string[];
 }
 
+export interface ReleaseAsset {
+  name: string;
+  browser_download_url: string;
+  size: number;
+}
+
+export interface ReleaseInfo {
+  tag_name: string;
+  name: string;
+  body: string;
+  published_at: string;
+  html_url: string;
+  assets: ReleaseAsset[];
+  prerelease: boolean;
+  draft: boolean;
+}
+
+export interface UpdateCheckResult {
+  updateAvailable: boolean;
+  currentVersion: string;
+  latestVersion: string;
+  releaseInfo?: ReleaseInfo;
+  message: string;
+}
+
+export interface VersionInfo {
+  version: string;
+  buildDate?: string;
+  commit?: string;
+}
+
 export const systemApi = {
   getInfo: async () => {
     const response = await client.get<ApiResponse<SystemInfo>>('/system/info');
@@ -65,6 +96,18 @@ export const systemApi = {
 
   applyUpdates: async () => {
     const response = await client.post<ApiResponse<{ message: string }>>('/system/updates');
+    return response.data;
+  },
+
+  // New update system endpoints
+  getCurrentVersion: async () => {
+    const response = await client.get<ApiResponse<VersionInfo>>('/system/version');
+    return response.data;
+  },
+
+  checkForUpdates: async (forceCheck?: boolean) => {
+    const url = forceCheck ? '/system/check-updates?force=true' : '/system/check-updates';
+    const response = await client.get<ApiResponse<UpdateCheckResult>>(url);
     return response.data;
   },
 };
