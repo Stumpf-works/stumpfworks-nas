@@ -14,13 +14,14 @@ export default function Window({ window }: WindowProps) {
   const minimizeWindow = useWindowStore((state) => state.minimizeWindow);
   const maximizeWindow = useWindowStore((state) => state.maximizeWindow);
   const updateWindowPosition = useWindowStore((state) => state.updateWindowPosition);
-  const updateWindowSize = useWindowStore((state) => state.updateWindowSize);
 
   const [isHoveringTitleBar, setIsHoveringTitleBar] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const windowRef = useRef<HTMLDivElement>(null);
   const titleBarRef = useRef<HTMLDivElement>(null);
+
+  const isMaximized = window.state === 'maximized';
 
   const handleMouseDown = () => {
     focusWindow(window.id);
@@ -47,7 +48,7 @@ export default function Window({ window }: WindowProps) {
         const newY = Math.max(0, e.clientY - dragStart.y); // Prevent dragging above screen
 
         updateWindowPosition(window.id, {
-          x: Math.max(0, Math.min(newX, window.innerWidth - window.size.width)),
+          x: Math.max(0, Math.min(newX, globalThis.innerWidth - window.size.width)),
           y: newY,
         });
       }
@@ -67,8 +68,6 @@ export default function Window({ window }: WindowProps) {
       document.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isDragging, dragStart, window.id, window.size.width, isMaximized, updateWindowPosition]);
-
-  const isMaximized = window.state === 'maximized';
 
   // Get the app component
   const app = getAppById(window.appId);
