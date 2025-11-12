@@ -4,6 +4,7 @@ import { storageApi, Share, CreateShareRequest } from '@/api/storage';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
+import FolderPicker from '@/components/FolderPicker';
 
 export default function ShareManager() {
   const [shares, setShares] = useState<Share[]>([]);
@@ -308,10 +309,10 @@ function ShareModal({ share, onClose, onSuccess }: ShareModalProps) {
             required
           />
 
-          <Input
+          <FolderPicker
             label="Path"
             value={formData.path}
-            onChange={(e) => setFormData({ ...formData, path: e.target.value })}
+            onChange={(path) => setFormData({ ...formData, path })}
             placeholder="/mnt/storage/share"
             required
           />
