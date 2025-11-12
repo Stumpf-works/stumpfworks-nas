@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FileInfo, formatFileSize, getFileIcon } from '../../../api/files';
+import { FileInfo, formatFileSize, getFileIcon } from '@/api/files';
 
 interface FileBrowserProps {
   files: FileInfo[];

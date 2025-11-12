@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileInfo } from '../../../api/files';
+import { FileInfo } from '@/api/files';
 
 interface FilePreviewModalProps {
   file: FileInfo;
