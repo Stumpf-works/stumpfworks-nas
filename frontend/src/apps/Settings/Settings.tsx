@@ -18,6 +18,7 @@ export function Settings() {
   const [adConfigEditing, setAdConfigEditing] = useState(false);
   const [adTestResult, setAdTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [adLoading, setAdLoading] = useState(false);
+  const [showAdSetup, setShowAdSetup] = useState(false);
 
   useEffect(() => {
     const fetchSystemInfo = async () => {
@@ -55,6 +56,25 @@ export function Settings() {
       clearAuth();
       window.location.reload();
     }
+  };
+
+  const handleSetupAd = () => {
+    // Create a default AD config
+    const defaultConfig: ADConfig = {
+      enabled: false,
+      server: '',
+      port: 389,
+      baseDN: '',
+      bindUser: '',
+      bindPassword: '',
+      userFilter: '(&(objectClass=user)(sAMAccountName=%s))',
+      groupFilter: '(&(objectClass=group)(member=%s))',
+      useTLS: false,
+      skipVerify: false,
+    };
+    setAdConfig(defaultConfig);
+    setAdConfigEditing(true);
+    setShowAdSetup(false);
   };
 
   const handleAdConfigSave = async () => {
@@ -173,24 +193,45 @@ export function Settings() {
         </Card>
 
         {/* Active Directory Configuration */}
-        {adConfig && (
-          <Card>
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  Active Directory
-                </h2>
-                {!adConfigEditing && (
-                  <Button
-                    variant="secondary"
-                    onClick={() => setAdConfigEditing(true)}
-                    size="sm"
-                  >
-                    Edit
-                  </Button>
-                )}
-              </div>
+        <Card>
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                Active Directory
+              </h2>
+              {!adConfig && !showAdSetup && (
+                <Button
+                  variant="primary"
+                  onClick={handleSetupAd}
+                  size="sm"
+                >
+                  Setup AD
+                </Button>
+              )}
+              {adConfig && !adConfigEditing && (
+                <Button
+                  variant="secondary"
+                  onClick={() => setAdConfigEditing(true)}
+                  size="sm"
+                >
+                  Edit
+                </Button>
+              )}
+            </div>
 
+            {!adConfig && !showAdSetup ? (
+              <div className="text-center py-8">
+                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  Active Directory integration is not configured yet.
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-500 mb-4">
+                  Configure AD to enable user authentication and synchronization with your directory services.
+                </p>
+                <Button variant="primary" onClick={handleSetupAd}>
+                  Configure Active Directory
+                </Button>
+              </div>
+            ) : (
               <div className="space-y-4">
                 {/* Enabled Toggle */}
                 <div className="flex items-center justify-between">
@@ -205,16 +246,17 @@ export function Settings() {
                   <button
                     onClick={() =>
                       adConfigEditing &&
+                      adConfig &&
                       setAdConfig({ ...adConfig, enabled: !adConfig.enabled })
                     }
                     disabled={!adConfigEditing}
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      adConfig.enabled ? 'bg-macos-blue' : 'bg-gray-300'
+                      adConfig?.enabled ? 'bg-macos-blue' : 'bg-gray-300'
                     } ${!adConfigEditing ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     <span
                       className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        adConfig.enabled ? 'translate-x-6' : 'translate-x-1'
+                        adConfig?.enabled ? 'translate-x-6' : 'translate-x-1'
                       }`}
                     />
                   </button>
@@ -228,9 +270,9 @@ export function Settings() {
                         Server
                       </label>
                       <Input
-                        value={adConfig.server}
+                        value={adConfig?.server || ''}
                         onChange={(e) =>
-                          setAdConfig({ ...adConfig, server: e.target.value })
+                          adConfig && setAdConfig({ ...adConfig, server: e.target.value })
                         }
                         placeholder="ldap.example.com"
                       />
@@ -241,9 +283,9 @@ export function Settings() {
                       </label>
                       <Input
                         type="number"
-                        value={adConfig.port}
+                        value={adConfig?.port || 389}
                         onChange={(e) =>
-                          setAdConfig({ ...adConfig, port: parseInt(e.target.value) })
+                          adConfig && setAdConfig({ ...adConfig, port: parseInt(e.target.value) })
                         }
                         placeholder="389"
                       />
@@ -253,9 +295,9 @@ export function Settings() {
                         Base DN
                       </label>
                       <Input
-                        value={adConfig.baseDN}
+                        value={adConfig?.baseDN || ''}
                         onChange={(e) =>
-                          setAdConfig({ ...adConfig, baseDN: e.target.value })
+                          adConfig && setAdConfig({ ...adConfig, baseDN: e.target.value })
                         }
                         placeholder="dc=example,dc=com"
                       />
@@ -265,9 +307,9 @@ export function Settings() {
                         Bind User
                       </label>
                       <Input
-                        value={adConfig.bindUser}
+                        value={adConfig?.bindUser || ''}
                         onChange={(e) =>
-                          setAdConfig({ ...adConfig, bindUser: e.target.value })
+                          adConfig && setAdConfig({ ...adConfig, bindUser: e.target.value })
                         }
                         placeholder="cn=admin,dc=example,dc=com"
                       />
@@ -278,9 +320,9 @@ export function Settings() {
                       </label>
                       <Input
                         type="password"
-                        value={adConfig.bindPassword || ''}
+                        value={adConfig?.bindPassword || ''}
                         onChange={(e) =>
-                          setAdConfig({ ...adConfig, bindPassword: e.target.value })
+                          adConfig && setAdConfig({ ...adConfig, bindPassword: e.target.value })
                         }
                         placeholder="••••••••"
                       />
@@ -290,11 +332,23 @@ export function Settings() {
                         User Filter
                       </label>
                       <Input
-                        value={adConfig.userFilter}
+                        value={adConfig?.userFilter || ''}
                         onChange={(e) =>
-                          setAdConfig({ ...adConfig, userFilter: e.target.value })
+                          adConfig && setAdConfig({ ...adConfig, userFilter: e.target.value })
                         }
-                        placeholder="(objectClass=user)"
+                        placeholder="(&(objectClass=user)(sAMAccountName=%s))"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Group Filter
+                      </label>
+                      <Input
+                        value={adConfig?.groupFilter || ''}
+                        onChange={(e) =>
+                          adConfig && setAdConfig({ ...adConfig, groupFilter: e.target.value })
+                        }
+                        placeholder="(&(objectClass=group)(member=%s))"
                       />
                     </div>
                     <div className="flex items-center justify-between">
@@ -308,15 +362,39 @@ export function Settings() {
                       </div>
                       <button
                         onClick={() =>
-                          setAdConfig({ ...adConfig, useTLS: !adConfig.useTLS })
+                          adConfig && setAdConfig({ ...adConfig, useTLS: !adConfig.useTLS })
                         }
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                          adConfig.useTLS ? 'bg-macos-blue' : 'bg-gray-300'
+                        className={`relative inline-flex h-6 w-11 items-centers rounded-full transition-colors ${
+                          adConfig?.useTLS ? 'bg-macos-blue' : 'bg-gray-300'
                         }`}
                       >
                         <span
                           className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                            adConfig.useTLS ? 'translate-x-6' : 'translate-x-1'
+                            adConfig?.useTLS ? 'translate-x-6' : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-gray-900 dark:text-gray-100">
+                          Skip TLS Verification
+                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Skip certificate verification (use for self-signed certs)
+                        </p>
+                      </div>
+                      <button
+                        onClick={() =>
+                          adConfig && setAdConfig({ ...adConfig, skipVerify: !adConfig.skipVerify })
+                        }
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                          adConfig?.skipVerify ? 'bg-macos-blue' : 'bg-gray-300'
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            adConfig?.skipVerify ? 'translate-x-6' : 'translate-x-1'
                           }`}
                         />
                       </button>
@@ -328,19 +406,19 @@ export function Settings() {
                       <div>
                         <span className="text-sm text-gray-600 dark:text-gray-400">Server:</span>
                         <p className="font-medium text-gray-900 dark:text-gray-100">
-                          {adConfig.server}:{adConfig.port}
+                          {adConfig?.server}:{adConfig?.port}
                         </p>
                       </div>
                       <div>
                         <span className="text-sm text-gray-600 dark:text-gray-400">Base DN:</span>
                         <p className="font-medium text-gray-900 dark:text-gray-100">
-                          {adConfig.baseDN}
+                          {adConfig?.baseDN}
                         </p>
                       </div>
                       <div>
                         <span className="text-sm text-gray-600 dark:text-gray-400">TLS:</span>
                         <p className="font-medium text-gray-900 dark:text-gray-100">
-                          {adConfig.useTLS ? 'Enabled' : 'Disabled'}
+                          {adConfig?.useTLS ? 'Enabled' : 'Disabled'}
                         </p>
                       </div>
                     </div>
@@ -401,9 +479,9 @@ export function Settings() {
                   )}
                 </div>
               </div>
-            </div>
-          </Card>
-        )}
+            )}
+          </div>
+        </Card>
 
         {/* System Information */}
         {systemInfo && (

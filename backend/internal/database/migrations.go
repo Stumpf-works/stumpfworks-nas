@@ -14,6 +14,7 @@ func RunMigrations() error {
 	if err := DB.AutoMigrate(
 		&models.User{},
 		&models.Share{},
+		&models.AuditLog{},
 		// Add more models here as they are created
 	); err != nil {
 		return err

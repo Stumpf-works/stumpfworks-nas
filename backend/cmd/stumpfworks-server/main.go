@@ -12,6 +12,7 @@ import (
 	"github.com/Stumpf-works/stumpfworks-nas/internal/ad"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/api"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/api/handlers"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/audit"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/backup"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/config"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database"
@@ -101,6 +102,15 @@ func main() {
 		logger.Info("Active Directory service initialized")
 	}
 
+	// Initialize Audit Log service
+	if err := initializeAuditLog(); err != nil {
+		logger.Warn("Audit log service initialization failed",
+			zap.Error(err),
+			zap.String("message", "Audit logging may be limited"))
+	} else {
+		logger.Info("Audit log service initialized")
+	}
+
 	// Create HTTP router
 	router := api.NewRouter(cfg)
 
@@ -173,5 +183,12 @@ func initializeBackup() error {
 func initializeAD() error {
 	// Initialize with default config (disabled by default)
 	_, err := ad.Initialize(nil)
+	return err
+}
+
+// initializeAuditLog initializes the Audit Log service
+// Returns error if audit log service fails to initialize, but this is non-fatal
+func initializeAuditLog() error {
+	_, err := audit.Initialize()
 	return err
 }
