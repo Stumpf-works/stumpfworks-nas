@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import SearchBar from './SearchBar';
 
 interface ToolbarProps {
   onRefresh: () => void;
@@ -9,6 +10,7 @@ interface ToolbarProps {
   onDelete: () => void;
   onPermissions: () => void;
   onToggleHidden: () => void;
+  onSearch?: (query: string) => void;
   showHidden: boolean;
   viewMode: 'list' | 'grid';
   onViewModeChange: (mode: 'list' | 'grid') => void;
@@ -26,6 +28,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
   onDelete,
   onPermissions,
   onToggleHidden,
+  onSearch,
   showHidden,
   viewMode,
   onViewModeChange,
@@ -127,6 +130,15 @@ const Toolbar: React.FC<ToolbarProps> = ({
       )}
 
       <div className="flex-1"></div>
+
+      {/* Search Bar */}
+      {onSearch && (
+        <div className="w-64">
+          <SearchBar onSearch={onSearch} />
+        </div>
+      )}
+
+      <div className="w-px h-6 bg-gray-300 dark:bg-gray-600"></div>
 
       {/* View Options */}
       <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded p-1">

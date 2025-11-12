@@ -23,6 +23,7 @@ const FileManager: React.FC = () => {
   const [browseData, setBrowseData] = useState<BrowseResponse | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [showHidden, setShowHidden] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Modals
   const [previewFile, setPreviewFile] = useState<FileInfo | null>(null);
@@ -32,6 +33,17 @@ const FileManager: React.FC = () => {
 
   // Context Menu
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; file: FileInfo | null } | null>(null);
+
+  // Filter files based on search query
+  const filteredFiles = React.useMemo(() => {
+    if (!searchQuery.trim()) {
+      return files;
+    }
+    const query = searchQuery.toLowerCase();
+    return files.filter(file =>
+      file.name.toLowerCase().includes(query)
+    );
+  }, [files, searchQuery]);
 
   // Load files for current path
   const loadFiles = useCallback(async () => {
@@ -222,6 +234,7 @@ const FileManager: React.FC = () => {
         onDelete={handleDelete}
         onPermissions={handlePermissions}
         onToggleHidden={handleToggleHidden}
+        onSearch={setSearchQuery}
         showHidden={showHidden}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
@@ -262,7 +275,7 @@ const FileManager: React.FC = () => {
               </div>
             ) : (
               <FileBrowser
-                files={files}
+                files={filteredFiles}
                 selectedFiles={selectedFiles}
                 viewMode={viewMode}
                 onFileClick={handleFileClick}
