@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/stumpfworks/nas/pkg/errors"
-	"github.com/stumpfworks/nas/pkg/logger"
+	"github.com/Stumpf-works/stumpfworks-nas/pkg/errors"
+	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
 	"go.uber.org/zap"
 )
 

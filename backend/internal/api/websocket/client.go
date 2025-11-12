@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/stumpfworks/nas/pkg/logger"
+	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
 	"go.uber.org/zap"
 )
 

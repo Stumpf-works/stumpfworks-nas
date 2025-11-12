@@ -1,10 +1,8 @@
 package users
 
 import (
-	"fmt"
-
-	"github.com/stumpfworks/nas/internal/database"
-	"github.com/stumpfworks/nas/pkg/errors"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/database"
+	"github.com/Stumpf-works/stumpfworks-nas/pkg/errors"
 	"gorm.io/gorm"
 )
 

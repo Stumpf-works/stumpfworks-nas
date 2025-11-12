@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/stumpfworks/nas/pkg/logger"
+	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
 	"go.uber.org/zap"
 )
 

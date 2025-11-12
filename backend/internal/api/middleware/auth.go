@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/stumpfworks/nas/internal/users"
-	"github.com/stumpfworks/nas/pkg/errors"
-	"github.com/stumpfworks/nas/pkg/utils"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/users"
+	"github.com/Stumpf-works/stumpfworks-nas/pkg/errors"
+	"github.com/Stumpf-works/stumpfworks-nas/pkg/utils"
 )
 
 type contextKey string

@@ -3,8 +3,8 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/stumpfworks/nas/internal/config"
-	"github.com/stumpfworks/nas/pkg/utils"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/config"
+	"github.com/Stumpf-works/stumpfworks-nas/pkg/utils"
 )
 
 // HealthCheck returns the health status of the API

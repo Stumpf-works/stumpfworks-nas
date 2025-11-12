@@ -3,9 +3,9 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/stumpfworks/nas/internal/system"
-	"github.com/stumpfworks/nas/pkg/errors"
-	"github.com/stumpfworks/nas/pkg/utils"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/system"
+	"github.com/Stumpf-works/stumpfworks-nas/pkg/errors"
+	"github.com/Stumpf-works/stumpfworks-nas/pkg/utils"
 )
 
 // GetSystemInfo returns basic system information

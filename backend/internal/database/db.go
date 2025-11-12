@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/stumpfworks/nas/internal/config"
-	"github.com/stumpfworks/nas/pkg/logger"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/config"
+	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
 	"go.uber.org/zap"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"

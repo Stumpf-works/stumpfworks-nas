@@ -1,7 +1,7 @@
 package users
 
 import (
-	"github.com/stumpfworks/nas/internal/database/models"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/database/models"
 )
 
 // User is an alias for models.User for easier imports

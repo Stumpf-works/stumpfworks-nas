@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/stumpfworks/nas/internal/config"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/config"
 )
 
 // Claims represents JWT claims
