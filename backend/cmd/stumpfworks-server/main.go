@@ -13,6 +13,7 @@ import (
 	"github.com/Stumpf-works/stumpfworks-nas/internal/api/handlers"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/config"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/docker"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
 	"go.uber.org/zap"
 )
@@ -61,6 +62,15 @@ func main() {
 	}
 	logger.Info("File service initialized")
 
+	// Initialize Docker service (non-fatal if not available)
+	if err := initializeDocker(); err != nil {
+		logger.Warn("Docker not available",
+			zap.Error(err),
+			zap.String("message", "Docker features will be disabled"))
+	} else {
+		logger.Info("Docker service initialized and available")
+	}
+
 	// Create HTTP router
 	router := api.NewRouter(cfg)
 
@@ -105,4 +115,11 @@ func main() {
 	}
 
 	logger.Info("Server stopped")
+}
+
+// initializeDocker initializes the Docker service
+// Returns error if Docker is not available, but this is non-fatal
+func initializeDocker() error {
+	_, err := docker.Initialize()
+	return err
 }
