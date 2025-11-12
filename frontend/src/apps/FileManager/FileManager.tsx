@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { FileInfo, browseFiles, BrowseResponse } from '../../api/files';
+import { FileInfo, browseFiles, BrowseResponse } from '@/api/files';
 import Toolbar from './components/Toolbar';
 import Breadcrumbs from './components/Breadcrumbs';
 import FileBrowser from './components/FileBrowser';
@@ -9,10 +9,10 @@ import FilePreviewModal from './components/FilePreviewModal';
 import NewFolderModal from './components/NewFolderModal';
 import UploadModal from './components/UploadModal';
 import PermissionsModal from './components/PermissionsModal';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuthStore } from '@/store';
 
 const FileManager: React.FC = () => {
-  const { user } = useAuth();
+  const user = useAuthStore((state) => state.user);
   const [currentPath, setCurrentPath] = useState<string>('/');
   const [files, setFiles] = useState<FileInfo[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { createDirectory } from '../../../api/files';
+import { createDirectory } from '@/api/files';
 
 interface NewFolderModalProps {
   currentPath: string;

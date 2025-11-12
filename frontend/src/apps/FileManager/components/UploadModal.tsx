@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { uploadFile } from '../../../api/files';
+import { uploadFile } from '@/api/files';
 
 interface UploadModalProps {
   currentPath: string;
