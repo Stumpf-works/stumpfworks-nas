@@ -14,6 +14,14 @@ export default function ContainerManager() {
     null
   );
   const [deleteModal, setDeleteModal] = useState<DockerContainer | null>(null);
+  const [resourcesModal, setResourcesModal] = useState<DockerContainer | null>(null);
+  const [execModal, setExecModal] = useState<DockerContainer | null>(null);
+  const [execCommand, setExecCommand] = useState('ls -la');
+  const [execOutput, setExecOutput] = useState('');
+  const [resourceLimits, setResourceLimits] = useState({
+    memory: '',
+    cpuShares: '',
+  });
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
@@ -110,6 +118,49 @@ export default function ContainerManager() {
         setLogsModal({ container, logs: response.data });
       } else {
         alert(response.error?.message || 'Failed to load logs');
+      }
+    } catch (err) {
+      alert(getErrorMessage(err));
+    }
+  };
+
+  const handleUpdateResources = async () => {
+    if (!resourcesModal) return;
+
+    try {
+      const resources: any = {};
+
+      if (resourceLimits.memory) {
+        // Convert MB to bytes
+        resources.memory = parseInt(resourceLimits.memory) * 1024 * 1024;
+      }
+
+      if (resourceLimits.cpuShares) {
+        resources.cpuShares = parseInt(resourceLimits.cpuShares);
+      }
+
+      const response = await dockerApi.updateContainerResources(resourcesModal.id, resources);
+      if (response.success) {
+        setResourcesModal(null);
+        setResourceLimits({ memory: '', cpuShares: '' });
+        loadContainers();
+      } else {
+        alert(response.error?.message || 'Failed to update resources');
+      }
+    } catch (err) {
+      alert(getErrorMessage(err));
+    }
+  };
+
+  const handleExecCommand = async () => {
+    if (!execModal || !execCommand.trim()) return;
+
+    try {
+      const response = await dockerApi.execContainer(execModal.id, execCommand.split(' '));
+      if (response.success && response.data) {
+        setExecOutput(response.data.output);
+      } else {
+        alert(response.error?.message || 'Failed to execute command');
       }
     } catch (err) {
       alert(getErrorMessage(err));
@@ -297,6 +348,27 @@ export default function ContainerManager() {
                   >
                     📄 Logs
                   </Button>
+                  {container.state.toLowerCase() === 'running' && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => {
+                        setExecModal(container);
+                        setExecOutput('');
+                      }}
+                      className="flex-1 min-w-[80px]"
+                    >
+                      💻 Exec
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => setResourcesModal(container)}
+                    className="flex-1 min-w-[80px]"
+                  >
+                    ⚙️ Resources
+                  </Button>
                   <Button
                     size="sm"
                     variant="danger"
@@ -390,6 +462,155 @@ export default function ContainerManager() {
                   disabled={actionLoading === deleteModal.id}
                 >
                   {actionLoading === deleteModal.id ? 'Deleting...' : 'Delete'}
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Resource Limits Modal */}
+      <AnimatePresence>
+        {resourcesModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={() => setResourcesModal(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-gray-100">
+                Update Resource Limits
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Container: {resourcesModal.name}
+              </p>
+
+              <div className="space-y-4 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Memory Limit (MB)
+                  </label>
+                  <input
+                    type="number"
+                    value={resourceLimits.memory}
+                    onChange={(e) =>
+                      setResourceLimits({ ...resourceLimits, memory: e.target.value })
+                    }
+                    placeholder="e.g., 512"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    CPU Shares (Relative Weight)
+                  </label>
+                  <input
+                    type="number"
+                    value={resourceLimits.cpuShares}
+                    onChange={(e) =>
+                      setResourceLimits({ ...resourceLimits, cpuShares: e.target.value })
+                    }
+                    placeholder="e.g., 1024"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setResourcesModal(null);
+                    setResourceLimits({ memory: '', cpuShares: '' });
+                  }}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleUpdateResources} className="flex-1">
+                  Update
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Exec Command Modal */}
+      <AnimatePresence>
+        {execModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={() => setExecModal(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-gray-100">
+                Execute Command
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Container: {execModal.name}
+              </p>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Command
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={execCommand}
+                    onChange={(e) => setExecCommand(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        handleExecCommand();
+                      }
+                    }}
+                    placeholder="ls -la"
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-mono text-sm"
+                  />
+                  <Button onClick={handleExecCommand}>Run</Button>
+                </div>
+              </div>
+
+              {execOutput && (
+                <div className="flex-1 overflow-y-auto">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Output
+                  </label>
+                  <pre className="bg-gray-900 text-green-400 p-4 rounded-md text-xs font-mono whitespace-pre-wrap overflow-x-auto">
+                    {execOutput}
+                  </pre>
+                </div>
+              )}
+
+              <div className="mt-4 flex justify-end">
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setExecModal(null);
+                    setExecCommand('ls -la');
+                    setExecOutput('');
+                  }}
+                >
+                  Close
                 </Button>
               </div>
             </motion.div>

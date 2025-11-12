@@ -524,3 +524,66 @@ func (s *Service) PruneSystem(ctx context.Context) (types.DiskUsage, error) {
 
 	return usage, nil
 }
+
+// UpdateContainerResources updates resource limits for a container
+func (s *Service) UpdateContainerResources(ctx context.Context, containerID string, resources container.Resources) error {
+	if !s.available {
+		return fmt.Errorf("Docker is not available")
+	}
+
+	updateConfig := container.UpdateConfig{
+		Resources: resources,
+	}
+
+	_, err := s.client.ContainerUpdate(ctx, containerID, updateConfig)
+	if err != nil {
+		return fmt.Errorf("failed to update container resources: %w", err)
+	}
+
+	return nil
+}
+
+// ExecContainer executes a command in a container
+func (s *Service) ExecContainer(ctx context.Context, containerID string, cmd []string) (string, error) {
+	if !s.available {
+		return "", fmt.Errorf("Docker is not available")
+	}
+
+	execConfig := container.ExecOptions{
+		AttachStdout: true,
+		AttachStderr: true,
+		Cmd:          cmd,
+	}
+
+	execID, err := s.client.ContainerExecCreate(ctx, containerID, execConfig)
+	if err != nil {
+		return "", fmt.Errorf("failed to create exec: %w", err)
+	}
+
+	resp, err := s.client.ContainerExecAttach(ctx, execID.ID, container.ExecAttachOptions{})
+	if err != nil {
+		return "", fmt.Errorf("failed to attach to exec: %w", err)
+	}
+	defer resp.Close()
+
+	output, err := io.ReadAll(resp.Reader)
+	if err != nil {
+		return "", fmt.Errorf("failed to read exec output: %w", err)
+	}
+
+	return string(output), nil
+}
+
+// GetContainerTop gets running processes in a container
+func (s *Service) GetContainerTop(ctx context.Context, containerID string) (container.ContainerTopOKBody, error) {
+	if !s.available {
+		return container.ContainerTopOKBody{}, fmt.Errorf("Docker is not available")
+	}
+
+	top, err := s.client.ContainerTop(ctx, containerID, []string{})
+	if err != nil {
+		return container.ContainerTopOKBody{}, fmt.Errorf("failed to get container processes: %w", err)
+	}
+
+	return top, nil
+}

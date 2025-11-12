@@ -207,11 +207,14 @@ func NewRouter(cfg *config.Config) http.Handler {
 				r.Get("/containers/{id}", dockerHandler.InspectContainer)
 				r.Get("/containers/{id}/stats", dockerHandler.GetContainerStats)
 				r.Get("/containers/{id}/logs", dockerHandler.GetContainerLogs)
+				r.Get("/containers/{id}/top", dockerHandler.GetContainerTop)
 				r.Post("/containers/{id}/start", dockerHandler.StartContainer)
 				r.Post("/containers/{id}/stop", dockerHandler.StopContainer)
 				r.Post("/containers/{id}/restart", dockerHandler.RestartContainer)
 				r.Post("/containers/{id}/pause", dockerHandler.PauseContainer)
 				r.Post("/containers/{id}/unpause", dockerHandler.UnpauseContainer)
+				r.Post("/containers/{id}/exec", dockerHandler.ExecContainer)
+				r.Put("/containers/{id}/resources", dockerHandler.UpdateContainerResources)
 				r.Delete("/containers/{id}", dockerHandler.RemoveContainer)
 
 				// Image routes

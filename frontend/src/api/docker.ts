@@ -122,6 +122,30 @@ export const dockerApi = {
     return response.data;
   },
 
+  async getContainerTop(id: string): Promise<ApiResponse<any>> {
+    const response = await client.get(`/docker/containers/${id}/top`);
+    return response.data;
+  },
+
+  async execContainer(id: string, command: string[]): Promise<ApiResponse<{ output: string }>> {
+    const response = await client.post(`/docker/containers/${id}/exec`, { command });
+    return response.data;
+  },
+
+  async updateContainerResources(
+    id: string,
+    resources: {
+      memory?: number;
+      memorySwap?: number;
+      cpuShares?: number;
+      cpuQuota?: number;
+      cpuPeriod?: number;
+    }
+  ): Promise<ApiResponse<any>> {
+    const response = await client.put(`/docker/containers/${id}/resources`, resources);
+    return response.data;
+  },
+
   // Images
   async listImages(): Promise<ApiResponse<DockerImage[]>> {
     const response = await client.get('/docker/images');
