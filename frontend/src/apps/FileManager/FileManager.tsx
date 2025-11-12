@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { FileInfo, browseFiles, BrowseResponse } from '@/api/files';
+import { FileInfo, browseFiles, BrowseResponse, uploadFile } from '@/api/files';
 import Toolbar from './components/Toolbar';
 import Breadcrumbs from './components/Breadcrumbs';
 import FileBrowser from './components/FileBrowser';
@@ -9,6 +9,8 @@ import FilePreviewModal from './components/FilePreviewModal';
 import NewFolderModal from './components/NewFolderModal';
 import UploadModal from './components/UploadModal';
 import PermissionsModal from './components/PermissionsModal';
+import ContextMenu from './components/ContextMenu';
+import DropZone from './components/DropZone';
 import { useAuthStore } from '@/store';
 
 const FileManager: React.FC = () => {
@@ -27,6 +29,9 @@ const FileManager: React.FC = () => {
   const [showNewFolderModal, setShowNewFolderModal] = useState<boolean>(false);
   const [showUploadModal, setShowUploadModal] = useState<boolean>(false);
   const [permissionsFile, setPermissionsFile] = useState<FileInfo | null>(null);
+
+  // Context Menu
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; file: FileInfo | null } | null>(null);
 
   // Load files for current path
   const loadFiles = useCallback(async () => {
@@ -142,6 +147,70 @@ const FileManager: React.FC = () => {
     setShowHidden(!showHidden);
   };
 
+  // Drag & Drop Handler
+  const handleFilesDropped = async (fileList: FileList) => {
+    const filesArray = Array.from(fileList);
+    console.log(`Dropped ${filesArray.length} files`);
+
+    // Upload files one by one
+    for (const file of filesArray) {
+      try {
+        await uploadFile(currentPath, file, (progress) => {
+          console.log(`Uploading ${file.name}: ${progress}%`);
+        });
+      } catch (err: any) {
+        alert(`Failed to upload ${file.name}: ${err.message}`);
+        break;
+      }
+    }
+
+    // Refresh after all uploads
+    loadFiles();
+  };
+
+  // Context Menu Handlers
+  const handleContextMenu = (event: React.MouseEvent, file: FileInfo | null) => {
+    event.preventDefault();
+    setContextMenu({ x: event.clientX, y: event.clientY, file });
+  };
+
+  const handleContextMenuOpen = () => {
+    if (contextMenu?.file) {
+      if (contextMenu.file.isDir) {
+        navigateTo(contextMenu.file.path);
+      } else {
+        setPreviewFile(contextMenu.file);
+      }
+    }
+  };
+
+  const handleContextMenuDownload = () => {
+    if (contextMenu?.file && !contextMenu.file.isDir) {
+      const { downloadFile } = require('../../api/files');
+      downloadFile(contextMenu.file.path);
+    }
+  };
+
+  const handleContextMenuDelete = async () => {
+    if (contextMenu?.file) {
+      if (confirm(`Delete "${contextMenu.file.name}"?`)) {
+        try {
+          const { deleteFiles } = require('../../api/files');
+          await deleteFiles([contextMenu.file.path], true);
+          loadFiles();
+        } catch (err: any) {
+          alert('Failed to delete: ' + err.message);
+        }
+      }
+    }
+  };
+
+  const handleContextMenuPermissions = () => {
+    if (contextMenu?.file) {
+      setPermissionsFile(contextMenu.file);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900">
       {/* Toolbar */}
@@ -168,36 +237,44 @@ const FileManager: React.FC = () => {
         onNavigate={navigateTo}
       />
 
-      {/* File Browser */}
+      {/* File Browser with Drag & Drop */}
       <div className="flex-1 overflow-auto">
-        {loading ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <DropZone onFilesDropped={handleFilesDropped} disabled={loading}>
+          <div
+            className="h-full"
+            onContextMenu={(e) => handleContextMenu(e, null)}
+          >
+            {loading ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+              </div>
+            ) : error ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <p className="text-red-500 dark:text-red-400 mb-4">{error}</p>
+                  <button
+                    onClick={handleRefresh}
+                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                  >
+                    Retry
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <FileBrowser
+                files={files}
+                selectedFiles={selectedFiles}
+                viewMode={viewMode}
+                onFileClick={handleFileClick}
+                onFileDoubleClick={handleFileDoubleClick}
+                onSelectionChange={setSelectedFiles}
+                onContextMenu={handleContextMenu}
+                currentPath={currentPath}
+                onRefresh={loadFiles}
+              />
+            )}
           </div>
-        ) : error ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <p className="text-red-500 dark:text-red-400 mb-4">{error}</p>
-              <button
-                onClick={handleRefresh}
-                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-              >
-                Retry
-              </button>
-            </div>
-          </div>
-        ) : (
-          <FileBrowser
-            files={files}
-            selectedFiles={selectedFiles}
-            viewMode={viewMode}
-            onFileClick={handleFileClick}
-            onFileDoubleClick={handleFileDoubleClick}
-            onSelectionChange={setSelectedFiles}
-            currentPath={currentPath}
-            onRefresh={loadFiles}
-          />
-        )}
+        </DropZone>
       </div>
 
       {/* Status Bar */}
@@ -239,6 +316,21 @@ const FileManager: React.FC = () => {
           file={permissionsFile}
           onClose={() => setPermissionsFile(null)}
           onSuccess={loadFiles}
+        />
+      )}
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          file={contextMenu.file}
+          onClose={() => setContextMenu(null)}
+          onOpen={handleContextMenuOpen}
+          onDownload={handleContextMenuDownload}
+          onDelete={handleContextMenuDelete}
+          onPermissions={user?.role === 'admin' ? handleContextMenuPermissions : undefined}
+          isAdmin={user?.role === 'admin'}
         />
       )}
     </div>
