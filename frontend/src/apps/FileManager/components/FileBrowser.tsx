@@ -9,6 +9,7 @@ interface FileBrowserProps {
   onFileClick: (file: FileInfo, event: React.MouseEvent) => void;
   onFileDoubleClick: (file: FileInfo) => void;
   onSelectionChange: (selected: Set<string>) => void;
+  onContextMenu?: (event: React.MouseEvent, file: FileInfo) => void;
   currentPath: string;
   onRefresh: () => void;
 }
@@ -19,6 +20,7 @@ const FileBrowser: React.FC<FileBrowserProps> = ({
   viewMode,
   onFileClick,
   onFileDoubleClick,
+  onContextMenu,
   currentPath,
   onRefresh,
 }) => {
@@ -77,6 +79,7 @@ const FileBrowser: React.FC<FileBrowserProps> = ({
             whileTap={{ scale: 0.98 }}
             onClick={(e) => onFileClick(file, e)}
             onDoubleClick={() => onFileDoubleClick(file)}
+            onContextMenu={(e) => onContextMenu?.(e, file)}
             className={`flex flex-col items-center p-4 rounded-lg border-2 cursor-pointer transition-colors ${
               selectedFiles.has(file.path)
                 ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
@@ -147,6 +150,7 @@ const FileBrowser: React.FC<FileBrowserProps> = ({
             whileHover={{ backgroundColor: 'rgba(0, 0, 0, 0.02)' }}
             onClick={(e) => onFileClick(file, e)}
             onDoubleClick={() => onFileDoubleClick(file)}
+            onContextMenu={(e) => onContextMenu?.(e, file)}
             className={`flex items-center px-4 py-2 border-b border-gray-100 dark:border-gray-800 cursor-pointer ${
               selectedFiles.has(file.path)
                 ? 'bg-blue-50 dark:bg-blue-900/20'
