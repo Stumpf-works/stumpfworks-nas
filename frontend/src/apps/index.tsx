@@ -3,20 +3,10 @@ import { UserManager } from './UserManager/UserManager';
 import { Settings } from './Settings/Settings';
 import { StorageManager } from './StorageManager/StorageManager';
 import FileManager from './FileManager/FileManager';
+import { NetworkManager } from './NetworkManager/NetworkManager';
 import type { App } from '@/types';
 
 // Placeholder components for apps not yet implemented
-const PlaceholderApp = ({ name }: { name: string }) => (
-  <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-macos-dark-50">
-    <div className="text-center">
-      <div className="text-6xl mb-4">🚧</div>
-      <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-        {name}
-      </h2>
-      <p className="text-gray-600 dark:text-gray-400">Coming Soon</p>
-    </div>
-  </div>
-);
 
 export const registeredApps: App[] = [
   {
@@ -55,9 +45,9 @@ export const registeredApps: App[] = [
     id: 'network',
     name: 'Network',
     icon: '🌐',
-    component: () => <PlaceholderApp name="Network Manager" />,
-    defaultSize: { width: 800, height: 600 },
-    minSize: { width: 600, height: 400 },
+    component: NetworkManager,
+    defaultSize: { width: 1200, height: 800 },
+    minSize: { width: 900, height: 600 },
   },
   {
     id: 'settings',

@@ -153,10 +153,48 @@ func NewRouter(cfg *config.Config) http.Handler {
 				})
 			})
 
-			// Network routes (will implement in next phase)
-			// r.Route("/network", func(r chi.Router) {
-			// 	r.Get("/interfaces", handlers.ListInterfaces)
-			// })
+			// Network routes
+			r.Route("/network", func(r chi.Router) {
+				netHandler := handlers.NewNetworkHandler()
+
+				// Interface management
+				r.Get("/interfaces", netHandler.ListInterfaces)
+				r.Get("/interfaces/stats", netHandler.GetInterfaceStats)
+
+				// Routes and DNS
+				r.Get("/routes", netHandler.GetRoutes)
+				r.Get("/dns", netHandler.GetDNS)
+
+				// Firewall (read-only)
+				r.Get("/firewall", netHandler.GetFirewallStatus)
+
+				// Diagnostics
+				r.Post("/diagnostics/ping", netHandler.Ping)
+				r.Post("/diagnostics/traceroute", netHandler.Traceroute)
+				r.Post("/diagnostics/netstat", netHandler.Netstat)
+
+				// Admin-only network operations
+				r.Group(func(r chi.Router) {
+					r.Use(mw.AdminOnly)
+
+					// Interface configuration
+					r.Post("/interfaces/{name}/state", netHandler.SetInterfaceState)
+					r.Post("/interfaces/{name}/configure", netHandler.ConfigureInterface)
+
+					// DNS configuration
+					r.Post("/dns", netHandler.SetDNS)
+
+					// Firewall management
+					r.Post("/firewall/state", netHandler.SetFirewallState)
+					r.Post("/firewall/rules", netHandler.AddFirewallRule)
+					r.Delete("/firewall/rules/{number}", netHandler.DeleteFirewallRule)
+					r.Post("/firewall/default", netHandler.SetDefaultPolicy)
+					r.Post("/firewall/reset", netHandler.ResetFirewall)
+
+					// Wake-on-LAN
+					r.Post("/wol", netHandler.WakeOnLAN)
+				})
+			})
 
 			// Plugin routes (will implement in next phase)
 			// r.Route("/plugins", func(r chi.Router) {
