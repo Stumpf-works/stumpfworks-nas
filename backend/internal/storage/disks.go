@@ -463,33 +463,45 @@ func FormatDisk(req *FormatDiskRequest) error {
 		exec.Command("umount", diskPath).Run()
 	}
 
-	// Format based on filesystem type
-	var cmd *exec.Cmd
+	// Determine the mkfs command based on filesystem type
+	var mkfsCmd string
+	var args []string
+
 	switch req.Filesystem {
 	case "ext4":
-		args := []string{"-F"}
+		mkfsCmd = "mkfs.ext4"
+		args = []string{"-F"}
 		if req.Label != "" {
 			args = append(args, "-L", req.Label)
 		}
-		args = append(args, diskPath)
-		cmd = exec.Command("mkfs.ext4", args...)
 	case "xfs":
-		args := []string{"-f"}
+		mkfsCmd = "mkfs.xfs"
+		args = []string{"-f"}
 		if req.Label != "" {
 			args = append(args, "-L", req.Label)
 		}
-		args = append(args, diskPath)
-		cmd = exec.Command("mkfs.xfs", args...)
 	case "btrfs":
-		args := []string{"-f"}
+		mkfsCmd = "mkfs.btrfs"
+		args = []string{"-f"}
 		if req.Label != "" {
 			args = append(args, "-L", req.Label)
 		}
-		args = append(args, diskPath)
-		cmd = exec.Command("mkfs.btrfs", args...)
 	default:
 		return fmt.Errorf("unsupported filesystem: %s", req.Filesystem)
 	}
+
+	// Check if the filesystem tool is available
+	if _, err := exec.LookPath(mkfsCmd); err != nil {
+		logger.Warn("Filesystem tool not available",
+			zap.String("tool", mkfsCmd),
+			zap.String("disk", diskPath),
+			zap.String("filesystem", req.Filesystem))
+		return fmt.Errorf("filesystem tool not available: %s is not installed on this system. Please install the required packages (e.g., e2fsprogs for ext4, xfsprogs for xfs, btrfs-progs for btrfs)", mkfsCmd)
+	}
+
+	// Format the disk
+	args = append(args, diskPath)
+	cmd := exec.Command(mkfsCmd, args...)
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
