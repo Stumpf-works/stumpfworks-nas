@@ -21,8 +21,8 @@ const FileBrowser: React.FC<FileBrowserProps> = ({
   onFileClick,
   onFileDoubleClick,
   onContextMenu,
-  currentPath,
-  onRefresh,
+  currentPath: _currentPath, // Reserved for future use
+  onRefresh: _onRefresh, // Reserved for future use
 }) => {
   const [sortBy, setSortBy] = useState<'name' | 'size' | 'date'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
