@@ -255,10 +255,20 @@ func NewRouter(cfg *config.Config) http.Handler {
 				r.Get("/stacks/{name}/compose", composeHandler.GetComposeFile)
 			})
 
-			// Plugin routes (will implement in next phase)
-			// r.Route("/plugins", func(r chi.Router) {
-			// 	r.Get("/", handlers.ListPlugins)
-			// })
+			// Plugin routes
+			r.Route("/plugins", func(r chi.Router) {
+				pluginHandler := handlers.NewPluginHandler()
+				r.Use(pluginHandler.CheckAvailability)
+
+				// Plugin management
+				r.Get("/", pluginHandler.ListPlugins)
+				r.Get("/{id}", pluginHandler.GetPlugin)
+				r.Post("/install", pluginHandler.InstallPlugin)
+				r.Delete("/{id}", pluginHandler.UninstallPlugin)
+				r.Post("/{id}/enable", pluginHandler.EnablePlugin)
+				r.Post("/{id}/disable", pluginHandler.DisablePlugin)
+				r.Put("/{id}/config", pluginHandler.UpdatePluginConfig)
+			})
 		})
 	})
 
