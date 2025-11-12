@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore, useThemeStore } from '@/store';
-import { systemApi } from '@/api/system';
+import { systemApi, type UpdateCheckResult } from '@/api/system';
 import { authApi } from '@/api/auth';
 import { adApi, type ADConfig } from '@/api/ad';
+import { getErrorMessage } from '@/api/client';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -19,6 +20,11 @@ export function Settings() {
   const [adTestResult, setAdTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [adLoading, setAdLoading] = useState(false);
   const [showAdSetup, setShowAdSetup] = useState(false);
+
+  // Update checking state
+  const [updateCheckResult, setUpdateCheckResult] = useState<UpdateCheckResult | null>(null);
+  const [checkingUpdates, setCheckingUpdates] = useState(false);
+  const [updateError, setUpdateError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchSystemInfo = async () => {
@@ -109,6 +115,24 @@ export function Settings() {
       setAdTestResult({ success: false, message: 'Connection test failed' });
     } finally {
       setAdLoading(false);
+    }
+  };
+
+  const handleCheckForUpdates = async (forceCheck = false) => {
+    setCheckingUpdates(true);
+    setUpdateError(null);
+    try {
+      const response = await systemApi.checkForUpdates(forceCheck);
+      if (response.success && response.data) {
+        setUpdateCheckResult(response.data);
+      } else {
+        setUpdateError(response.error?.message || 'Failed to check for updates');
+      }
+    } catch (error) {
+      console.error('Failed to check for updates:', error);
+      setUpdateError(getErrorMessage(error));
+    } finally {
+      setCheckingUpdates(false);
     }
   };
 
@@ -532,30 +556,120 @@ export function Settings() {
           </Card>
         )}
 
-        {/* About */}
+        {/* About & Updates */}
         <Card>
           <div className="p-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-              About
+              About & Updates
             </h2>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Application:</span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">
-                  Stumpf.Works NAS
-                </span>
+            <div className="space-y-4">
+              {/* Application Info */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Application:</span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">
+                    Stumpf.Works NAS
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Version:</span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">
+                    v0.3.0
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">License:</span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">
+                    MIT
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Version:</span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">
-                  0.2.1-alpha
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600 dark:text-gray-400">License:</span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">
-                  MIT
-                </span>
+
+              {/* Update Check Section */}
+              <div className="pt-4 border-t border-gray-200 dark:border-macos-dark-300">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                    Software Updates
+                  </h3>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleCheckForUpdates(true)}
+                    disabled={checkingUpdates}
+                  >
+                    {checkingUpdates ? 'Checking...' : 'Check for Updates'}
+                  </Button>
+                </div>
+
+                {/* Update Check Result */}
+                {updateCheckResult && (
+                  <div className="space-y-3">
+                    {updateCheckResult.updateAvailable ? (
+                      <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <p className="font-semibold text-blue-900 dark:text-blue-100">
+                              Update Available!
+                            </p>
+                            <p className="text-sm text-blue-800 dark:text-blue-200 mt-1">
+                              {updateCheckResult.currentVersion} → {updateCheckResult.latestVersion}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Release Notes */}
+                        {updateCheckResult.releaseInfo && (
+                          <div className="mt-3">
+                            <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
+                              Release Notes:
+                            </p>
+                            <div className="text-xs text-blue-800 dark:text-blue-200 max-h-32 overflow-y-auto bg-blue-100/50 dark:bg-blue-900/10 p-2 rounded">
+                              <pre className="whitespace-pre-wrap font-mono">
+                                {updateCheckResult.releaseInfo.body || 'No release notes available'}
+                              </pre>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Download Button */}
+                        {updateCheckResult.releaseInfo?.html_url && (
+                          <div className="mt-3">
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              onClick={() => window.open(updateCheckResult.releaseInfo!.html_url, '_blank')}
+                              className="w-full"
+                            >
+                              Download Update from GitHub
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                        <p className="text-sm text-green-800 dark:text-green-200">
+                          ✓ {updateCheckResult.message}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Error Message */}
+                {updateError && (
+                  <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                    <p className="text-sm text-red-800 dark:text-red-200">
+                      {updateError}
+                    </p>
+                  </div>
+                )}
+
+                {/* Initial State */}
+                {!updateCheckResult && !updateError && !checkingUpdates && (
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Click "Check for Updates" to see if a new version is available.
+                  </p>
+                )}
               </div>
             </div>
           </div>
