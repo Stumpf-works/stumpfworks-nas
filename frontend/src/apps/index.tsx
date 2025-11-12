@@ -5,6 +5,7 @@ import { StorageManager } from './StorageManager/StorageManager';
 import FileManager from './FileManager/FileManager';
 import { NetworkManager } from './NetworkManager/NetworkManager';
 import { DockerManager } from './DockerManager/DockerManager';
+import { PluginManager } from './PluginManager/PluginManager';
 import type { App } from '@/types';
 
 // Placeholder components for apps not yet implemented
@@ -55,6 +56,14 @@ export const registeredApps: App[] = [
     name: 'Docker',
     icon: '🐳',
     component: DockerManager,
+    defaultSize: { width: 1200, height: 800 },
+    minSize: { width: 900, height: 600 },
+  },
+  {
+    id: 'plugins',
+    name: 'Plugins',
+    icon: '🔌',
+    component: PluginManager,
     defaultSize: { width: 1200, height: 800 },
     minSize: { width: 900, height: 600 },
   },

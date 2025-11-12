@@ -14,6 +14,7 @@ import (
 	"github.com/Stumpf-works/stumpfworks-nas/internal/config"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/docker"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/plugins"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
 	"go.uber.org/zap"
 )
@@ -71,6 +72,15 @@ func main() {
 		logger.Info("Docker service initialized and available")
 	}
 
+	// Initialize Plugin service (non-fatal if fails)
+	if err := initializePlugins(); err != nil {
+		logger.Warn("Plugin service initialization failed",
+			zap.Error(err),
+			zap.String("message", "Plugin features may be limited"))
+	} else {
+		logger.Info("Plugin service initialized")
+	}
+
 	// Create HTTP router
 	router := api.NewRouter(cfg)
 
@@ -121,5 +131,12 @@ func main() {
 // Returns error if Docker is not available, but this is non-fatal
 func initializeDocker() error {
 	_, err := docker.Initialize()
+	return err
+}
+
+// initializePlugins initializes the Plugin service
+// Returns error if plugin service fails to initialize, but this is non-fatal
+func initializePlugins() error {
+	_, err := plugins.Initialize("")
 	return err
 }
