@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { usersApi, CreateUserRequest, UpdateUserRequest } from '@/api/users';
 import { User } from '@/api/auth';
+import { adApi, type ADUser } from '@/api/ad';
 import { getErrorMessage } from '@/api/client';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -9,9 +10,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 export function UserManager() {
   const [users, setUsers] = useState<User[]>([]);
+  const [adUsers, setAdUsers] = useState<ADUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [adLoading, setAdLoading] = useState(false);
   const [error, setError] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showAdSyncModal, setShowAdSyncModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
 
   // Form state
@@ -100,6 +104,42 @@ export function UserManager() {
     }
   };
 
+  const loadAdUsers = async () => {
+    setAdLoading(true);
+    setError('');
+    try {
+      const response = await adApi.listUsers();
+      if (response.success && response.data) {
+        setAdUsers(response.data);
+        setShowAdSyncModal(true);
+      } else {
+        setError(response.error?.message || 'Failed to load AD users');
+      }
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setAdLoading(false);
+    }
+  };
+
+  const handleSyncAdUser = async (username: string) => {
+    setAdLoading(true);
+    setError('');
+    try {
+      const response = await adApi.syncUser(username);
+      if (response.success) {
+        loadUsers();
+        setShowAdSyncModal(false);
+      } else {
+        setError(response.error?.message || 'Failed to sync user');
+      }
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setAdLoading(false);
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       username: '',
@@ -150,9 +190,14 @@ export function UserManager() {
             Manage system users and permissions
           </p>
         </div>
-        <Button onClick={() => setShowCreateModal(true)}>
-          + Create User
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={loadAdUsers} disabled={adLoading}>
+            {adLoading ? 'Loading...' : 'Sync from AD'}
+          </Button>
+          <Button onClick={() => setShowCreateModal(true)}>
+            + Create User
+          </Button>
+        </div>
       </div>
 
       {/* Error Display */}
@@ -340,6 +385,96 @@ export function UserManager() {
                   className="flex-1"
                 >
                   {editingUser ? 'Update' : 'Create'}
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* AD Sync Modal */}
+      <AnimatePresence>
+        {showAdSyncModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+            onClick={() => {
+              setShowAdSyncModal(false);
+              setAdUsers([]);
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white dark:bg-macos-dark-100 rounded-lg shadow-2xl p-6 w-full max-w-2xl mx-4 max-h-[80vh] overflow-hidden flex flex-col"
+            >
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+                Sync Users from Active Directory
+              </h2>
+
+              <div className="flex-1 overflow-auto mb-4">
+                {adUsers.length > 0 ? (
+                  <div className="space-y-2">
+                    {adUsers.map((adUser) => (
+                      <div
+                        key={adUser.username}
+                        className="flex items-center justify-between p-4 bg-gray-50 dark:bg-macos-dark-200 rounded-lg"
+                      >
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                            {adUser.displayName}
+                          </h3>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            {adUser.username} • {adUser.email}
+                          </p>
+                          {adUser.groups.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {adUser.groups.slice(0, 3).map((group) => (
+                                <span
+                                  key={group}
+                                  className="px-2 py-0.5 text-xs rounded bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                                >
+                                  {group}
+                                </span>
+                              ))}
+                              {adUser.groups.length > 3 && (
+                                <span className="px-2 py-0.5 text-xs text-gray-600 dark:text-gray-400">
+                                  +{adUser.groups.length - 3} more
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => handleSyncAdUser(adUser.username)}
+                          disabled={adLoading}
+                        >
+                          Sync
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                    No AD users found
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end">
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setShowAdSyncModal(false);
+                    setAdUsers([]);
+                  }}
+                >
+                  Close
                 </Button>
               </div>
             </motion.div>
