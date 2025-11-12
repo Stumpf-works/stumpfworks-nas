@@ -13,6 +13,7 @@ import (
 	"github.com/Stumpf-works/stumpfworks-nas/internal/api"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/api/handlers"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/audit"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/auth"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/backup"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/config"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database"
@@ -111,6 +112,15 @@ func main() {
 		logger.Info("Audit log service initialized")
 	}
 
+	// Initialize Failed Login Tracking service
+	if err := initializeFailedLoginService(); err != nil {
+		logger.Warn("Failed login service initialization failed",
+			zap.Error(err),
+			zap.String("message", "Failed login tracking may be limited"))
+	} else {
+		logger.Info("Failed login tracking service initialized")
+	}
+
 	// Create HTTP router
 	router := api.NewRouter(cfg)
 
@@ -190,5 +200,12 @@ func initializeAD() error {
 // Returns error if audit log service fails to initialize, but this is non-fatal
 func initializeAuditLog() error {
 	_, err := audit.Initialize()
+	return err
+}
+
+// initializeFailedLoginService initializes the Failed Login Tracking service
+// Returns error if service fails to initialize, but this is non-fatal
+func initializeFailedLoginService() error {
+	_, err := auth.InitializeFailedLoginService()
 	return err
 }

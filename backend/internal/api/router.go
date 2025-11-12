@@ -39,8 +39,9 @@ func NewRouter(cfg *config.Config) http.Handler {
 
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
-		// Public routes (no auth)
+		// Public routes (no auth, but with IP blocking check)
 		r.Group(func(r chi.Router) {
+			r.Use(mw.IPBlockMiddleware)
 			r.Post("/auth/login", handlers.Login)
 			// r.Post("/auth/register", handlers.Register) // Will implement later
 		})
@@ -307,6 +308,18 @@ func NewRouter(cfg *config.Config) http.Handler {
 				r.Get("/logs/recent", auditHandler.GetRecentAuditLogs)
 				r.Get("/logs/{id}", auditHandler.GetAuditLog)
 				r.Get("/stats", auditHandler.GetAuditStats)
+			})
+
+			// Failed Login Tracking routes
+			r.Route("/security", func(r chi.Router) {
+				failedLoginHandler := handlers.NewFailedLoginHandler()
+
+				// Security management (admin only)
+				r.Use(mw.AdminOnly)
+				r.Get("/failed-logins", failedLoginHandler.ListFailedAttempts)
+				r.Get("/blocked-ips", failedLoginHandler.GetBlockedIPs)
+				r.Post("/unblock-ip", failedLoginHandler.UnblockIP)
+				r.Get("/failed-logins/stats", failedLoginHandler.GetStats)
 			})
 
 			// Plugin routes

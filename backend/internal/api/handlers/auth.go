@@ -3,11 +3,16 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/Stumpf-works/stumpfworks-nas/internal/api/middleware"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/auth"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/database/models"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/users"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/errors"
+	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/utils"
+	"go.uber.org/zap"
 )
 
 // LoginRequest represents a login request
@@ -31,9 +36,38 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get client IP and user agent
+	ipAddress := getClientIP(r)
+	userAgent := r.UserAgent()
+
 	// Authenticate user
 	user, err := users.AuthenticateUser(req.Username, req.Password)
 	if err != nil {
+		// Track failed login attempt
+		failedLoginService := auth.GetFailedLoginService()
+		if failedLoginService != nil {
+			// Determine failure reason
+			reason := models.FailureReasonInvalidPassword
+			if strings.Contains(err.Error(), "not found") {
+				reason = models.FailureReasonUserNotFound
+			} else if strings.Contains(err.Error(), "disabled") {
+				reason = models.FailureReasonAccountDisabled
+			}
+
+			// Record failed attempt
+			if recordErr := failedLoginService.RecordFailedAttempt(
+				r.Context(),
+				req.Username,
+				ipAddress,
+				userAgent,
+				reason,
+			); recordErr != nil {
+				logger.Error("Failed to record login attempt",
+					zap.Error(recordErr),
+					zap.String("username", req.Username))
+			}
+		}
+
 		utils.RespondError(w, err)
 		return
 	}
@@ -57,6 +91,26 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		RefreshToken: refreshToken,
 		User:         users.ToResponse(user),
 	})
+}
+
+// getClientIP extracts the real IP address from the request
+func getClientIP(r *http.Request) string {
+	// Check X-Forwarded-For header
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		// Take the first IP if multiple are present
+		ips := strings.Split(xff, ",")
+		if len(ips) > 0 {
+			return strings.TrimSpace(ips[0])
+		}
+	}
+
+	// Check X-Real-IP header
+	if xri := r.Header.Get("X-Real-IP"); xri != "" {
+		return xri
+	}
+
+	// Fall back to RemoteAddr
+	return r.RemoteAddr
 }
 
 // Logout handles user logout
