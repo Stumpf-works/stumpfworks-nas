@@ -196,6 +196,43 @@ func NewRouter(cfg *config.Config) http.Handler {
 				})
 			})
 
+			// Docker routes
+			dockerHandler, err := handlers.NewSimpleDockerHandler()
+			if err == nil {
+				r.Route("/docker", func(r chi.Router) {
+					// Containers (read-only)
+					r.Get("/containers", dockerHandler.ListContainers)
+					r.Get("/containers/{id}/logs", dockerHandler.GetContainerLogs)
+
+					// Images (read-only)
+					r.Get("/images", dockerHandler.ListImages)
+
+					// Volumes (read-only)
+					r.Get("/volumes", dockerHandler.ListVolumes)
+
+					// Networks (read-only)
+					r.Get("/networks", dockerHandler.ListNetworks)
+
+					// Admin-only Docker operations
+					r.Group(func(r chi.Router) {
+						r.Use(mw.AdminOnly)
+
+						// Container management
+						r.Post("/containers/{id}/start", dockerHandler.StartContainer)
+						r.Post("/containers/{id}/stop", dockerHandler.StopContainer)
+						r.Post("/containers/{id}/restart", dockerHandler.RestartContainer)
+						r.Delete("/containers/{id}", dockerHandler.RemoveContainer)
+
+						// Image management
+						r.Post("/images/pull", dockerHandler.PullImage)
+						r.Delete("/images/{id}", dockerHandler.RemoveImage)
+
+						// Volume management
+						r.Delete("/volumes/{id}", dockerHandler.RemoveVolume)
+					})
+				})
+			}
+
 			// Plugin routes (will implement in next phase)
 			// r.Route("/plugins", func(r chi.Router) {
 			// 	r.Get("/", handlers.ListPlugins)
