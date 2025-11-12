@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Stumpf-works/stumpfworks-nas/internal/ad"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/api"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/api/handlers"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/backup"
@@ -22,7 +23,7 @@ import (
 
 const (
 	AppName    = "Stumpf.Works NAS"
-	AppVersion = "0.1.0-alpha"
+	AppVersion = "0.2.1-alpha"
 )
 
 func main() {
@@ -91,6 +92,15 @@ func main() {
 		logger.Info("Backup service initialized")
 	}
 
+	// Initialize Active Directory service (non-fatal if fails)
+	if err := initializeAD(); err != nil {
+		logger.Warn("Active Directory service initialization failed",
+			zap.Error(err),
+			zap.String("message", "AD features will be disabled"))
+	} else {
+		logger.Info("Active Directory service initialized")
+	}
+
 	// Create HTTP router
 	router := api.NewRouter(cfg)
 
@@ -155,5 +165,13 @@ func initializePlugins() error {
 // Returns error if backup service fails to initialize, but this is non-fatal
 func initializeBackup() error {
 	_, err := backup.Initialize("")
+	return err
+}
+
+// initializeAD initializes the Active Directory service
+// Returns error if AD service fails to initialize, but this is non-fatal
+func initializeAD() error {
+	// Initialize with default config (disabled by default)
+	_, err := ad.Initialize(nil)
 	return err
 }
