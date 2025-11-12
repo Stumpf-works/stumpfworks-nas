@@ -297,6 +297,18 @@ func NewRouter(cfg *config.Config) http.Handler {
 				r.Post("/users/sync", adHandler.SyncUser)
 			})
 
+			// Audit Log routes
+			r.Route("/audit", func(r chi.Router) {
+				auditHandler := handlers.NewAuditHandler()
+
+				// Audit log retrieval (admin only)
+				r.Use(mw.AdminOnly)
+				r.Get("/logs", auditHandler.ListAuditLogs)
+				r.Get("/logs/recent", auditHandler.GetRecentAuditLogs)
+				r.Get("/logs/{id}", auditHandler.GetAuditLog)
+				r.Get("/stats", auditHandler.GetAuditStats)
+			})
+
 			// Plugin routes
 			r.Route("/plugins", func(r chi.Router) {
 				pluginHandler := handlers.NewPluginHandler()
