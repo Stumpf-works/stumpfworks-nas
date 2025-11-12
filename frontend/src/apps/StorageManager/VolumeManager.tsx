@@ -19,9 +19,12 @@ export default function VolumeManager() {
       const response = await storageApi.listVolumes();
       if (response.success) {
         setVolumes(response.data);
+      } else {
+        console.error('Failed to load volumes:', response.error);
       }
     } catch (error) {
       console.error('Failed to load volumes:', error);
+      alert('Failed to load volumes. Please check the console for details.');
     } finally {
       setLoading(false);
     }
@@ -162,7 +165,7 @@ export default function VolumeManager() {
             </div>
 
             {/* Disks */}
-            {volume.disks.length > 0 && (
+            {volume.disks && volume.disks.length > 0 && (
               <div className="mb-4">
                 <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase mb-2">
                   Disks ({volume.disks.length})

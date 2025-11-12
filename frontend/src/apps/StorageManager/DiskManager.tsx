@@ -19,9 +19,12 @@ export default function DiskManager() {
       const response = await storageApi.listDisks();
       if (response.success) {
         setDisks(response.data);
+      } else {
+        console.error('Failed to load disks:', response.error);
       }
     } catch (error) {
       console.error('Failed to load disks:', error);
+      alert('Failed to load disks. Please check the console for details.');
     } finally {
       setLoading(false);
     }
@@ -88,6 +91,17 @@ export default function DiskManager() {
           />
         ))}
       </div>
+
+      {disks.length === 0 && (
+        <div className="text-center py-12 text-gray-600 dark:text-gray-400">
+          <div className="text-6xl mb-4">💿</div>
+          <p className="text-lg font-medium mb-2">No disks found</p>
+          <p className="text-sm mb-4">No physical disks were detected in this environment</p>
+          <Button onClick={loadDisks} variant="secondary">
+            🔄 Retry
+          </Button>
+        </div>
+      )}
 
       {/* SMART Data Modal */}
       <AnimatePresence>
@@ -158,12 +172,12 @@ function DiskCard({ disk, onSelect, formatBytes, getDiskIcon, getStatusColor }: 
         <div>
           <span className="text-gray-600 dark:text-gray-400">Partitions:</span>
           <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">
-            {disk.partitions.length}
+            {disk.partitions?.length || 0}
           </span>
         </div>
       </div>
 
-      {disk.partitions.length > 0 && (
+      {disk.partitions && disk.partitions.length > 0 && (
         <div className="mt-4 space-y-2">
           <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">
             Partitions

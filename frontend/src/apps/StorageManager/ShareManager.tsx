@@ -20,9 +20,12 @@ export default function ShareManager() {
       const response = await storageApi.listShares();
       if (response.success) {
         setShares(response.data);
+      } else {
+        console.error('Failed to load shares:', response.error);
       }
     } catch (error) {
       console.error('Failed to load shares:', error);
+      alert('Failed to load shares. Please check the console for details.');
     } finally {
       setLoading(false);
     }
