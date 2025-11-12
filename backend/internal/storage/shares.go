@@ -137,7 +137,18 @@ func CreateShare(req *CreateShareRequest) (*Share, error) {
 		ValidUsers:  strings.Join(req.ValidUsers, ","),
 	}
 
+	// Check if share with this name already exists
+	var existingShare models.Share
+	if err := database.DB.Where("name = ?", req.Name).First(&existingShare).Error; err == nil {
+		return nil, fmt.Errorf("a share with the name '%s' already exists", req.Name)
+	}
+
 	if err := database.DB.Create(model).Error; err != nil {
+		// Check if it's a duplicate key error (in case of race condition)
+		if strings.Contains(err.Error(), "UNIQUE constraint failed") ||
+		   strings.Contains(err.Error(), "duplicate key") {
+			return nil, fmt.Errorf("a share with the name '%s' already exists", req.Name)
+		}
 		return nil, fmt.Errorf("failed to create share in database: %w", err)
 	}
 
