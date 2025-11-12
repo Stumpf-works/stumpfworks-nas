@@ -1,11 +1,13 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/storage"
+	"github.com/Stumpf-works/stumpfworks-nas/pkg/errors"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/utils"
 	"go.uber.org/zap"
@@ -18,7 +20,7 @@ func ListDisks(w http.ResponseWriter, r *http.Request) {
 	disks, err := storage.ListDisks()
 	if err != nil {
 		logger.Error("Failed to list disks", zap.Error(err))
-		utils.RespondError(w, http.StatusInternalServerError, "Failed to list disks", err)
+		utils.RespondError(w, errors.InternalServerError("Failed to list disks", err))
 		return
 	}
 
@@ -32,7 +34,7 @@ func GetDisk(w http.ResponseWriter, r *http.Request) {
 	disk, err := storage.GetDiskInfo(diskName)
 	if err != nil {
 		logger.Error("Failed to get disk info", zap.String("disk", diskName), zap.Error(err))
-		utils.RespondError(w, http.StatusNotFound, "Disk not found", err)
+		utils.RespondError(w, errors.NotFound("Disk not found", err))
 		return
 	}
 
@@ -42,14 +44,14 @@ func GetDisk(w http.ResponseWriter, r *http.Request) {
 // FormatDisk formats a disk with the specified filesystem
 func FormatDisk(w http.ResponseWriter, r *http.Request) {
 	var req storage.FormatDiskRequest
-	if err := utils.ParseJSON(r, &req); err != nil {
-		utils.RespondError(w, http.StatusBadRequest, "Invalid request", err)
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.RespondError(w, errors.BadRequest("Invalid request", err))
 		return
 	}
 
 	if err := storage.FormatDisk(&req); err != nil {
 		logger.Error("Failed to format disk", zap.String("disk", req.Disk), zap.Error(err))
-		utils.RespondError(w, http.StatusInternalServerError, "Failed to format disk", err)
+		utils.RespondError(w, errors.InternalServerError("Failed to format disk", err))
 		return
 	}
 
@@ -65,7 +67,7 @@ func GetDiskSMART(w http.ResponseWriter, r *http.Request) {
 	smart, err := storage.GetSMARTData(diskName)
 	if err != nil {
 		logger.Error("Failed to get SMART data", zap.String("disk", diskName), zap.Error(err))
-		utils.RespondError(w, http.StatusInternalServerError, "Failed to get SMART data", err)
+		utils.RespondError(w, errors.InternalServerError("Failed to get SMART data", err))
 		return
 	}
 
@@ -79,7 +81,7 @@ func GetDiskHealth(w http.ResponseWriter, r *http.Request) {
 	health, err := storage.AssessDiskHealth(diskName)
 	if err != nil {
 		logger.Error("Failed to assess disk health", zap.String("disk", diskName), zap.Error(err))
-		utils.RespondError(w, http.StatusInternalServerError, "Failed to assess disk health", err)
+		utils.RespondError(w, errors.InternalServerError("Failed to assess disk health", err))
 		return
 	}
 
@@ -93,7 +95,7 @@ func ListVolumes(w http.ResponseWriter, r *http.Request) {
 	volumes, err := storage.ListVolumes()
 	if err != nil {
 		logger.Error("Failed to list volumes", zap.Error(err))
-		utils.RespondError(w, http.StatusInternalServerError, "Failed to list volumes", err)
+		utils.RespondError(w, errors.InternalServerError("Failed to list volumes", err))
 		return
 	}
 
@@ -107,7 +109,7 @@ func GetVolume(w http.ResponseWriter, r *http.Request) {
 	volume, err := storage.GetVolume(volumeID)
 	if err != nil {
 		logger.Error("Failed to get volume", zap.String("id", volumeID), zap.Error(err))
-		utils.RespondError(w, http.StatusNotFound, "Volume not found", err)
+		utils.RespondError(w, errors.NotFound("Volume not found", err))
 		return
 	}
 
@@ -117,15 +119,15 @@ func GetVolume(w http.ResponseWriter, r *http.Request) {
 // CreateVolume creates a new storage volume
 func CreateVolume(w http.ResponseWriter, r *http.Request) {
 	var req storage.CreateVolumeRequest
-	if err := utils.ParseJSON(r, &req); err != nil {
-		utils.RespondError(w, http.StatusBadRequest, "Invalid request", err)
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.RespondError(w, errors.BadRequest("Invalid request", err))
 		return
 	}
 
 	volume, err := storage.CreateVolume(&req)
 	if err != nil {
 		logger.Error("Failed to create volume", zap.String("name", req.Name), zap.Error(err))
-		utils.RespondError(w, http.StatusInternalServerError, "Failed to create volume", err)
+		utils.RespondError(w, errors.InternalServerError("Failed to create volume", err))
 		return
 	}
 
@@ -138,7 +140,7 @@ func DeleteVolume(w http.ResponseWriter, r *http.Request) {
 
 	if err := storage.DeleteVolume(volumeID); err != nil {
 		logger.Error("Failed to delete volume", zap.String("id", volumeID), zap.Error(err))
-		utils.RespondError(w, http.StatusInternalServerError, "Failed to delete volume", err)
+		utils.RespondError(w, errors.InternalServerError("Failed to delete volume", err))
 		return
 	}
 
@@ -154,7 +156,7 @@ func ListShares(w http.ResponseWriter, r *http.Request) {
 	shares, err := storage.ListShares()
 	if err != nil {
 		logger.Error("Failed to list shares", zap.Error(err))
-		utils.RespondError(w, http.StatusInternalServerError, "Failed to list shares", err)
+		utils.RespondError(w, errors.InternalServerError("Failed to list shares", err))
 		return
 	}
 
@@ -168,7 +170,7 @@ func GetShare(w http.ResponseWriter, r *http.Request) {
 	share, err := storage.GetShare(shareID)
 	if err != nil {
 		logger.Error("Failed to get share", zap.String("id", shareID), zap.Error(err))
-		utils.RespondError(w, http.StatusNotFound, "Share not found", err)
+		utils.RespondError(w, errors.NotFound("Share not found", err))
 		return
 	}
 
@@ -178,15 +180,15 @@ func GetShare(w http.ResponseWriter, r *http.Request) {
 // CreateShare creates a new network share
 func CreateShare(w http.ResponseWriter, r *http.Request) {
 	var req storage.CreateShareRequest
-	if err := utils.ParseJSON(r, &req); err != nil {
-		utils.RespondError(w, http.StatusBadRequest, "Invalid request", err)
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.RespondError(w, errors.BadRequest("Invalid request", err))
 		return
 	}
 
 	share, err := storage.CreateShare(&req)
 	if err != nil {
 		logger.Error("Failed to create share", zap.String("name", req.Name), zap.Error(err))
-		utils.RespondError(w, http.StatusInternalServerError, "Failed to create share", err)
+		utils.RespondError(w, errors.InternalServerError("Failed to create share", err))
 		return
 	}
 
@@ -198,15 +200,15 @@ func UpdateShare(w http.ResponseWriter, r *http.Request) {
 	shareID := chi.URLParam(r, "id")
 
 	var req storage.CreateShareRequest
-	if err := utils.ParseJSON(r, &req); err != nil {
-		utils.RespondError(w, http.StatusBadRequest, "Invalid request", err)
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.RespondError(w, errors.BadRequest("Invalid request", err))
 		return
 	}
 
 	share, err := storage.UpdateShare(shareID, &req)
 	if err != nil {
 		logger.Error("Failed to update share", zap.String("id", shareID), zap.Error(err))
-		utils.RespondError(w, http.StatusInternalServerError, "Failed to update share", err)
+		utils.RespondError(w, errors.InternalServerError("Failed to update share", err))
 		return
 	}
 
@@ -219,7 +221,7 @@ func DeleteShare(w http.ResponseWriter, r *http.Request) {
 
 	if err := storage.DeleteShare(shareID); err != nil {
 		logger.Error("Failed to delete share", zap.String("id", shareID), zap.Error(err))
-		utils.RespondError(w, http.StatusInternalServerError, "Failed to delete share", err)
+		utils.RespondError(w, errors.InternalServerError("Failed to delete share", err))
 		return
 	}
 
@@ -234,7 +236,7 @@ func EnableShare(w http.ResponseWriter, r *http.Request) {
 
 	if err := storage.EnableShare(shareID); err != nil {
 		logger.Error("Failed to enable share", zap.String("id", shareID), zap.Error(err))
-		utils.RespondError(w, http.StatusInternalServerError, "Failed to enable share", err)
+		utils.RespondError(w, errors.InternalServerError("Failed to enable share", err))
 		return
 	}
 
@@ -249,7 +251,7 @@ func DisableShare(w http.ResponseWriter, r *http.Request) {
 
 	if err := storage.DisableShare(shareID); err != nil {
 		logger.Error("Failed to disable share", zap.String("id", shareID), zap.Error(err))
-		utils.RespondError(w, http.StatusInternalServerError, "Failed to disable share", err)
+		utils.RespondError(w, errors.InternalServerError("Failed to disable share", err))
 		return
 	}
 
@@ -265,7 +267,7 @@ func GetStorageStats(w http.ResponseWriter, r *http.Request) {
 	stats, err := storage.GetStorageStats()
 	if err != nil {
 		logger.Error("Failed to get storage stats", zap.Error(err))
-		utils.RespondError(w, http.StatusInternalServerError, "Failed to get storage stats", err)
+		utils.RespondError(w, errors.InternalServerError("Failed to get storage stats", err))
 		return
 	}
 
@@ -277,7 +279,7 @@ func GetDiskIOStats(w http.ResponseWriter, r *http.Request) {
 	stats, err := storage.GetDiskIOStats()
 	if err != nil {
 		logger.Error("Failed to get disk I/O stats", zap.Error(err))
-		utils.RespondError(w, http.StatusInternalServerError, "Failed to get disk I/O stats", err)
+		utils.RespondError(w, errors.InternalServerError("Failed to get disk I/O stats", err))
 		return
 	}
 
@@ -291,7 +293,7 @@ func GetDiskIOStatsForDisk(w http.ResponseWriter, r *http.Request) {
 	stats, err := storage.GetDiskIOStatsForDisk(diskName)
 	if err != nil {
 		logger.Error("Failed to get disk I/O stats", zap.String("disk", diskName), zap.Error(err))
-		utils.RespondError(w, http.StatusNotFound, "Disk not found", err)
+		utils.RespondError(w, errors.NotFound("Disk not found", err))
 		return
 	}
 
@@ -303,7 +305,7 @@ func GetAllDiskHealth(w http.ResponseWriter, r *http.Request) {
 	healthList, err := storage.GetAllDiskHealth()
 	if err != nil {
 		logger.Error("Failed to get disk health", zap.Error(err))
-		utils.RespondError(w, http.StatusInternalServerError, "Failed to get disk health", err)
+		utils.RespondError(w, errors.InternalServerError("Failed to get disk health", err))
 		return
 	}
 
@@ -338,7 +340,7 @@ func StopIOMonitoring() {
 // GetIOMonitorStats retrieves the latest I/O monitoring stats
 func GetIOMonitorStats(w http.ResponseWriter, r *http.Request) {
 	if ioMonitor == nil {
-		utils.RespondError(w, http.StatusServiceUnavailable, "I/O monitoring not started", nil)
+		utils.RespondError(w, errors.NewAppError(http.StatusServiceUnavailable, "I/O monitoring not started", nil))
 		return
 	}
 
@@ -347,6 +349,6 @@ func GetIOMonitorStats(w http.ResponseWriter, r *http.Request) {
 	case stats := <-ioMonitor.Stats():
 		utils.RespondSuccess(w, stats)
 	case <-time.After(5 * time.Second):
-		utils.RespondError(w, http.StatusRequestTimeout, "Timeout waiting for stats", nil)
+		utils.RespondError(w, errors.NewAppError(http.StatusRequestTimeout, "Timeout waiting for stats", nil))
 	}
 }

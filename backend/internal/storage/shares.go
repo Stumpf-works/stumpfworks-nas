@@ -6,35 +6,16 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/database/models"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
-// ShareModel represents a share in the database
-type ShareModel struct {
-	gorm.Model
-	Name        string    `gorm:"uniqueIndex;size:255;not null"`
-	Path        string    `gorm:"size:500;not null"`
-	Type        string    `gorm:"size:10;not null"` // smb, nfs, ftp
-	Description string    `gorm:"size:500"`
-	Enabled     bool      `gorm:"default:true"`
-	ReadOnly    bool      `gorm:"default:false"`
-	Browseable  bool      `gorm:"default:true"`
-	GuestOK     bool      `gorm:"default:false"`
-	ValidUsers  string    `gorm:"size:1000"` // Comma-separated list
-}
-
-// TableName specifies the table name for ShareModel
-func (ShareModel) TableName() string {
-	return "shares"
-}
-
-// toShare converts ShareModel to Share
-func (s *ShareModel) toShare() *Share {
+// toShare converts models.Share to Share
+func toShare(s *models.Share) *Share {
 	var validUsers []string
 	if s.ValidUsers != "" {
 		validUsers = strings.Split(s.ValidUsers, ",")
@@ -58,14 +39,14 @@ func (s *ShareModel) toShare() *Share {
 
 // ListShares lists all network shares
 func ListShares() ([]Share, error) {
-	var models []ShareModel
+	var models []models.Share
 	if err := database.DB.Find(&models).Error; err != nil {
 		return nil, err
 	}
 
 	shares := make([]Share, len(models))
 	for i, model := range models {
-		shares[i] = *model.toShare()
+		shares[i] = *toShare(&model)
 	}
 
 	return shares, nil
@@ -73,7 +54,7 @@ func ListShares() ([]Share, error) {
 
 // GetShare retrieves a specific share by ID
 func GetShare(id string) (*Share, error) {
-	var model ShareModel
+	var model models.Share
 	if err := database.DB.First(&model, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, fmt.Errorf("share not found")
@@ -81,7 +62,7 @@ func GetShare(id string) (*Share, error) {
 		return nil, err
 	}
 
-	return model.toShare(), nil
+	return toShare(&model), nil
 }
 
 // CreateShare creates a new network share
@@ -97,7 +78,7 @@ func CreateShare(req *CreateShareRequest) (*Share, error) {
 	}
 
 	// Create database record
-	model := &ShareModel{
+	model := &models.Share{
 		Name:        req.Name,
 		Path:        req.Path,
 		Type:        string(req.Type),
@@ -131,12 +112,12 @@ func CreateShare(req *CreateShareRequest) (*Share, error) {
 
 	logger.Info("Share created successfully", zap.String("name", req.Name))
 
-	return model.toShare(), nil
+	return toShare(model), nil
 }
 
 // UpdateShare updates an existing share
 func UpdateShare(id string, req *CreateShareRequest) (*Share, error) {
-	var model ShareModel
+	var model models.Share
 	if err := database.DB.First(&model, id).Error; err != nil {
 		return nil, err
 	}
@@ -166,12 +147,12 @@ func UpdateShare(id string, req *CreateShareRequest) (*Share, error) {
 		}
 	}
 
-	return model.toShare(), nil
+	return toShare(&model), nil
 }
 
 // DeleteShare deletes a network share
 func DeleteShare(id string) error {
-	var model ShareModel
+	var model models.Share
 	if err := database.DB.First(&model, id).Error; err != nil {
 		return err
 	}
@@ -199,7 +180,7 @@ func DeleteShare(id string) error {
 }
 
 // configureSMBShare configures a Samba share
-func configureSMBShare(share *ShareModel) error {
+func configureSMBShare(share *models.Share) error {
 	// Check if Samba is installed
 	if _, err := exec.LookPath("smbd"); err != nil {
 		return fmt.Errorf("Samba not installed")
@@ -245,7 +226,7 @@ func configureSMBShare(share *ShareModel) error {
 }
 
 // removeSMBShare removes a Samba share configuration
-func removeSMBShare(share *ShareModel) error {
+func removeSMBShare(share *models.Share) error {
 	configPath := filepath.Join("/etc/samba/shares.d", share.Name+".conf")
 	if err := os.Remove(configPath); err != nil && !os.IsNotExist(err) {
 		return err
@@ -261,16 +242,10 @@ func removeSMBShare(share *ShareModel) error {
 }
 
 // configureNFSShare configures an NFS export
-func configureNFSShare(share *ShareModel) error {
+func configureNFSShare(share *models.Share) error {
 	// Check if NFS is installed
 	if _, err := exec.LookPath("exportfs"); err != nil {
 		return fmt.Errorf("NFS not installed")
-	}
-
-	// Build NFS export options
-	options := []string{"rw", "sync", "no_subtree_check"}
-	if share.ReadOnly {
-		options = []string{"ro", "sync", "no_subtree_check"}
 	}
 
 	// Build export entry
@@ -300,7 +275,7 @@ func configureNFSShare(share *ShareModel) error {
 }
 
 // removeNFSShare removes an NFS export
-func removeNFSShare(share *ShareModel) error {
+func removeNFSShare(share *models.Share) error {
 	// This is a simplified version
 	// In production, you'd want to parse and rewrite /etc/exports properly
 
@@ -370,7 +345,7 @@ func DisableShare(id string) error {
 
 // updateShareStatus updates the enabled status of a share
 func updateShareStatus(id string, enabled bool) error {
-	var model ShareModel
+	var model models.Share
 	if err := database.DB.First(&model, id).Error; err != nil {
 		return err
 	}
@@ -404,7 +379,7 @@ func updateShareStatus(id string, enabled bool) error {
 // GetShareStats returns statistics about shares
 func GetShareStats() (int, error) {
 	var count int64
-	if err := database.DB.Model(&ShareModel{}).Count(&count).Error; err != nil {
+	if err := database.DB.Model(&models.Share{}).Count(&count).Error; err != nil {
 		return 0, err
 	}
 	return int(count), nil
@@ -412,5 +387,5 @@ func GetShareStats() (int, error) {
 
 // MigrateShares runs database migrations for shares
 func MigrateShares() error {
-	return database.DB.AutoMigrate(&ShareModel{})
+	return database.DB.AutoMigrate(&models.Share{})
 }
