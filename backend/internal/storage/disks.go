@@ -406,6 +406,38 @@ func readSysFile(path string) (string, error) {
 	return string(data), nil
 }
 
+// findSystemBinary searches for a binary in common system paths
+func findSystemBinary(name string) (string, error) {
+	// First try exec.LookPath (searches in PATH)
+	if path, err := exec.LookPath(name); err == nil {
+		return path, nil
+	}
+
+	// Common system paths where binaries like mkfs.* are located
+	systemPaths := []string{
+		"/usr/sbin",
+		"/sbin",
+		"/usr/bin",
+		"/bin",
+		"/usr/local/sbin",
+		"/usr/local/bin",
+	}
+
+	for _, dir := range systemPaths {
+		fullPath := filepath.Join(dir, name)
+		if _, err := os.Stat(fullPath); err == nil {
+			// Check if executable
+			if info, err := os.Stat(fullPath); err == nil {
+				if info.Mode()&0111 != 0 {
+					return fullPath, nil
+				}
+			}
+		}
+	}
+
+	return "", fmt.Errorf("%s not found in system paths", name)
+}
+
 // GetStorageStats returns overall storage statistics
 func GetStorageStats() (*StorageStats, error) {
 	disks, err := ListDisks()
@@ -464,24 +496,24 @@ func FormatDisk(req *FormatDiskRequest) error {
 	}
 
 	// Determine the mkfs command based on filesystem type
-	var mkfsCmd string
+	var mkfsBinary string
 	var args []string
 
 	switch req.Filesystem {
 	case "ext4":
-		mkfsCmd = "mkfs.ext4"
+		mkfsBinary = "mkfs.ext4"
 		args = []string{"-F"}
 		if req.Label != "" {
 			args = append(args, "-L", req.Label)
 		}
 	case "xfs":
-		mkfsCmd = "mkfs.xfs"
+		mkfsBinary = "mkfs.xfs"
 		args = []string{"-f"}
 		if req.Label != "" {
 			args = append(args, "-L", req.Label)
 		}
 	case "btrfs":
-		mkfsCmd = "mkfs.btrfs"
+		mkfsBinary = "mkfs.btrfs"
 		args = []string{"-f"}
 		if req.Label != "" {
 			args = append(args, "-L", req.Label)
@@ -490,14 +522,17 @@ func FormatDisk(req *FormatDiskRequest) error {
 		return fmt.Errorf("unsupported filesystem: %s", req.Filesystem)
 	}
 
-	// Check if the filesystem tool is available
-	if _, err := exec.LookPath(mkfsCmd); err != nil {
+	// Find the full path to the mkfs tool (checking common system paths)
+	mkfsCmd, err := findSystemBinary(mkfsBinary)
+	if err != nil {
 		logger.Warn("Filesystem tool not available",
-			zap.String("tool", mkfsCmd),
+			zap.String("tool", mkfsBinary),
 			zap.String("disk", diskPath),
 			zap.String("filesystem", req.Filesystem))
-		return fmt.Errorf("filesystem tool not available: %s is not installed on this system. Please install the required packages (e.g., e2fsprogs for ext4, xfsprogs for xfs, btrfs-progs for btrfs)", mkfsCmd)
+		return fmt.Errorf("filesystem tool not available: %s is not installed on this system. Please install the required packages (e.g., e2fsprogs for ext4, xfsprogs for xfs, btrfs-progs for btrfs)", mkfsBinary)
 	}
+
+	logger.Info("Using filesystem tool", zap.String("path", mkfsCmd))
 
 	// Format the disk
 	args = append(args, diskPath)
