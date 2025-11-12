@@ -262,12 +262,12 @@ export function Settings() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Bind DN
+                        Bind User
                       </label>
                       <Input
-                        value={adConfig.bindDN}
+                        value={adConfig.bindUser}
                         onChange={(e) =>
-                          setAdConfig({ ...adConfig, bindDN: e.target.value })
+                          setAdConfig({ ...adConfig, bindUser: e.target.value })
                         }
                         placeholder="cn=admin,dc=example,dc=com"
                       />

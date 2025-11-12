@@ -5,11 +5,12 @@ export interface ADConfig {
   server: string;
   port: number;
   baseDN: string;
-  bindDN: string;
+  bindUser: string;
   bindPassword?: string;
   userFilter: string;
   groupFilter: string;
   useTLS: boolean;
+  skipVerify?: boolean;
 }
 
 export interface ADUser {
@@ -17,7 +18,8 @@ export interface ADUser {
   displayName: string;
   email: string;
   groups: string[];
-  dn: string;
+  distinguishedName: string;
+  enabled: boolean;
 }
 
 export interface ADGroup {
