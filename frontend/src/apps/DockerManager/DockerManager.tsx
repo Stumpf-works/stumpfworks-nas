@@ -4,8 +4,9 @@ import ContainerManager from './components/ContainerManager';
 import ImageManager from './components/ImageManager';
 import VolumeManager from './components/VolumeManager';
 import NetworkManager from './components/NetworkManager';
+import StackManager from './components/StackManager';
 
-type Tab = 'containers' | 'images' | 'volumes' | 'networks';
+type Tab = 'containers' | 'images' | 'volumes' | 'networks' | 'stacks';
 
 export function DockerManager() {
   const [activeTab, setActiveTab] = useState<Tab>('containers');
@@ -15,6 +16,7 @@ export function DockerManager() {
     { id: 'images' as Tab, name: 'Images', icon: '💿' },
     { id: 'volumes' as Tab, name: 'Volumes', icon: '💾' },
     { id: 'networks' as Tab, name: 'Networks', icon: '🌐' },
+    { id: 'stacks' as Tab, name: 'Stacks', icon: '📚' },
   ];
 
   return (
@@ -25,7 +27,7 @@ export function DockerManager() {
           Docker Manager
         </h1>
         <p className="text-gray-600 dark:text-gray-400 mt-1">
-          Manage Docker containers, images, volumes, and networks
+          Manage Docker containers, images, volumes, networks, and compose stacks
         </p>
       </div>
 
@@ -60,6 +62,7 @@ export function DockerManager() {
         {activeTab === 'images' && <ImageManager />}
         {activeTab === 'volumes' && <VolumeManager />}
         {activeTab === 'networks' && <NetworkManager />}
+        {activeTab === 'stacks' && <StackManager />}
       </div>
     </div>
   );

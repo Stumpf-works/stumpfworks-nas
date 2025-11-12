@@ -239,6 +239,20 @@ func NewRouter(cfg *config.Config) http.Handler {
 				r.Get("/info", dockerHandler.GetDockerInfo)
 				r.Get("/version", dockerHandler.GetDockerVersion)
 				r.Post("/system/prune", dockerHandler.PruneSystem)
+
+				// Docker Compose Stack routes
+				composeHandler := handlers.NewComposeHandler("")
+				r.Get("/stacks", composeHandler.ListStacks)
+				r.Post("/stacks", composeHandler.CreateStack)
+				r.Get("/stacks/{name}", composeHandler.GetStack)
+				r.Put("/stacks/{name}", composeHandler.UpdateStack)
+				r.Delete("/stacks/{name}", composeHandler.DeleteStack)
+				r.Post("/stacks/{name}/deploy", composeHandler.DeployStack)
+				r.Post("/stacks/{name}/stop", composeHandler.StopStack)
+				r.Post("/stacks/{name}/restart", composeHandler.RestartStack)
+				r.Post("/stacks/{name}/remove", composeHandler.RemoveStack)
+				r.Get("/stacks/{name}/logs", composeHandler.GetStackLogs)
+				r.Get("/stacks/{name}/compose", composeHandler.GetComposeFile)
 			})
 
 			// Plugin routes (will implement in next phase)
