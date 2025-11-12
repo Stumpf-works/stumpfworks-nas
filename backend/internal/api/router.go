@@ -196,6 +196,51 @@ func NewRouter(cfg *config.Config) http.Handler {
 				})
 			})
 
+			// Docker routes
+			r.Route("/docker", func(r chi.Router) {
+				dockerHandler := handlers.NewDockerHandler()
+				r.Use(dockerHandler.CheckAvailability)
+
+				// Container routes
+				r.Get("/containers", dockerHandler.ListContainers)
+				r.Post("/containers", dockerHandler.CreateContainer)
+				r.Get("/containers/{id}", dockerHandler.InspectContainer)
+				r.Get("/containers/{id}/stats", dockerHandler.GetContainerStats)
+				r.Get("/containers/{id}/logs", dockerHandler.GetContainerLogs)
+				r.Post("/containers/{id}/start", dockerHandler.StartContainer)
+				r.Post("/containers/{id}/stop", dockerHandler.StopContainer)
+				r.Post("/containers/{id}/restart", dockerHandler.RestartContainer)
+				r.Post("/containers/{id}/pause", dockerHandler.PauseContainer)
+				r.Post("/containers/{id}/unpause", dockerHandler.UnpauseContainer)
+				r.Delete("/containers/{id}", dockerHandler.RemoveContainer)
+
+				// Image routes
+				r.Get("/images", dockerHandler.ListImages)
+				r.Get("/images/search", dockerHandler.SearchImages)
+				r.Post("/images/pull", dockerHandler.PullImage)
+				r.Get("/images/{id}", dockerHandler.InspectImage)
+				r.Delete("/images/{id}", dockerHandler.RemoveImage)
+
+				// Volume routes
+				r.Get("/volumes", dockerHandler.ListVolumes)
+				r.Post("/volumes", dockerHandler.CreateVolume)
+				r.Get("/volumes/{name}", dockerHandler.InspectVolume)
+				r.Delete("/volumes/{name}", dockerHandler.RemoveVolume)
+
+				// Network routes
+				r.Get("/networks", dockerHandler.ListNetworks)
+				r.Post("/networks", dockerHandler.CreateNetwork)
+				r.Get("/networks/{id}", dockerHandler.InspectNetwork)
+				r.Delete("/networks/{id}", dockerHandler.RemoveNetwork)
+				r.Post("/networks/{id}/connect", dockerHandler.ConnectContainerToNetwork)
+				r.Post("/networks/{id}/disconnect", dockerHandler.DisconnectContainerFromNetwork)
+
+				// System routes
+				r.Get("/info", dockerHandler.GetDockerInfo)
+				r.Get("/version", dockerHandler.GetDockerVersion)
+				r.Post("/system/prune", dockerHandler.PruneSystem)
+			})
+
 			// Plugin routes (will implement in next phase)
 			// r.Route("/plugins", func(r chi.Router) {
 			// 	r.Get("/", handlers.ListPlugins)
