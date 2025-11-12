@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	"github.com/gorilla/websocket"
-	ws "github.com/stumpfworks/nas/internal/api/websocket"
-	"github.com/stumpfworks/nas/pkg/logger"
+	ws "github.com/Stumpf-works/stumpfworks-nas/internal/api/websocket"
+	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
 	"go.uber.org/zap"
 )
 

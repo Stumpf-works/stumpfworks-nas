@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/stumpfworks/nas/pkg/logger"
+	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
 	"go.uber.org/zap"
 )
 

@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/stumpfworks/nas/internal/api/middleware"
-	"github.com/stumpfworks/nas/internal/users"
-	"github.com/stumpfworks/nas/pkg/errors"
-	"github.com/stumpfworks/nas/pkg/utils"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/api/middleware"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/users"
+	"github.com/Stumpf-works/stumpfworks-nas/pkg/errors"
+	"github.com/Stumpf-works/stumpfworks-nas/pkg/utils"
 )
 
 // LoginRequest represents a login request

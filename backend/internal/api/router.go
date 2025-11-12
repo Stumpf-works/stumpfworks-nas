@@ -7,9 +7,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
-	"github.com/stumpfworks/nas/internal/api/handlers"
-	mw "github.com/stumpfworks/nas/internal/api/middleware"
-	"github.com/stumpfworks/nas/internal/config"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/api/handlers"
+	mw "github.com/Stumpf-works/stumpfworks-nas/internal/api/middleware"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/config"
 )
 
 // NewRouter creates and configures the HTTP router

@@ -1,8 +1,8 @@
 package database
 
 import (
-	"github.com/stumpfworks/nas/internal/database/models"
-	"github.com/stumpfworks/nas/pkg/logger"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/database/models"
+	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
 	"go.uber.org/zap"
 )
 

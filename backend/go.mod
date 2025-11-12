@@ -1,4 +1,4 @@
-module github.com/stumpfworks/nas
+module github.com/Stumpf-works/stumpfworks-nas
 
 go 1.21
 
