@@ -11,6 +11,7 @@ import (
 
 	"github.com/Stumpf-works/stumpfworks-nas/internal/api"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/api/handlers"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/backup"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/config"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/docker"
@@ -81,6 +82,15 @@ func main() {
 		logger.Info("Plugin service initialized")
 	}
 
+	// Initialize Backup service (non-fatal if fails)
+	if err := initializeBackup(); err != nil {
+		logger.Warn("Backup service initialization failed",
+			zap.Error(err),
+			zap.String("message", "Backup features may be limited"))
+	} else {
+		logger.Info("Backup service initialized")
+	}
+
 	// Create HTTP router
 	router := api.NewRouter(cfg)
 
@@ -138,5 +148,12 @@ func initializeDocker() error {
 // Returns error if plugin service fails to initialize, but this is non-fatal
 func initializePlugins() error {
 	_, err := plugins.Initialize("")
+	return err
+}
+
+// initializeBackup initializes the Backup service
+// Returns error if backup service fails to initialize, but this is non-fatal
+func initializeBackup() error {
+	_, err := backup.Initialize("")
 	return err
 }

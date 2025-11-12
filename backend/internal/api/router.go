@@ -255,6 +255,29 @@ func NewRouter(cfg *config.Config) http.Handler {
 				r.Get("/stacks/{name}/compose", composeHandler.GetComposeFile)
 			})
 
+			// Backup routes
+			r.Route("/backups", func(r chi.Router) {
+				backupHandler := handlers.NewBackupHandler()
+				r.Use(backupHandler.CheckAvailability)
+
+				// Backup jobs
+				r.Get("/jobs", backupHandler.ListJobs)
+				r.Post("/jobs", backupHandler.CreateJob)
+				r.Get("/jobs/{id}", backupHandler.GetJob)
+				r.Put("/jobs/{id}", backupHandler.UpdateJob)
+				r.Delete("/jobs/{id}", backupHandler.DeleteJob)
+				r.Post("/jobs/{id}/run", backupHandler.RunJob)
+
+				// Backup history
+				r.Get("/history", backupHandler.GetHistory)
+
+				// Snapshots
+				r.Get("/snapshots", backupHandler.ListSnapshots)
+				r.Post("/snapshots", backupHandler.CreateSnapshot)
+				r.Delete("/snapshots/{id}", backupHandler.DeleteSnapshot)
+				r.Post("/snapshots/{id}/restore", backupHandler.RestoreSnapshot)
+			})
+
 			// Plugin routes
 			r.Route("/plugins", func(r chi.Router) {
 				pluginHandler := handlers.NewPluginHandler()
