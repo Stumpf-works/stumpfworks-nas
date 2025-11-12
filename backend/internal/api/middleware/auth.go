@@ -7,7 +7,9 @@ import (
 
 	"github.com/Stumpf-works/stumpfworks-nas/internal/users"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/errors"
+	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/utils"
+	"go.uber.org/zap"
 )
 
 type contextKey string
@@ -19,6 +21,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Extract token from Authorization header
 		authHeader := r.Header.Get("Authorization")
+		logger.Info("Auth header received", zap.String("header", authHeader), zap.Int("length", len(authHeader)))
 		if authHeader == "" {
 			utils.RespondError(w, errors.Unauthorized("Missing authorization header", nil))
 			return
@@ -26,7 +29,9 @@ func AuthMiddleware(next http.Handler) http.Handler {
 
 		// Check Bearer prefix
 		parts := strings.Split(authHeader, " ")
+		logger.Info("Auth header split", zap.Int("parts", len(parts)), zap.Strings("parts", parts))
 		if len(parts) != 2 || parts[0] != "Bearer" {
+			logger.Warn("Invalid auth header format", zap.Int("parts", len(parts)))
 			utils.RespondError(w, errors.Unauthorized("Invalid authorization header format", nil))
 			return
 		}
