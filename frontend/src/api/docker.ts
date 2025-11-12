@@ -1,0 +1,132 @@
+import client, { ApiResponse } from './client';
+
+// Types
+export interface DockerContainer {
+  id: string;
+  name: string;
+  image: string;
+  state: string;
+  status: string;
+  created: string;
+  ports?: Array<{
+    privatePort: number;
+    publicPort?: number;
+    type: string;
+  }>;
+  labels?: Record<string, string>;
+  networks?: Record<string, any>;
+}
+
+export interface DockerImage {
+  id: string;
+  repoTags: string[];
+  repoDigests: string[];
+  created: number;
+  size: number;
+  virtualSize: number;
+  sharedSize: number;
+  labels?: Record<string, string>;
+  containers: number;
+}
+
+export interface DockerVolume {
+  name: string;
+  driver: string;
+  mountpoint: string;
+  createdAt: string;
+  labels?: Record<string, string>;
+  scope: string;
+  options?: Record<string, string>;
+}
+
+export interface DockerNetwork {
+  id: string;
+  name: string;
+  driver: string;
+  scope: string;
+  internal: boolean;
+  enableIPv6: boolean;
+  ipam?: {
+    driver: string;
+    config?: Array<{
+      subnet?: string;
+      gateway?: string;
+    }>;
+  };
+  containers?: Record<string, any>;
+  options?: Record<string, string>;
+  labels?: Record<string, string>;
+}
+
+export interface PullImageRequest {
+  image: string;
+}
+
+// API
+export const dockerApi = {
+  // Containers
+  async listContainers(all: boolean = false): Promise<ApiResponse<DockerContainer[]>> {
+    const response = await client.get('/docker/containers', {
+      params: { all },
+    });
+    return response.data;
+  },
+
+  async startContainer(id: string): Promise<ApiResponse<any>> {
+    const response = await client.post(`/docker/containers/${id}/start`);
+    return response.data;
+  },
+
+  async stopContainer(id: string): Promise<ApiResponse<any>> {
+    const response = await client.post(`/docker/containers/${id}/stop`);
+    return response.data;
+  },
+
+  async restartContainer(id: string): Promise<ApiResponse<any>> {
+    const response = await client.post(`/docker/containers/${id}/restart`);
+    return response.data;
+  },
+
+  async removeContainer(id: string): Promise<ApiResponse<any>> {
+    const response = await client.delete(`/docker/containers/${id}`);
+    return response.data;
+  },
+
+  async getContainerLogs(id: string): Promise<ApiResponse<string>> {
+    const response = await client.get(`/docker/containers/${id}/logs`);
+    return response.data;
+  },
+
+  // Images
+  async listImages(): Promise<ApiResponse<DockerImage[]>> {
+    const response = await client.get('/docker/images');
+    return response.data;
+  },
+
+  async pullImage(image: string): Promise<ApiResponse<string>> {
+    const response = await client.post('/docker/images/pull', { image });
+    return response.data;
+  },
+
+  async removeImage(id: string): Promise<ApiResponse<any>> {
+    const response = await client.delete(`/docker/images/${id}`);
+    return response.data;
+  },
+
+  // Volumes
+  async listVolumes(): Promise<ApiResponse<DockerVolume[]>> {
+    const response = await client.get('/docker/volumes');
+    return response.data;
+  },
+
+  async removeVolume(id: string): Promise<ApiResponse<any>> {
+    const response = await client.delete(`/docker/volumes/${id}`);
+    return response.data;
+  },
+
+  // Networks
+  async listNetworks(): Promise<ApiResponse<DockerNetwork[]>> {
+    const response = await client.get('/docker/networks');
+    return response.data;
+  },
+};
