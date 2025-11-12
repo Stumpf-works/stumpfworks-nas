@@ -2,6 +2,7 @@ import { Dashboard } from './Dashboard/Dashboard';
 import { UserManager } from './UserManager/UserManager';
 import { Settings } from './Settings/Settings';
 import { StorageManager } from './StorageManager/StorageManager';
+import FileManager from './FileManager/FileManager';
 import type { App } from '@/types';
 
 // Placeholder components for apps not yet implemented
@@ -38,9 +39,9 @@ export const registeredApps: App[] = [
     id: 'files',
     name: 'Files',
     icon: '📁',
-    component: () => <PlaceholderApp name="File Station" />,
-    defaultSize: { width: 900, height: 700 },
-    minSize: { width: 700, height: 500 },
+    component: FileManager,
+    defaultSize: { width: 1200, height: 800 },
+    minSize: { width: 900, height: 600 },
   },
   {
     id: 'users',

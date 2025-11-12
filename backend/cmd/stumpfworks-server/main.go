@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Stumpf-works/stumpfworks-nas/internal/api"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/api/handlers"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/config"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
@@ -53,6 +54,12 @@ func main() {
 		logger.Fatal("Failed to initialize database", zap.Error(err))
 	}
 	defer database.Close()
+
+	// Initialize file service
+	if err := handlers.InitFileService(); err != nil {
+		logger.Fatal("Failed to initialize file service", zap.Error(err))
+	}
+	logger.Info("File service initialized")
 
 	// Create HTTP router
 	router := api.NewRouter(cfg)
