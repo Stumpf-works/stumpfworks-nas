@@ -26,6 +26,9 @@ export default function App() {
           // Token is invalid, clear auth
           clearAuth();
         }
+      } else {
+        // No token found - clear persisted auth state
+        clearAuth();
       }
       setIsChecking(false);
     };
