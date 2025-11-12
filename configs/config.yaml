@@ -1,0 +1,21 @@
+# Stumpf.Works NAS Configuration File
+
+app:
+  name: "Stumpf.Works NAS"
+  version: "0.1.0"
+  environment: "development"
+
+server:
+  host: "0.0.0.0"
+  port: 8080
+
+database:
+  path: "./data/stumpfworks.db"
+
+auth:
+  jwt_secret: "your-secret-key-change-in-production"
+  jwt_expiration: 24h
+  refresh_token_expiration: 168h
+
+logging:
+  level: "info"
