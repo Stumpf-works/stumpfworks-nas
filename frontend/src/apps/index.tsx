@@ -4,6 +4,7 @@ import { Settings } from './Settings/Settings';
 import { StorageManager } from './StorageManager/StorageManager';
 import FileManager from './FileManager/FileManager';
 import { NetworkManager } from './NetworkManager/NetworkManager';
+import { DockerManager } from './DockerManager/DockerManager';
 import type { App } from '@/types';
 
 // Placeholder components for apps not yet implemented
@@ -46,6 +47,14 @@ export const registeredApps: App[] = [
     name: 'Network',
     icon: '🌐',
     component: NetworkManager,
+    defaultSize: { width: 1200, height: 800 },
+    minSize: { width: 900, height: 600 },
+  },
+  {
+    id: 'docker',
+    name: 'Docker',
+    icon: '🐳',
+    component: DockerManager,
     defaultSize: { width: 1200, height: 800 },
     minSize: { width: 900, height: 600 },
   },
