@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	mw "github.com/Stumpf-works/stumpfworks-nas/internal/api/middleware"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database/models"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/files"
@@ -52,8 +53,8 @@ func InitFileService() error {
 // getSecurityContext extracts security context from request
 func getSecurityContext(r *http.Request) (*files.SecurityContext, error) {
 	// Get user from context (set by auth middleware)
-	user, ok := r.Context().Value("user").(*models.User)
-	if !ok {
+	user := mw.GetUserFromContext(r.Context())
+	if user == nil {
 		return nil, errors.Unauthorized("User not authenticated", nil)
 	}
 
