@@ -7,6 +7,7 @@ import { NetworkManager } from './NetworkManager/NetworkManager';
 import { DockerManager } from './DockerManager/DockerManager';
 import { PluginManager } from './PluginManager/PluginManager';
 import { BackupManager } from './BackupManager/BackupManager';
+import { AuditLogs } from './AuditLogs/AuditLogs';
 import type { App } from '@/types';
 
 // Placeholder components for apps not yet implemented
@@ -43,6 +44,14 @@ export const registeredApps: App[] = [
     component: UserManager,
     defaultSize: { width: 1000, height: 700 },
     minSize: { width: 800, height: 600 },
+  },
+  {
+    id: 'audit-logs',
+    name: 'Audit Logs',
+    icon: '🔒',
+    component: AuditLogs,
+    defaultSize: { width: 1400, height: 800 },
+    minSize: { width: 1000, height: 600 },
   },
   {
     id: 'network',
