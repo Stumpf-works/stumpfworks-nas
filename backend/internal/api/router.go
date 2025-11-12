@@ -281,6 +281,22 @@ func NewRouter(cfg *config.Config) http.Handler {
 				r.Post("/snapshots/{id}/restore", backupHandler.RestoreSnapshot)
 			})
 
+			// Active Directory routes
+			r.Route("/ad", func(r chi.Router) {
+				adHandler := handlers.NewADHandler()
+
+				// AD configuration
+				r.Get("/config", adHandler.GetConfig)
+				r.Put("/config", adHandler.UpdateConfig)
+				r.Post("/test", adHandler.TestConnection)
+				r.Get("/status", adHandler.GetStatus)
+
+				// AD users
+				r.Post("/authenticate", adHandler.Authenticate)
+				r.Get("/users", adHandler.ListUsers)
+				r.Post("/users/sync", adHandler.SyncUser)
+			})
+
 			// Plugin routes
 			r.Route("/plugins", func(r chi.Router) {
 				pluginHandler := handlers.NewPluginHandler()
