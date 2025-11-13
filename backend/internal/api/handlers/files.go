@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	mw "github.com/Stumpf-works/stumpfworks-nas/internal/api/middleware"
@@ -74,6 +77,47 @@ func getSecurityContext(r *http.Request) (*files.SecurityContext, error) {
 	}, nil
 }
 
+// buildSharesRootResponse creates a virtual directory listing showing all available shares
+func buildSharesRootResponse(ctx *files.SecurityContext) *files.BrowseResponse {
+	var virtualFiles []files.FileInfo
+
+	// Convert each allowed path into a virtual directory entry
+	for _, sharePath := range ctx.AllowedPaths {
+		// Get the share name (last part of the path)
+		shareName := filepath.Base(sharePath)
+
+		// Try to get real directory stats if accessible
+		var size int64
+		var modTime time.Time
+		if info, err := os.Stat(sharePath); err == nil {
+			modTime = info.ModTime()
+			// For directories, we don't show size at root level
+		} else {
+			// Share might not exist yet, use current time
+			modTime = time.Now()
+		}
+
+		virtualFiles = append(virtualFiles, files.FileInfo{
+			Name:        shareName,
+			Path:        sharePath,
+			Size:        size,
+			IsDir:       true,
+			ModTime:     modTime,
+			Permissions: "drwxr-xr-x", // Virtual directory
+			Owner:       "root",
+			Group:       "root",
+		})
+	}
+
+	return &files.BrowseResponse{
+		Path:       "/",
+		Files:      virtualFiles,
+		TotalSize:  0,
+		TotalFiles: 0,
+		TotalDirs:  len(virtualFiles),
+	}
+}
+
 // ===== File Browsing Handlers =====
 
 // BrowseFiles lists files in a directory
@@ -89,6 +133,13 @@ func BrowseFiles(w http.ResponseWriter, r *http.Request) {
 	ctx, err := getSecurityContext(r)
 	if err != nil {
 		utils.RespondError(w, err)
+		return
+	}
+
+	// Special case: browsing "/" shows all available shares as virtual directories
+	if path == "/" {
+		result := buildSharesRootResponse(ctx)
+		utils.RespondSuccess(w, result)
 		return
 	}
 
