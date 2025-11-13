@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
+	"github.com/Stumpf-works/stumpfworks-nas/pkg/sysutil"
 	"go.uber.org/zap"
 )
 
@@ -71,7 +72,7 @@ func GetDiskInfo(diskName string) (*Disk, error) {
 	}
 
 	// Get disk model
-	model, err := readSysFile(filepath.Join(sysPath, "device/model"))
+	model, err := sysutil.ReadSysFile(filepath.Join(sysPath, "device/model"))
 	if err == nil {
 		disk.Model = strings.TrimSpace(model)
 	}
@@ -80,7 +81,7 @@ func GetDiskInfo(diskName string) (*Disk, error) {
 	disk.Type = getDiskType(diskName, sysPath)
 
 	// Check if removable
-	removable, err := readSysFile(filepath.Join(sysPath, "removable"))
+	removable, err := sysutil.ReadSysFile(filepath.Join(sysPath, "removable"))
 	if err == nil {
 		disk.IsRemovable = strings.TrimSpace(removable) == "1"
 	}
@@ -112,7 +113,7 @@ func GetDiskInfo(diskName string) (*Disk, error) {
 
 // getDiskSize reads the disk size from sysfs
 func getDiskSize(sysPath string) (uint64, error) {
-	sizeStr, err := readSysFile(filepath.Join(sysPath, "size"))
+	sizeStr, err := sysutil.ReadSysFile(filepath.Join(sysPath, "size"))
 	if err != nil {
 		return 0, err
 	}
@@ -133,7 +134,7 @@ func getDiskType(diskName, sysPath string) DiskType {
 	}
 
 	// Check if it's an SSD by checking rotational
-	rotational, err := readSysFile(filepath.Join(sysPath, "queue/rotational"))
+	rotational, err := sysutil.ReadSysFile(filepath.Join(sysPath, "queue/rotational"))
 	if err == nil && strings.TrimSpace(rotational) == "0" {
 		return DiskTypeSSD
 	}
@@ -447,47 +448,6 @@ func getHealthStatus(smart *SMARTData) DiskStatus {
 	return DiskStatusHealthy
 }
 
-// readSysFile reads a single-line file from sysfs
-func readSysFile(path string) (string, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return "", err
-	}
-	return string(data), nil
-}
-
-// findSystemBinary searches for a binary in common system paths
-func findSystemBinary(name string) (string, error) {
-	// First try exec.LookPath (searches in PATH)
-	if path, err := exec.LookPath(name); err == nil {
-		return path, nil
-	}
-
-	// Common system paths where binaries like mkfs.* are located
-	systemPaths := []string{
-		"/usr/sbin",
-		"/sbin",
-		"/usr/bin",
-		"/bin",
-		"/usr/local/sbin",
-		"/usr/local/bin",
-	}
-
-	for _, dir := range systemPaths {
-		fullPath := filepath.Join(dir, name)
-		if _, err := os.Stat(fullPath); err == nil {
-			// Check if executable
-			if info, err := os.Stat(fullPath); err == nil {
-				if info.Mode()&0111 != 0 {
-					return fullPath, nil
-				}
-			}
-		}
-	}
-
-	return "", fmt.Errorf("%s not found in system paths", name)
-}
-
 // GetStorageStats returns overall storage statistics
 func GetStorageStats() (*StorageStats, error) {
 	disks, err := ListDisks()
@@ -573,8 +533,10 @@ func FormatDisk(req *FormatDiskRequest) error {
 	}
 
 	// Find the full path to the mkfs tool (checking common system paths)
-	mkfsCmd, err := findSystemBinary(mkfsBinary)
-	if err != nil {
+	mkfsCmd := sysutil.FindCommand(mkfsBinary)
+
+	// Check if command exists
+	if !sysutil.CommandExists(mkfsBinary) {
 		logger.Warn("Filesystem tool not available",
 			zap.String("tool", mkfsBinary),
 			zap.String("disk", diskPath),

@@ -2,12 +2,11 @@ package users
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
+	"github.com/Stumpf-works/stumpfworks-nas/pkg/sysutil"
 	"go.uber.org/zap"
 )
 
@@ -17,37 +16,6 @@ type SambaUserManager struct {
 }
 
 var sambaManager *SambaUserManager
-
-// findCommand searches for a command in common system paths
-func findCommand(name string) string {
-	// First try exec.LookPath (searches in PATH)
-	if path, err := exec.LookPath(name); err == nil {
-		return path
-	}
-
-	// Common system paths where admin tools are located
-	systemPaths := []string{
-		"/usr/sbin",
-		"/sbin",
-		"/usr/bin",
-		"/bin",
-		"/usr/local/sbin",
-		"/usr/local/bin",
-	}
-
-	for _, dir := range systemPaths {
-		fullPath := filepath.Join(dir, name)
-		if info, err := os.Stat(fullPath); err == nil {
-			// Check if executable
-			if info.Mode()&0111 != 0 {
-				return fullPath
-			}
-		}
-	}
-
-	// Return original name as fallback - will fail with proper error message
-	return name
-}
 
 // InitSambaUserManager initializes the Samba user manager
 func InitSambaUserManager() *SambaUserManager {
@@ -77,14 +45,12 @@ func GetSambaManager() *SambaUserManager {
 // isSambaInstalled checks if Samba is installed on the system
 func isSambaInstalled() bool {
 	// Check for smbpasswd command
-	smbpasswdPath := findCommand("smbpasswd")
-	if _, err := os.Stat(smbpasswdPath); err != nil {
+	if !sysutil.CommandExists("smbpasswd") {
 		return false
 	}
 
 	// Check for pdbedit command
-	pdbeditPath := findCommand("pdbedit")
-	if _, err := os.Stat(pdbeditPath); err != nil {
+	if !sysutil.CommandExists("pdbedit") {
 		return false
 	}
 
@@ -184,7 +150,7 @@ func (m *SambaUserManager) DeleteSambaUser(username string) error {
 // createLinuxUser creates a Linux system user for Samba
 func (m *SambaUserManager) createLinuxUser(username string) error {
 	// Check if user already exists
-	cmd := exec.Command(findCommand("id"), username)
+	cmd := exec.Command(sysutil.FindCommand("id"), username)
 	if err := cmd.Run(); err == nil {
 		logger.Debug("Linux user already exists", zap.String("username", username))
 		return nil // User exists, that's fine
@@ -192,7 +158,7 @@ func (m *SambaUserManager) createLinuxUser(username string) error {
 
 	// Create user without home directory (-M) and with no shell access (-s /bin/false)
 	// This is a "system user" only for Samba authentication
-	useraddPath := findCommand("useradd")
+	useraddPath := sysutil.FindCommand("useradd")
 	cmd = exec.Command(useraddPath,
 		"-M",                  // No home directory
 		"-s", "/bin/false",    // No shell access (security)
@@ -211,14 +177,14 @@ func (m *SambaUserManager) createLinuxUser(username string) error {
 // deleteLinuxUser removes a Linux system user
 func (m *SambaUserManager) deleteLinuxUser(username string) error {
 	// Check if user exists
-	cmd := exec.Command(findCommand("id"), username)
+	cmd := exec.Command(sysutil.FindCommand("id"), username)
 	if err := cmd.Run(); err != nil {
 		logger.Debug("Linux user doesn't exist", zap.String("username", username))
 		return nil // Already gone
 	}
 
 	// Delete user (but keep home directory if any - just in case)
-	cmd = exec.Command(findCommand("userdel"), username)
+	cmd = exec.Command(sysutil.FindCommand("userdel"), username)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("userdel failed: %s: %w", string(output), err)
@@ -233,7 +199,7 @@ func (m *SambaUserManager) addSambaPassword(username, password string) error {
 	// Use smbpasswd to set password
 	// -a = add user (or update if exists)
 	// -s = silent mode (read password from stdin)
-	cmd := exec.Command(findCommand("smbpasswd"), "-a", "-s", username)
+	cmd := exec.Command(sysutil.FindCommand("smbpasswd"), "-a", "-s", username)
 
 	// Pass password via stdin (format: password\npassword\n)
 	cmd.Stdin = strings.NewReader(password + "\n" + password + "\n")
@@ -250,7 +216,7 @@ func (m *SambaUserManager) addSambaPassword(username, password string) error {
 // enableSambaUser enables a Samba user account
 func (m *SambaUserManager) enableSambaUser(username string) error {
 	// Use smbpasswd -e to enable
-	cmd := exec.Command(findCommand("smbpasswd"), "-e", username)
+	cmd := exec.Command(sysutil.FindCommand("smbpasswd"), "-e", username)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("smbpasswd enable failed: %s: %w", string(output), err)
@@ -263,7 +229,7 @@ func (m *SambaUserManager) enableSambaUser(username string) error {
 // removeSambaUser removes a user from Samba database
 func (m *SambaUserManager) removeSambaUser(username string) error {
 	// Use smbpasswd -x to remove
-	cmd := exec.Command(findCommand("smbpasswd"), "-x", username)
+	cmd := exec.Command(sysutil.FindCommand("smbpasswd"), "-x", username)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		// Check if error is just "user doesn't exist"
@@ -281,7 +247,7 @@ func (m *SambaUserManager) removeSambaUser(username string) error {
 // sambaUserExists checks if a user exists in Samba database
 func (m *SambaUserManager) sambaUserExists(username string) (bool, error) {
 	// Use pdbedit to list users and check if username exists
-	cmd := exec.Command(findCommand("pdbedit"), "-L", "-u", username)
+	cmd := exec.Command(sysutil.FindCommand("pdbedit"), "-L", "-u", username)
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -306,7 +272,7 @@ func (m *SambaUserManager) ListSambaUsers() ([]string, error) {
 		return []string{}, nil
 	}
 
-	cmd := exec.Command(findCommand("pdbedit"), "-L")
+	cmd := exec.Command(sysutil.FindCommand("pdbedit"), "-L")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("pdbedit failed: %s: %w", string(output), err)
