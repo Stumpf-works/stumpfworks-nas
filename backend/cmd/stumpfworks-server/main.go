@@ -20,6 +20,8 @@ import (
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/docker"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/plugins"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/scheduler"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/twofa"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/updates"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
 	"go.uber.org/zap"
@@ -141,6 +143,24 @@ func main() {
 		logger.Info("Alert service initialized")
 	}
 
+	// Initialize Scheduler service
+	if err := initializeScheduler(); err != nil {
+		logger.Warn("Scheduler service initialization failed",
+			zap.Error(err),
+			zap.String("message", "Scheduled tasks may be disabled"))
+	} else {
+		logger.Info("Scheduler service initialized and started")
+	}
+
+	// Initialize Two-Factor Authentication service
+	if err := initializeTwoFA(); err != nil {
+		logger.Warn("Two-Factor Authentication service initialization failed",
+			zap.Error(err),
+			zap.String("message", "2FA may be disabled"))
+	} else {
+		logger.Info("Two-Factor Authentication service initialized")
+	}
+
 	// Create HTTP router
 	router := api.NewRouter(cfg)
 
@@ -241,5 +261,22 @@ func initializeUpdateService() error {
 // Returns error if service fails to initialize, but this is non-fatal
 func initializeAlertService() error {
 	_, err := alerts.Initialize()
+	return err
+}
+
+// initializeScheduler initializes the Scheduler service and starts it
+// Returns error if service fails to initialize, but this is non-fatal
+func initializeScheduler() error {
+	service, err := scheduler.Initialize()
+	if err != nil {
+		return err
+	}
+	return service.Start()
+}
+
+// initializeTwoFA initializes the Two-Factor Authentication service
+// Returns error if service fails to initialize, but this is non-fatal
+func initializeTwoFA() error {
+	_, err := twofa.Initialize()
 	return err
 }

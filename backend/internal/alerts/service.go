@@ -143,7 +143,7 @@ func (s *Service) SendFailedLoginAlert(ctx context.Context, username, ipAddress 
 	}
 
 	subject := fmt.Sprintf("⚠️ Failed Login Alert - %d Attempts Detected", attemptCount)
-	body := fmt.Sprintf(`
+	htmlBody := fmt.Sprintf(`
 <html>
 <body>
 <h2>Failed Login Alert</h2>
@@ -159,7 +159,11 @@ func (s *Service) SendFailedLoginAlert(ctx context.Context, username, ipAddress 
 </html>
 `, username, ipAddress, attemptCount, time.Now().Format("2006-01-02 15:04:05"))
 
-	return s.sendEmail(ctx, config, subject, body, models.AlertTypeFailedLogin)
+	// Plain text version for webhooks
+	textBody := fmt.Sprintf("**Failed Login Alert**\n\nUsername: %s\nIP Address: %s\nAttempt Count: %d\nTime: %s\n\nIf this was not you, please review your security settings immediately.",
+		username, ipAddress, attemptCount, time.Now().Format("2006-01-02 15:04:05"))
+
+	return s.sendAlert(ctx, config, subject, htmlBody, textBody, models.AlertTypeFailedLogin)
 }
 
 // SendIPBlockAlert sends an alert when an IP is blocked
@@ -177,7 +181,7 @@ func (s *Service) SendIPBlockAlert(ctx context.Context, ipAddress string, reason
 	}
 
 	subject := fmt.Sprintf("🛡️ IP Blocked - Security Alert")
-	body := fmt.Sprintf(`
+	htmlBody := fmt.Sprintf(`
 <html>
 <body>
 <h2>IP Block Alert</h2>
@@ -193,7 +197,10 @@ func (s *Service) SendIPBlockAlert(ctx context.Context, ipAddress string, reason
 </html>
 `, ipAddress, reason, attempts, time.Now().Format("2006-01-02 15:04:05"))
 
-	return s.sendEmail(ctx, config, subject, body, models.AlertTypeIPBlock)
+	textBody := fmt.Sprintf("**IP Block Alert**\n\nIP Address: %s\nReason: %s\nFailed Attempts: %d\nTime: %s\n\nThe IP address will remain blocked for 15 minutes. You can manually unblock it from the Security dashboard.",
+		ipAddress, reason, attempts, time.Now().Format("2006-01-02 15:04:05"))
+
+	return s.sendAlert(ctx, config, subject, htmlBody, textBody, models.AlertTypeIPBlock)
 }
 
 // SendCriticalEventAlert sends an alert for critical security events
@@ -211,7 +218,7 @@ func (s *Service) SendCriticalEventAlert(ctx context.Context, action, username, 
 	}
 
 	subject := fmt.Sprintf("🚨 Critical Security Event - %s", action)
-	body := fmt.Sprintf(`
+	htmlBody := fmt.Sprintf(`
 <html>
 <body>
 <h2>Critical Security Event</h2>
@@ -228,7 +235,10 @@ func (s *Service) SendCriticalEventAlert(ctx context.Context, action, username, 
 </html>
 `, action, username, ipAddress, message, time.Now().Format("2006-01-02 15:04:05"))
 
-	return s.sendEmail(ctx, config, subject, body, models.AlertTypeCriticalEvent)
+	textBody := fmt.Sprintf("**Critical Security Event**\n\nAction: %s\nUser: %s\nIP Address: %s\nMessage: %s\nTime: %s\n\nPlease review the audit logs for more details.",
+		action, username, ipAddress, message, time.Now().Format("2006-01-02 15:04:05"))
+
+	return s.sendAlert(ctx, config, subject, htmlBody, textBody, models.AlertTypeCriticalEvent)
 }
 
 // shouldSendAlert checks if an alert should be sent based on rate limiting
@@ -248,6 +258,38 @@ func (s *Service) shouldSendAlert(alertType string, rateLimitMinutes int) bool {
 	}
 
 	return false
+}
+
+// sendAlert sends alerts to all enabled channels (email and/or webhook)
+func (s *Service) sendAlert(ctx context.Context, config *models.AlertConfig, subject, htmlBody, textBody, alertType string) error {
+	var emailErr, webhookErr error
+
+	// Send email if enabled
+	if config.Enabled && config.AlertRecipient != "" {
+		emailErr = s.sendEmail(ctx, config, subject, htmlBody, alertType)
+		if emailErr != nil {
+			logger.Error("Failed to send email alert",
+				zap.Error(emailErr),
+				zap.String("type", alertType))
+		}
+	}
+
+	// Send webhook if enabled
+	if config.WebhookEnabled && config.WebhookURL != "" {
+		webhookErr = s.sendWebhook(ctx, config, subject, textBody, alertType)
+		if webhookErr != nil {
+			logger.Error("Failed to send webhook alert",
+				zap.Error(webhookErr),
+				zap.String("type", alertType))
+		}
+	}
+
+	// Return error only if both channels failed
+	if emailErr != nil && webhookErr != nil {
+		return fmt.Errorf("failed to send alert via both channels: email=%v, webhook=%v", emailErr, webhookErr)
+	}
+
+	return nil
 }
 
 // sendEmail sends an email alert
@@ -295,6 +337,7 @@ func (s *Service) sendEmail(ctx context.Context, config *models.AlertConfig, sub
 	// Log the alert
 	alertLog := &models.AlertLog{
 		AlertType: alertType,
+		Channel:   models.AlertChannelEmail,
 		Subject:   subject,
 		Body:      body,
 		Recipient: config.AlertRecipient,

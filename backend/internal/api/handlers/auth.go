@@ -8,6 +8,7 @@ import (
 	"github.com/Stumpf-works/stumpfworks-nas/internal/api/middleware"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/auth"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database/models"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/twofa"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/users"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/errors"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
@@ -23,9 +24,11 @@ type LoginRequest struct {
 
 // LoginResponse represents a login response
 type LoginResponse struct {
-	AccessToken  string              `json:"accessToken"`
-	RefreshToken string              `json:"refreshToken"`
-	User         *users.UserResponse `json:"user"`
+	Requires2FA  bool                `json:"requires2FA,omitempty"`
+	UserID       uint                `json:"userId,omitempty"`
+	AccessToken  string              `json:"accessToken,omitempty"`
+	RefreshToken string              `json:"refreshToken,omitempty"`
+	User         *users.UserResponse `json:"user,omitempty"`
 }
 
 // Login handles user authentication
@@ -72,7 +75,25 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Generate tokens
+	// Check if 2FA is enabled for this user
+	twofaService := twofa.GetService()
+	if twofaService != nil {
+		enabled, err := twofaService.IsEnabled(r.Context(), user.ID)
+		if err != nil {
+			logger.Error("Failed to check 2FA status", zap.Error(err))
+		}
+
+		if enabled {
+			// Return a response indicating 2FA is required
+			utils.RespondSuccess(w, LoginResponse{
+				Requires2FA: true,
+				UserID:      user.ID,
+			})
+			return
+		}
+	}
+
+	// Generate tokens (no 2FA required or 2FA not enabled)
 	accessToken, err := users.GenerateToken(user)
 	if err != nil {
 		utils.RespondError(w, errors.InternalServerError("Failed to generate access token", err))
@@ -167,4 +188,74 @@ func GetCurrentUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.RespondSuccess(w, users.ToResponse(user))
+}
+
+// LoginWith2FA completes the login process after 2FA verification
+func LoginWith2FA(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		UserID       uint   `json:"userId"`
+		Code         string `json:"code"`
+		IsBackupCode bool   `json:"isBackupCode"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.RespondError(w, errors.BadRequest("Invalid request body", err))
+		return
+	}
+
+	if req.Code == "" {
+		utils.RespondError(w, errors.BadRequest("Verification code is required", nil))
+		return
+	}
+
+	// Verify 2FA code
+	twofaService := twofa.GetService()
+	if twofaService == nil {
+		utils.RespondError(w, errors.InternalServerError("2FA service not available", nil))
+		return
+	}
+
+	valid, err := twofaService.VerifyCode(r.Context(), twofa.VerifyRequest{
+		UserID:       req.UserID,
+		Code:         req.Code,
+		IsBackupCode: req.IsBackupCode,
+	})
+
+	if err != nil {
+		logger.Error("Failed to verify 2FA code", zap.Error(err))
+		utils.RespondError(w, errors.InternalServerError("Failed to verify code", err))
+		return
+	}
+
+	if !valid {
+		utils.RespondError(w, errors.Unauthorized("Invalid verification code", nil))
+		return
+	}
+
+	// Get user
+	user, err := users.GetUserByID(req.UserID)
+	if err != nil {
+		utils.RespondError(w, errors.NotFound("User not found", err))
+		return
+	}
+
+	// Generate tokens
+	accessToken, err := users.GenerateToken(user)
+	if err != nil {
+		utils.RespondError(w, errors.InternalServerError("Failed to generate access token", err))
+		return
+	}
+
+	refreshToken, err := users.GenerateRefreshToken(user)
+	if err != nil {
+		utils.RespondError(w, errors.InternalServerError("Failed to generate refresh token", err))
+		return
+	}
+
+	// Return response
+	utils.RespondSuccess(w, LoginResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		User:         users.ToResponse(user),
+	})
 }

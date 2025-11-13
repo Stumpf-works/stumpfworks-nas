@@ -19,6 +19,11 @@ func RunMigrations() error {
 		&models.IPBlock{},
 		&models.AlertConfig{},
 		&models.AlertLog{},
+		&models.ScheduledTask{},
+		&models.TaskExecution{},
+		&models.TwoFactorAuth{},
+		&models.TwoFactorBackupCode{},
+		&models.TwoFactorAttempt{},
 		// Add more models here as they are created
 	); err != nil {
 		return err

@@ -19,6 +19,13 @@ type AlertConfig struct {
 	SMTPUseTLS     bool   `gorm:"default:true" json:"smtpUseTLS"`
 	AlertRecipient string `gorm:"size:255" json:"alertRecipient"`
 
+	// Webhook settings
+	WebhookEnabled    bool   `gorm:"default:false" json:"webhookEnabled"`
+	WebhookType       string `gorm:"size:50" json:"webhookType"`         // discord, slack, custom
+	WebhookURL        string `gorm:"size:512" json:"webhookURL"`
+	WebhookUsername   string `gorm:"size:255" json:"webhookUsername"`   // Optional display name
+	WebhookAvatarURL  string `gorm:"size:512" json:"webhookAvatarURL"`  // Optional avatar image
+
 	// Alert triggers
 	OnFailedLogin     bool `gorm:"default:true" json:"onFailedLogin"`
 	OnIPBlock         bool `gorm:"default:true" json:"onIPBlock"`
@@ -35,6 +42,7 @@ type AlertLog struct {
 	CreatedAt time.Time `gorm:"index" json:"createdAt"`
 
 	AlertType string `gorm:"size:100;not null;index" json:"alertType"`
+	Channel   string `gorm:"size:20;not null;index" json:"channel"` // email, webhook
 	Subject   string `gorm:"size:255;not null" json:"subject"`
 	Body      string `gorm:"type:text" json:"body"`
 	Recipient string `gorm:"size:255;not null" json:"recipient"`
@@ -48,4 +56,17 @@ const (
 	AlertTypeIPBlock       = "ip_block"
 	AlertTypeCriticalEvent = "critical_event"
 	AlertTypeSystemError   = "system_error"
+)
+
+// Alert channels
+const (
+	AlertChannelEmail   = "email"
+	AlertChannelWebhook = "webhook"
+)
+
+// Webhook types
+const (
+	WebhookTypeDiscord = "discord"
+	WebhookTypeSlack   = "slack"
+	WebhookTypeCustom  = "custom"
 )

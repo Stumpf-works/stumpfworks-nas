@@ -87,6 +87,27 @@ func (h *AlertHandler) TestEmail(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// TestWebhook sends a test webhook
+func (h *AlertHandler) TestWebhook(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var config models.AlertConfig
+	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
+		utils.RespondError(w, errors.BadRequest("Invalid request body", err))
+		return
+	}
+
+	if err := h.alertService.TestWebhook(ctx, &config); err != nil {
+		logger.Error("Failed to send test webhook", zap.Error(err))
+		utils.RespondError(w, errors.InternalServerError("Failed to send test webhook", err))
+		return
+	}
+
+	utils.RespondSuccess(w, map[string]string{
+		"message": "Test webhook sent successfully",
+	})
+}
+
 // GetAlertLogs retrieves recent alert logs
 func (h *AlertHandler) GetAlertLogs(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
