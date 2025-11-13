@@ -102,6 +102,15 @@ func main() {
 		logger.Info("Default shares verified")
 	}
 
+	// Fix permissions for all existing shares
+	if err := storage.FixExistingSharePermissions(); err != nil {
+		logger.Warn("Failed to fix share permissions",
+			zap.Error(err),
+			zap.String("message", "Some shares may have incorrect permissions"))
+	} else {
+		logger.Info("Share permissions verified and fixed")
+	}
+
 	// Initialize file service
 	if err := handlers.InitFileService(); err != nil {
 		logger.Fatal("Failed to initialize file service", zap.Error(err))
