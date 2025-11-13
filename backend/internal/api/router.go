@@ -91,6 +91,21 @@ func NewRouter(cfg *config.Config) http.Handler {
 				r.Delete("/{id}", handlers.DeleteUser)
 			})
 
+			// User Group routes (admin only)
+			r.Route("/groups", func(r chi.Router) {
+				r.Use(mw.AdminOnly)
+				r.Get("/", handlers.ListGroups)
+				r.Post("/", handlers.CreateGroup)
+				r.Get("/{id}", handlers.GetGroup)
+				r.Put("/{id}", handlers.UpdateGroup)
+				r.Delete("/{id}", handlers.DeleteGroup)
+
+				// Group member management
+				r.Post("/{id}/members", handlers.AddGroupMember)
+				r.Delete("/{id}/members/{userId}", handlers.RemoveGroupMember)
+				r.Get("/{id}/members", handlers.GetGroupMembers)
+			})
+
 			// Storage routes
 			r.Route("/storage", func(r chi.Router) {
 				// Statistics and overview

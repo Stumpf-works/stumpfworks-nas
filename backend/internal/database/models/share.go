@@ -15,7 +15,8 @@ type Share struct {
 	ReadOnly    bool   `gorm:"default:false"`
 	Browseable  bool   `gorm:"default:true"`
 	GuestOK     bool   `gorm:"default:false"`
-	ValidUsers  string `gorm:"size:1000"` // Comma-separated list
+	ValidUsers  string `gorm:"size:1000"` // Comma-separated list of usernames
+	ValidGroups string `gorm:"size:1000"` // Comma-separated list of group names
 	DeletedAt   gorm.DeletedAt `gorm:"index;uniqueIndex:idx_name_deleted"` // Part of composite unique index
 }
 

@@ -141,6 +141,7 @@ type Share struct {
 	Browseable  bool      `json:"browseable"`
 	GuestOK     bool      `json:"guestOk"`
 	ValidUsers  []string  `json:"validUsers,omitempty"`
+	ValidGroups []string  `json:"validGroups,omitempty"`
 	CreatedAt   time.Time `json:"createdAt"`
 	UpdatedAt   time.Time `json:"updatedAt"`
 }
@@ -191,6 +192,7 @@ type CreateShareRequest struct {
 	Browseable  bool      `json:"browseable"`
 	GuestOK     bool      `json:"guestOk"`
 	ValidUsers  []string  `json:"validUsers,omitempty"`
+	ValidGroups []string  `json:"validGroups,omitempty"`
 }
 
 // FormatDiskRequest represents a request to format a disk/partition

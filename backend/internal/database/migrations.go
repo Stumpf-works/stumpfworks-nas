@@ -13,6 +13,7 @@ func RunMigrations() error {
 	// Auto-migrate models
 	if err := DB.AutoMigrate(
 		&models.User{},
+		&models.UserGroup{},
 		&models.Share{},
 		&models.AuditLog{},
 		&models.FailedLoginAttempt{},

@@ -26,6 +26,7 @@ import (
 	"github.com/Stumpf-works/stumpfworks-nas/internal/storage"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/twofa"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/updates"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/usergroups"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/users"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/sysutil"
@@ -91,6 +92,15 @@ func main() {
 			zap.String("message", "Samba user sync disabled - users will only work for web access"))
 	} else {
 		logger.Info("Samba user manager initialized")
+	}
+
+	// Initialize Unix group manager (non-fatal if commands not available)
+	if err := initializeUnixGroupManager(); err != nil {
+		logger.Warn("Unix group manager initialization failed",
+			zap.Error(err),
+			zap.String("message", "Unix group sync disabled - groups will only work in database"))
+	} else {
+		logger.Info("Unix group manager initialized")
 	}
 
 	// Ensure default shares exist (creates default shares on first run)
@@ -351,6 +361,16 @@ func initializeSambaUserManager() error {
 	manager := users.InitSambaUserManager()
 	if !manager.IsEnabled() {
 		return fmt.Errorf("samba not installed")
+	}
+	return nil
+}
+
+// initializeUnixGroupManager initializes the Unix group synchronization manager
+// Returns error if service fails to initialize, but this is non-fatal
+func initializeUnixGroupManager() error {
+	manager := usergroups.InitUnixGroupManager()
+	if !manager.IsEnabled() {
+		return fmt.Errorf("required Unix group commands not available")
 	}
 	return nil
 }

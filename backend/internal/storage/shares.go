@@ -69,6 +69,11 @@ func toShare(s *models.Share) *Share {
 		validUsers = strings.Split(s.ValidUsers, ",")
 	}
 
+	var validGroups []string
+	if s.ValidGroups != "" {
+		validGroups = strings.Split(s.ValidGroups, ",")
+	}
+
 	return &Share{
 		ID:          fmt.Sprintf("%d", s.ID),
 		Name:        s.Name,
@@ -80,6 +85,7 @@ func toShare(s *models.Share) *Share {
 		Browseable:  s.Browseable,
 		GuestOK:     s.GuestOK,
 		ValidUsers:  validUsers,
+		ValidGroups: validGroups,
 		CreatedAt:   s.CreatedAt,
 		UpdatedAt:   s.UpdatedAt,
 	}
@@ -136,6 +142,7 @@ func CreateShare(req *CreateShareRequest) (*Share, error) {
 		Browseable:  req.Browseable,
 		GuestOK:     req.GuestOK,
 		ValidUsers:  strings.Join(req.ValidUsers, ","),
+		ValidGroups: strings.Join(req.ValidGroups, ","),
 	}
 
 	// Check if share with this name already exists
@@ -189,6 +196,7 @@ func UpdateShare(id string, req *CreateShareRequest) (*Share, error) {
 	model.Browseable = req.Browseable
 	model.GuestOK = req.GuestOK
 	model.ValidUsers = strings.Join(req.ValidUsers, ",")
+	model.ValidGroups = strings.Join(req.ValidGroups, ",")
 
 	if err := database.DB.Save(&model).Error; err != nil {
 		return nil, err
@@ -289,8 +297,34 @@ func buildSambaShareConfig(share *models.Share) string {
 		boolToYesNo(share.ReadOnly),
 		boolToYesNo(share.GuestOK))
 
+	// Build valid users list (combining individual users and groups)
+	var validEntries []string
+
+	// Add individual users
 	if share.ValidUsers != "" {
-		config += fmt.Sprintf("\n   valid users = %s", strings.ReplaceAll(share.ValidUsers, ",", " "))
+		users := strings.Split(share.ValidUsers, ",")
+		for _, user := range users {
+			user = strings.TrimSpace(user)
+			if user != "" {
+				validEntries = append(validEntries, user)
+			}
+		}
+	}
+
+	// Add groups (prefixed with @ for Samba group syntax)
+	if share.ValidGroups != "" {
+		groups := strings.Split(share.ValidGroups, ",")
+		for _, group := range groups {
+			group = strings.TrimSpace(group)
+			if group != "" {
+				validEntries = append(validEntries, "@"+group)
+			}
+		}
+	}
+
+	// Add valid users directive if we have any entries
+	if len(validEntries) > 0 {
+		config += fmt.Sprintf("\n   valid users = %s", strings.Join(validEntries, " "))
 	}
 
 	return config
