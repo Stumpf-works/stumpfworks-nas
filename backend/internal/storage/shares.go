@@ -291,10 +291,7 @@ func configureSMBShare(share *models.Share) error {
 	ensureSambaInclude()
 
 	// Reload Samba
-	cmd := exec.Command("systemctl", "reload", "smbd")
-	if output, err := cmd.CombinedOutput(); err != nil {
-		logger.Warn("Failed to reload Samba", zap.String("output", string(output)))
-	}
+	reloadSamba()
 
 	return nil
 }
@@ -307,12 +304,33 @@ func removeSMBShare(share *models.Share) error {
 	}
 
 	// Reload Samba
-	cmd := exec.Command("systemctl", "reload", "smbd")
-	if output, err := cmd.CombinedOutput(); err != nil {
-		logger.Warn("Failed to reload Samba", zap.String("output", string(output)))
-	}
+	reloadSamba()
 
 	return nil
+}
+
+// reloadSamba reloads the Samba service to apply configuration changes
+func reloadSamba() {
+	// Try systemctl first
+	cmd := exec.Command("systemctl", "reload", "smbd")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		logger.Warn("Failed to reload smbd via systemctl",
+			zap.String("output", string(output)),
+			zap.Error(err))
+		// Try service command as fallback
+		cmd = exec.Command("service", "smbd", "reload")
+		if output, err := cmd.CombinedOutput(); err != nil {
+			logger.Warn("Failed to reload smbd via service",
+				zap.String("output", string(output)),
+				zap.Error(err))
+		}
+	}
+
+	// Also reload nmbd
+	cmd = exec.Command("systemctl", "reload", "nmbd")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		logger.Debug("Failed to reload nmbd", zap.String("output", string(output)))
+	}
 }
 
 // configureNFSShare configures an NFS export
@@ -369,7 +387,120 @@ func removeNFSShare(share *models.Share) error {
 	return nil
 }
 
+// RepairSambaConfig repairs common issues in smb.conf
+// This function is called on startup to fix configuration problems like:
+// - Duplicate include directives
+// - Incorrectly indented include directives (treated as parameters instead of directives)
+// - Missing include directives
+func RepairSambaConfig() error {
+	smbConfPath := "/etc/samba/smb.conf"
+	includeDirective := "include = /etc/samba/shares.d/*.conf"
+
+	// Check if smb.conf exists
+	if _, err := os.Stat(smbConfPath); os.IsNotExist(err) {
+		logger.Debug("Samba config not found, skipping repair", zap.String("path", smbConfPath))
+		return nil // Not an error - Samba might not be installed
+	}
+
+	// Read current config
+	data, err := os.ReadFile(smbConfPath)
+	if err != nil {
+		return err
+	}
+
+	content := string(data)
+	lines := strings.Split(content, "\n")
+
+	// Remove ALL existing include directives (both correct and incorrect)
+	var cleanedLines []string
+	needsRepair := false
+
+	for _, line := range lines {
+		// Skip any line that contains the include directive
+		if strings.Contains(line, "include = /etc/samba/shares.d") {
+			needsRepair = true
+			logger.Info("Removing include directive for repair", zap.String("line", line))
+			continue
+		}
+		// Also skip the comment line if present
+		if strings.Contains(line, "Include dynamic share configurations") {
+			continue
+		}
+		cleanedLines = append(cleanedLines, line)
+	}
+
+	// If no include was found, we need to add one
+	if !needsRepair {
+		logger.Debug("No include directive found, will add one")
+		needsRepair = true
+	}
+
+	if !needsRepair {
+		logger.Debug("Samba config is correct, no repair needed")
+		return nil
+	}
+
+	logger.Info("Repairing Samba configuration...")
+
+	// Now add ONE correct include directive at the right place
+	var newLines []string
+	addedInclude := false
+	inGlobalSection := false
+
+	for i, line := range cleanedLines {
+		trimmed := strings.TrimSpace(line)
+
+		// Detect [global] section start
+		if strings.Contains(trimmed, "[global]") {
+			inGlobalSection = true
+		}
+
+		// Detect when we're leaving global section
+		if inGlobalSection && !addedInclude {
+			if (strings.HasPrefix(trimmed, "[") && !strings.Contains(trimmed, "[global]")) ||
+			   strings.Contains(trimmed, "Share Definitions") {
+				// Insert include directive before this line
+				newLines = append(newLines, "")
+				newLines = append(newLines, "# Include dynamic share configurations")
+				newLines = append(newLines, includeDirective)
+				newLines = append(newLines, "")
+				addedInclude = true
+				inGlobalSection = false
+				logger.Info("Added include directive at correct position")
+			}
+		}
+
+		newLines = append(newLines, line)
+
+		// Fallback: if we reach the end without finding a section marker
+		if !addedInclude && i == len(cleanedLines)-1 {
+			lastLine := newLines[len(newLines)-1]
+			newLines = newLines[:len(newLines)-1]
+			newLines = append(newLines, "")
+			newLines = append(newLines, "# Include dynamic share configurations")
+			newLines = append(newLines, includeDirective)
+			newLines = append(newLines, "")
+			newLines = append(newLines, lastLine)
+			addedInclude = true
+			logger.Info("Added include directive at end of file (fallback)")
+		}
+	}
+
+	// Write back
+	if err := os.WriteFile(smbConfPath, []byte(strings.Join(newLines, "\n")), 0644); err != nil {
+		return fmt.Errorf("failed to write repaired smb.conf: %w", err)
+	}
+
+	logger.Info("Samba configuration repaired successfully")
+
+	// Reload Samba to apply changes
+	reloadSamba()
+
+	return nil
+}
+
 // ensureSambaInclude ensures the main smb.conf includes shares.d directory
+// This is a simpler check - for more aggressive repair, use RepairSambaConfig()
 func ensureSambaInclude() error {
 	smbConfPath := "/etc/samba/smb.conf"
 	includeDirective := "include = /etc/samba/shares.d/*.conf"
@@ -382,8 +513,8 @@ func ensureSambaInclude() error {
 
 	content := string(data)
 
-	// Check if include directive already exists
-	if strings.Contains(content, includeDirective) {
+	// Check if include directive already exists (correctly formatted)
+	if strings.Contains(content, "\n"+includeDirective) || strings.HasPrefix(content, includeDirective) {
 		return nil
 	}
 
