@@ -17,9 +17,11 @@ export interface LoginRequest {
 }
 
 export interface LoginResponse {
-  accessToken: string;
-  refreshToken: string;
-  user: User;
+  accessToken?: string;
+  refreshToken?: string;
+  user?: User;
+  requires2FA?: boolean;
+  userId?: number;
 }
 
 export const authApi = {

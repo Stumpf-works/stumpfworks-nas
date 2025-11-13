@@ -37,15 +37,19 @@ export default function Login({ onSuccess }: LoginProps) {
         // Check if 2FA is required
         if (response.data.requires2FA) {
           setRequires2FA(true);
-          setUserId(response.data.userId);
+          setUserId(response.data.userId || null);
           setIsLoading(false);
           return;
         }
 
         // Normal login (no 2FA)
         const { accessToken, refreshToken, user } = response.data;
-        setAuth(user, accessToken, refreshToken);
-        onSuccess();
+        if (accessToken && refreshToken && user) {
+          setAuth(user, accessToken, refreshToken);
+          onSuccess();
+        } else {
+          setError('Invalid login response');
+        }
       } else {
         setError(response.error?.message || 'Login failed');
       }
