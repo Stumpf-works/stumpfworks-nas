@@ -408,9 +408,10 @@ func ensureSambaInclude() error {
 			if (strings.HasPrefix(trimmed, "[") && !strings.Contains(trimmed, "[global]")) ||
 			   strings.Contains(trimmed, "Share Definitions") {
 				// Insert include directive before this line
+				// IMPORTANT: include directive must NOT be indented - it's a directive, not a parameter
 				newLines = append(newLines, "")
 				newLines = append(newLines, "# Include dynamic share configurations")
-				newLines = append(newLines, "   "+includeDirective)
+				newLines = append(newLines, includeDirective)
 				newLines = append(newLines, "")
 				addedInclude = true
 				inGlobalSection = false
@@ -423,11 +424,12 @@ func ensureSambaInclude() error {
 		// add it before the last line
 		if !addedInclude && i == len(lines)-1 {
 			// Insert before the last line
+			// IMPORTANT: include directive must NOT be indented - it's a directive, not a parameter
 			lastLine := newLines[len(newLines)-1]
 			newLines = newLines[:len(newLines)-1]
 			newLines = append(newLines, "")
 			newLines = append(newLines, "# Include dynamic share configurations")
-			newLines = append(newLines, "   "+includeDirective)
+			newLines = append(newLines, includeDirective)
 			newLines = append(newLines, "")
 			newLines = append(newLines, lastLine)
 			addedInclude = true
