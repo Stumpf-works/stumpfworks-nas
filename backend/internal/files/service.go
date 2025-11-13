@@ -27,6 +27,19 @@ func NewService(allowedPaths []string, permChecker *PermissionChecker) *Service 
 	}
 }
 
+// CheckWritePermission validates that a user has write access to a path
+// This is a helper method for operations that need to check permissions before acting
+func (s *Service) CheckWritePermission(ctx *SecurityContext, path string) error {
+	// Validate and sanitize path first
+	cleanPath, err := s.validator.ValidateAndSanitize(path)
+	if err != nil {
+		return err
+	}
+
+	// Check write permissions
+	return s.permissions.CanWrite(ctx, cleanPath)
+}
+
 // Browse lists files and directories at the specified path
 func (s *Service) Browse(ctx *SecurityContext, req *BrowseRequest) (*BrowseResponse, error) {
 	// Validate and sanitize path
