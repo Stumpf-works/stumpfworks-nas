@@ -234,7 +234,7 @@ func isRoot() bool {
 
 // PrintHelp prints usage instructions
 func PrintHelp() {
-	fmt.Println(`
+	fmt.Print(`
 Dependency Management:
 
   The system requires several packages to function properly:
