@@ -111,6 +111,15 @@ func main() {
 		logger.Info("Share permissions verified and fixed")
 	}
 
+	// Repair Samba configuration (fixes common misconfigurations)
+	if err := storage.RepairSambaConfig(); err != nil {
+		logger.Warn("Failed to repair Samba configuration",
+			zap.Error(err),
+			zap.String("message", "Samba shares may not work correctly - check /etc/samba/smb.conf"))
+	} else {
+		logger.Info("Samba configuration verified and repaired if needed")
+	}
+
 	// Initialize file service
 	if err := handlers.InitFileService(); err != nil {
 		logger.Fatal("Failed to initialize file service", zap.Error(err))
