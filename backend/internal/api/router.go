@@ -65,6 +65,22 @@ func NewRouter(cfg *config.Config) http.Handler {
 			r.Get("/system/version", updateHandler.GetCurrentVersion)
 			r.Get("/system/check-updates", updateHandler.CheckForUpdates)
 
+			// Metrics and monitoring routes
+			r.Route("/metrics", func(r chi.Router) {
+				metricsHandler := handlers.NewMetricsHandler()
+
+				r.Get("/history", metricsHandler.GetMetricsHistory)
+				r.Get("/latest", metricsHandler.GetLatestMetric)
+				r.Get("/trends", metricsHandler.GetTrends)
+			})
+
+			r.Route("/health", func(r chi.Router) {
+				metricsHandler := handlers.NewMetricsHandler()
+
+				r.Get("/scores", metricsHandler.GetHealthScores)
+				r.Get("/score", metricsHandler.GetLatestHealthScore)
+			})
+
 			// User routes (admin only for now)
 			r.Route("/users", func(r chi.Router) {
 				r.Use(mw.AdminOnly)
