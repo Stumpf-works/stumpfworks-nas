@@ -20,6 +20,7 @@ import (
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/docker"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/plugins"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/scheduler"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/updates"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
 	"go.uber.org/zap"
@@ -141,6 +142,15 @@ func main() {
 		logger.Info("Alert service initialized")
 	}
 
+	// Initialize Scheduler service
+	if err := initializeScheduler(); err != nil {
+		logger.Warn("Scheduler service initialization failed",
+			zap.Error(err),
+			zap.String("message", "Scheduled tasks may be disabled"))
+	} else {
+		logger.Info("Scheduler service initialized and started")
+	}
+
 	// Create HTTP router
 	router := api.NewRouter(cfg)
 
@@ -242,4 +252,14 @@ func initializeUpdateService() error {
 func initializeAlertService() error {
 	_, err := alerts.Initialize()
 	return err
+}
+
+// initializeScheduler initializes the Scheduler service and starts it
+// Returns error if service fails to initialize, but this is non-fatal
+func initializeScheduler() error {
+	service, err := scheduler.Initialize()
+	if err != nil {
+		return err
+	}
+	return service.Start()
 }

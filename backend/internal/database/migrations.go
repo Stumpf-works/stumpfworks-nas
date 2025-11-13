@@ -19,6 +19,8 @@ func RunMigrations() error {
 		&models.IPBlock{},
 		&models.AlertConfig{},
 		&models.AlertLog{},
+		&models.ScheduledTask{},
+		&models.TaskExecution{},
 		// Add more models here as they are created
 	); err != nil {
 		return err

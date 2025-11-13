@@ -10,6 +10,7 @@ import { BackupManager } from './BackupManager/BackupManager';
 import { AuditLogs } from './AuditLogs/AuditLogs';
 import { Security } from './Security/Security';
 import { Alerts } from './Alerts/Alerts';
+import { Tasks } from './Tasks/Tasks';
 import type { App } from '@/types';
 
 // Placeholder components for apps not yet implemented
@@ -70,6 +71,14 @@ export const registeredApps: App[] = [
     component: Alerts,
     defaultSize: { width: 1000, height: 800 },
     minSize: { width: 800, height: 600 },
+  },
+  {
+    id: 'tasks',
+    name: 'Scheduled Tasks',
+    icon: '📅',
+    component: Tasks,
+    defaultSize: { width: 1400, height: 800 },
+    minSize: { width: 1000, height: 600 },
   },
   {
     id: 'network',

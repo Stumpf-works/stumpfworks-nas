@@ -333,6 +333,22 @@ func NewRouter(cfg *config.Config) http.Handler {
 				r.Get("/logs", alertHandler.GetAlertLogs)
 			})
 
+			// Scheduler/Task routes
+			r.Route("/tasks", func(r chi.Router) {
+				schedulerHandler := handlers.NewSchedulerHandler()
+
+				// Task management (admin only)
+				r.Use(mw.AdminOnly)
+				r.Get("/", schedulerHandler.ListTasks)
+				r.Post("/", schedulerHandler.CreateTask)
+				r.Get("/{id}", schedulerHandler.GetTask)
+				r.Put("/{id}", schedulerHandler.UpdateTask)
+				r.Delete("/{id}", schedulerHandler.DeleteTask)
+				r.Post("/{id}/run", schedulerHandler.RunTaskNow)
+				r.Get("/{id}/executions", schedulerHandler.GetTaskExecutions)
+				r.Post("/validate-cron", schedulerHandler.ValidateCron)
+			})
+
 			// Plugin routes
 			r.Route("/plugins", func(r chi.Router) {
 				pluginHandler := handlers.NewPluginHandler()
