@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import client from './client';
 
 export interface ScheduledTask {
   id?: number;
@@ -61,7 +61,7 @@ export const tasksApi = {
    * List all scheduled tasks with pagination
    */
   listTasks: async (offset = 0, limit = 50): Promise<TaskListResponse> => {
-    const response = await apiClient.get('/api/v1/tasks', {
+    const response = await client.get('/api/v1/tasks', {
       params: { offset, limit },
     });
     return response.data.data;
@@ -71,7 +71,7 @@ export const tasksApi = {
    * Get a specific task by ID
    */
   getTask: async (id: number): Promise<ScheduledTask> => {
-    const response = await apiClient.get(`/api/v1/tasks/${id}`);
+    const response = await client.get(`/api/v1/tasks/${id}`);
     return response.data.data;
   },
 
@@ -79,7 +79,7 @@ export const tasksApi = {
    * Create a new scheduled task
    */
   createTask: async (task: Omit<ScheduledTask, 'id'>): Promise<ScheduledTask> => {
-    const response = await apiClient.post('/api/v1/tasks', task);
+    const response = await client.post('/api/v1/tasks', task);
     return response.data.data;
   },
 
@@ -87,7 +87,7 @@ export const tasksApi = {
    * Update an existing task
    */
   updateTask: async (id: number, task: ScheduledTask): Promise<ScheduledTask> => {
-    const response = await apiClient.put(`/api/v1/tasks/${id}`, task);
+    const response = await client.put(`/api/v1/tasks/${id}`, task);
     return response.data.data;
   },
 
@@ -95,14 +95,14 @@ export const tasksApi = {
    * Delete a task
    */
   deleteTask: async (id: number): Promise<void> => {
-    await apiClient.delete(`/api/v1/tasks/${id}`);
+    await client.delete(`/api/v1/tasks/${id}`);
   },
 
   /**
    * Run a task immediately
    */
   runTaskNow: async (id: number): Promise<void> => {
-    await apiClient.post(`/api/v1/tasks/${id}/run`);
+    await client.post(`/api/v1/tasks/${id}/run`);
   },
 
   /**
@@ -113,7 +113,7 @@ export const tasksApi = {
     offset = 0,
     limit = 50
   ): Promise<TaskExecutionsResponse> => {
-    const response = await apiClient.get(`/api/v1/tasks/${id}/executions`, {
+    const response = await client.get(`/api/v1/tasks/${id}/executions`, {
       params: { offset, limit },
     });
     return response.data.data;
@@ -123,7 +123,7 @@ export const tasksApi = {
    * Validate a cron expression
    */
   validateCron: async (expression: string): Promise<CronValidationResponse> => {
-    const response = await apiClient.post('/api/v1/tasks/validate-cron', {
+    const response = await client.post('/api/v1/tasks/validate-cron', {
       expression,
     });
     return response.data.data;
