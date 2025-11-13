@@ -8,4 +8,7 @@ var (
 
 	// ErrCommandNotFound is returned when a required command is not found
 	ErrCommandNotFound = errors.New("required command not found in system paths")
+
+	// ErrPathTraversal is returned when a path traversal attempt is detected
+	ErrPathTraversal = errors.New("path traversal attempt detected")
 )

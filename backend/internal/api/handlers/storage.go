@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/api/middleware"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/database/models"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/storage"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/errors"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
@@ -151,16 +153,61 @@ func DeleteVolume(w http.ResponseWriter, r *http.Request) {
 
 // ===== Share Handlers =====
 
-// ListShares lists all network shares
+// ListShares lists all network shares (filtered by user permissions)
 func ListShares(w http.ResponseWriter, r *http.Request) {
-	shares, err := storage.ListShares()
+	allShares, err := storage.ListShares()
 	if err != nil {
 		logger.Error("Failed to list shares", zap.Error(err))
 		utils.RespondError(w, errors.InternalServerError("Failed to list shares", err))
 		return
 	}
 
-	utils.RespondSuccess(w, shares)
+	// Get user from context
+	user := middleware.GetUserFromContext(r.Context())
+	if user == nil {
+		utils.RespondError(w, errors.Unauthorized("User not authenticated", nil))
+		return
+	}
+
+	// Admins see all shares
+	if user.IsAdmin() {
+		utils.RespondSuccess(w, allShares)
+		return
+	}
+
+	// Regular users only see shares they have access to
+	filteredShares := filterSharesForUser(allShares, user)
+	utils.RespondSuccess(w, filteredShares)
+}
+
+// filterSharesForUser filters shares based on user access permissions
+func filterSharesForUser(shares []storage.Share, user *models.User) []storage.Share {
+	var filtered []storage.Share
+
+	for _, share := range shares {
+		// Skip disabled shares
+		if !share.Enabled {
+			continue
+		}
+
+		// Include shares that are open to guests
+		if share.GuestOK {
+			filtered = append(filtered, share)
+			continue
+		}
+
+		// Include shares where user is in ValidUsers list
+		if len(share.ValidUsers) > 0 {
+			for _, validUser := range share.ValidUsers {
+				if validUser == user.Username {
+					filtered = append(filtered, share)
+					break
+				}
+			}
+		}
+	}
+
+	return filtered
 }
 
 // GetShare retrieves information about a specific share
