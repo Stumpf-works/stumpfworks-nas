@@ -3,6 +3,8 @@ package users
 import (
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/errors"
+	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -115,6 +117,15 @@ func CreateUser(req *CreateUserRequest) (*User, error) {
 		return nil, errors.InternalServerError("Failed to create user", err)
 	}
 
+	// Sync to Samba (for SMB share access)
+	sambaManager := GetSambaManager()
+	if err := sambaManager.CreateSambaUser(user.Username, req.Password); err != nil {
+		logger.Warn("Failed to create Samba user - user will only work for web access",
+			zap.String("username", user.Username),
+			zap.Error(err))
+		// Don't fail the whole operation - user can still use web interface
+	}
+
 	return user, nil
 }
 
@@ -171,6 +182,17 @@ func UpdateUser(id uint, req *UpdateUserRequest) (*User, error) {
 		return nil, errors.InternalServerError("Failed to update user", err)
 	}
 
+	// Sync password to Samba if password was changed
+	if req.Password != nil {
+		sambaManager := GetSambaManager()
+		if err := sambaManager.UpdateSambaPassword(user.Username, *req.Password); err != nil {
+			logger.Warn("Failed to update Samba password",
+				zap.String("username", user.Username),
+				zap.Error(err))
+			// Don't fail - web password is updated
+		}
+	}
+
 	// Reload user
 	if err := database.DB.First(user, id).Error; err != nil {
 		return nil, errors.InternalServerError("Failed to reload user", err)
@@ -199,6 +221,15 @@ func DeleteUser(id uint) error {
 		return errors.InternalServerError("Failed to delete user", err)
 	}
 
+	// Remove from Samba
+	sambaManager := GetSambaManager()
+	if err := sambaManager.DeleteSambaUser(user.Username); err != nil {
+		logger.Warn("Failed to delete Samba user",
+			zap.String("username", user.Username),
+			zap.Error(err))
+		// Don't fail - user is deleted from database
+	}
+
 	return nil
 }
 
@@ -222,6 +253,15 @@ func ChangePassword(userID uint, oldPassword, newPassword string) error {
 	// Save
 	if err := database.DB.Model(user).Update("password_hash", user.PasswordHash).Error; err != nil {
 		return errors.InternalServerError("Failed to update password", err)
+	}
+
+	// Sync to Samba
+	sambaManager := GetSambaManager()
+	if err := sambaManager.UpdateSambaPassword(user.Username, newPassword); err != nil {
+		logger.Warn("Failed to update Samba password",
+			zap.String("username", user.Username),
+			zap.Error(err))
+		// Don't fail - web password is updated
 	}
 
 	return nil
