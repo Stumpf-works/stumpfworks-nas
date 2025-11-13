@@ -28,6 +28,7 @@ build/
 
 # Backend (Go)
 backend/dist/
+backend/bin/
 backend/*.exe
 backend/*.dll
 backend/*.so

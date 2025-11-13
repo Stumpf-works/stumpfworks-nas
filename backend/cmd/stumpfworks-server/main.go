@@ -19,6 +19,7 @@ import (
 	"github.com/Stumpf-works/stumpfworks-nas/internal/config"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/docker"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/metrics"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/plugins"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/scheduler"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/storage"
@@ -179,6 +180,15 @@ func main() {
 			zap.String("message", "2FA may be disabled"))
 	} else {
 		logger.Info("Two-Factor Authentication service initialized")
+	}
+
+	// Initialize Metrics service
+	if err := initializeMetrics(); err != nil {
+		logger.Warn("Metrics service initialization failed",
+			zap.Error(err),
+			zap.String("message", "Metrics collection may be disabled"))
+	} else {
+		logger.Info("Metrics service initialized and started")
 	}
 
 	// Create HTTP router
