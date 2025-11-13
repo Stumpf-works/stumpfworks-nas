@@ -10,6 +10,7 @@ import (
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database/models"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
+	"github.com/Stumpf-works/stumpfworks-nas/pkg/sysutil"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -506,14 +507,16 @@ func setupSharePermissions(share *models.Share) error {
 // ensureSMBGroup ensures the smbusers group exists, creates it if not
 func ensureSMBGroup(groupName string) error {
 	// Check if group exists
-	cmd := exec.Command("getent", "group", groupName)
+	getentPath := sysutil.FindCommand("getent")
+	cmd := exec.Command(getentPath, "group", groupName)
 	if err := cmd.Run(); err == nil {
 		// Group exists
 		return nil
 	}
 
 	// Group doesn't exist, create it
-	cmd = exec.Command("groupadd", groupName)
+	groupaddPath := sysutil.FindCommand("groupadd")
+	cmd = exec.Command(groupaddPath, groupName)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to create group %s: %s: %w", groupName, string(output), err)
 	}
@@ -525,7 +528,8 @@ func ensureSMBGroup(groupName string) error {
 // setShareGroupOwnership sets the group ownership of a path
 func setShareGroupOwnership(path, groupName string) error {
 	// Use chgrp to set group ownership
-	cmd := exec.Command("chgrp", groupName, path)
+	chgrpPath := sysutil.FindCommand("chgrp")
+	cmd := exec.Command(chgrpPath, groupName, path)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("chgrp failed: %s: %w", string(output), err)
 	}
@@ -535,7 +539,8 @@ func setShareGroupOwnership(path, groupName string) error {
 // addUserToGroup adds a user to a group
 func addUserToGroup(username, groupName string) error {
 	// Check if user already in group
-	cmd := exec.Command("id", "-nG", username)
+	idPath := sysutil.FindCommand("id")
+	cmd := exec.Command(idPath, "-nG", username)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to check user groups: %w", err)
@@ -550,7 +555,8 @@ func addUserToGroup(username, groupName string) error {
 	}
 
 	// Add user to group
-	cmd = exec.Command("usermod", "-aG", groupName, username)
+	usermodPath := sysutil.FindCommand("usermod")
+	cmd = exec.Command(usermodPath, "-aG", groupName, username)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("usermod failed: %s: %w", string(output), err)
 	}
