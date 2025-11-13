@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FileInfo } from '@/api/files';
 import { getFilePermissions, changeFilePermissions, PermissionsInfo } from '@/api/files';
-import { useAuthStore } from '@/stores/authStore';
+import { useAuthStore } from '@/store';
 
 interface PermissionsModalProps {
   file: FileInfo;
