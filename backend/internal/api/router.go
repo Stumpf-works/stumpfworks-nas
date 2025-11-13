@@ -43,6 +43,7 @@ func NewRouter(cfg *config.Config) http.Handler {
 		r.Group(func(r chi.Router) {
 			r.Use(mw.IPBlockMiddleware)
 			r.Post("/auth/login", handlers.Login)
+			r.Post("/auth/login/2fa", handlers.LoginWith2FA)
 			// r.Post("/auth/register", handlers.Register) // Will implement later
 		})
 
@@ -347,6 +348,18 @@ func NewRouter(cfg *config.Config) http.Handler {
 				r.Post("/{id}/run", schedulerHandler.RunTaskNow)
 				r.Get("/{id}/executions", schedulerHandler.GetTaskExecutions)
 				r.Post("/validate-cron", schedulerHandler.ValidateCron)
+			})
+
+			// Two-Factor Authentication routes
+			r.Route("/2fa", func(r chi.Router) {
+				twofaHandler := handlers.NewTwoFAHandler()
+
+				// User 2FA management (requires authentication)
+				r.Get("/status", twofaHandler.GetStatus)
+				r.Post("/setup", twofaHandler.SetupTwoFactor)
+				r.Post("/enable", twofaHandler.EnableTwoFactor)
+				r.Post("/disable", twofaHandler.DisableTwoFactor)
+				r.Post("/backup-codes/regenerate", twofaHandler.RegenerateBackupCodes)
 			})
 
 			// Plugin routes
