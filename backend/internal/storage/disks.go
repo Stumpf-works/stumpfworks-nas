@@ -178,16 +178,29 @@ func isSystemDisk(diskName string) bool {
 func getPartitions(diskName string) ([]Partition, error) {
 	var partitions []Partition
 
-	sysPath := filepath.Join("/sys/block", diskName)
-	partPaths, err := filepath.Glob(filepath.Join(sysPath, diskName+"*"))
+	// Use lsblk to get all partitions for this disk
+	// This works for all disk types (sda, nvme0n1, mmcblk0, etc.)
+	cmd := exec.Command("lsblk", "-ln", "-o", "NAME,TYPE", "/dev/"+diskName)
+	output, err := cmd.Output()
 	if err != nil {
-		return nil, err
+		// Fallback to glob pattern for older systems without lsblk
+		logger.Warn("lsblk failed, falling back to glob pattern", zap.String("disk", diskName), zap.Error(err))
+		return getPartitionsViaGlob(diskName)
 	}
 
-	for _, partPath := range partPaths {
-		partName := filepath.Base(partPath)
-		if partName == diskName {
-			continue // Skip the disk itself
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			continue
+		}
+
+		partName := fields[0]
+		partType := fields[1]
+
+		// Only include partitions, skip the disk itself
+		if partType != "part" {
+			continue
 		}
 
 		partition, err := getPartitionInfo(partName)
@@ -197,6 +210,43 @@ func getPartitions(diskName string) ([]Partition, error) {
 		}
 
 		partitions = append(partitions, *partition)
+	}
+
+	return partitions, nil
+}
+
+// getPartitionsViaGlob is a fallback method using glob patterns
+func getPartitionsViaGlob(diskName string) ([]Partition, error) {
+	var partitions []Partition
+
+	sysPath := filepath.Join("/sys/block", diskName)
+
+	// Try different partition naming patterns
+	patterns := []string{
+		diskName + "[0-9]*",     // sda1, sda2, sdb1, etc.
+		diskName + "p[0-9]*",    // nvme0n1p1, mmcblk0p1, etc.
+	}
+
+	for _, pattern := range patterns {
+		partPaths, err := filepath.Glob(filepath.Join(sysPath, pattern))
+		if err != nil {
+			continue
+		}
+
+		for _, partPath := range partPaths {
+			partName := filepath.Base(partPath)
+			if partName == diskName {
+				continue // Skip the disk itself
+			}
+
+			partition, err := getPartitionInfo(partName)
+			if err != nil {
+				logger.Warn("Failed to get partition info", zap.String("partition", partName), zap.Error(err))
+				continue
+			}
+
+			partitions = append(partitions, *partition)
+		}
 	}
 
 	return partitions, nil
