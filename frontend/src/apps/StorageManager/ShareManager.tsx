@@ -5,6 +5,7 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import FolderPicker from '@/components/FolderPicker';
+import UserPicker from '@/components/UserPicker';
 
 export default function ShareManager() {
   const [shares, setShares] = useState<Share[]>([]);
@@ -245,9 +246,6 @@ function ShareModal({ share, onClose, onSuccess }: ShareModalProps) {
     guestOk: share?.guestOk || false,
     validUsers: share?.validUsers || [],
   });
-  const [validUsersInput, setValidUsersInput] = useState(
-    share?.validUsers?.join(', ') || ''
-  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -256,18 +254,10 @@ function ShareModal({ share, onClose, onSuccess }: ShareModalProps) {
     setLoading(true);
     setError('');
 
-    // Parse valid users
-    const validUsers = validUsersInput
-      .split(',')
-      .map((u) => u.trim())
-      .filter((u) => u.length > 0);
-
-    const data = { ...formData, validUsers };
-
     try {
       const response = share
-        ? await storageApi.updateShare(share.id, data)
-        : await storageApi.createShare(data);
+        ? await storageApi.updateShare(share.id, formData)
+        : await storageApi.createShare(formData);
 
       if (response.success) {
         onSuccess();
@@ -338,11 +328,12 @@ function ShareModal({ share, onClose, onSuccess }: ShareModalProps) {
             placeholder="Optional description"
           />
 
-          <Input
-            label="Valid Users (comma-separated)"
-            value={validUsersInput}
-            onChange={(e) => setValidUsersInput(e.target.value)}
-            placeholder="user1, user2, user3"
+          <UserPicker
+            label="Valid Users"
+            value={formData.validUsers}
+            onChange={(users) => setFormData({ ...formData, validUsers: users })}
+            placeholder="Select users who can access this share"
+            helperText="Leave empty to allow all authenticated users"
           />
 
           <div className="space-y-3">
