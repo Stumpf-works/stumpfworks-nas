@@ -7,6 +7,7 @@ import { getErrorMessage } from '@/api/client';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
+import { TwoFactorAuth } from '@/components/TwoFactorAuth/TwoFactorAuth';
 
 export function Settings() {
   const user = useAuthStore((state) => state.user);
@@ -182,6 +183,13 @@ export function Settings() {
                 </span>
               </div>
             </div>
+          </div>
+        </Card>
+
+        {/* Two-Factor Authentication */}
+        <Card>
+          <div className="p-6">
+            <TwoFactorAuth />
           </div>
         </Card>
 

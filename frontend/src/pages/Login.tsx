@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '@/store';
 import { authApi } from '@/api/auth';
+import { twofaApi } from '@/api/twofa';
 import { getErrorMessage } from '@/api/client';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -18,6 +19,12 @@ export default function Login({ onSuccess }: LoginProps) {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  // 2FA state
+  const [requires2FA, setRequires2FA] = useState(false);
+  const [userId, setUserId] = useState<number | null>(null);
+  const [twoFACode, setTwoFACode] = useState('');
+  const [useBackupCode, setUseBackupCode] = useState(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -27,6 +34,15 @@ export default function Login({ onSuccess }: LoginProps) {
       const response = await authApi.login({ username, password });
 
       if (response.success && response.data) {
+        // Check if 2FA is required
+        if (response.data.requires2FA) {
+          setRequires2FA(true);
+          setUserId(response.data.userId);
+          setIsLoading(false);
+          return;
+        }
+
+        // Normal login (no 2FA)
         const { accessToken, refreshToken, user } = response.data;
         setAuth(user, accessToken, refreshToken);
         onSuccess();
@@ -38,6 +54,39 @@ export default function Login({ onSuccess }: LoginProps) {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handle2FASubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
+    try {
+      const response = await twofaApi.loginWith2FA({
+        userId: userId!,
+        code: twoFACode,
+        isBackupCode: useBackupCode,
+      });
+
+      if (response) {
+        const { accessToken, refreshToken, user } = response;
+        setAuth(user, accessToken, refreshToken);
+        onSuccess();
+      }
+    } catch (err) {
+      setError(getErrorMessage(err));
+      setTwoFACode(''); // Clear the code on error
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleBackToLogin = () => {
+    setRequires2FA(false);
+    setUserId(null);
+    setTwoFACode('');
+    setUseBackupCode(false);
+    setError('');
   };
 
   return (
@@ -62,43 +111,111 @@ export default function Login({ onSuccess }: LoginProps) {
             </p>
           </div>
 
-          {/* Login Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <Input
-              label="Username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter your username"
-              required
-              autoFocus
-            />
+          {/* Login Form or 2FA Form */}
+          {!requires2FA ? (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <Input
+                label="Username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Enter your username"
+                required
+                autoFocus
+              />
 
-            <Input
-              label="Password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
-              required
-            />
+              <Input
+                label="Password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                required
+              />
 
-            {error && (
-              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-600 dark:text-red-400 text-sm">
-                {error}
+              {error && (
+                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-600 dark:text-red-400 text-sm">
+                  {error}
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                isLoading={isLoading}
+                className="w-full"
+              >
+                Sign In
+              </Button>
+            </form>
+          ) : (
+            <form onSubmit={handle2FASubmit} className="space-y-4">
+              <div className="text-center mb-4">
+                <p className="text-gray-700 dark:text-gray-300 text-sm">
+                  Enter the {useBackupCode ? 'backup code' : '6-digit code'} from your
+                  authenticator app
+                </p>
               </div>
-            )}
 
-            <Button
-              type="submit"
-              variant="primary"
-              size="lg"
-              isLoading={isLoading}
-              className="w-full"
-            >
-              Sign In
-            </Button>
-          </form>
+              <Input
+                label="Verification Code"
+                type="text"
+                value={twoFACode}
+                onChange={(e) =>
+                  setTwoFACode(
+                    useBackupCode ? e.target.value : e.target.value.replace(/\D/g, '').slice(0, 6)
+                  )
+                }
+                placeholder={useBackupCode ? 'XXXXXXXX' : '000000'}
+                required
+                autoFocus
+                className="text-center text-2xl tracking-widest font-mono"
+              />
+
+              {error && (
+                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-600 dark:text-red-400 text-sm">
+                  {error}
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="lg"
+                  onClick={handleBackToLogin}
+                  className="flex-1"
+                >
+                  Back
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="lg"
+                  isLoading={isLoading}
+                  className="flex-1"
+                  disabled={
+                    useBackupCode ? twoFACode.length === 0 : twoFACode.length !== 6
+                  }
+                >
+                  Verify
+                </Button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setUseBackupCode(!useBackupCode);
+                  setTwoFACode('');
+                  setError('');
+                }}
+                className="w-full text-sm text-macos-blue hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+              >
+                {useBackupCode ? 'Use authenticator code' : 'Use backup code'}
+              </button>
+            </form>
+          )}
 
           {/* Footer */}
           <div className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
