@@ -320,3 +320,13 @@ func initializeSambaUserManager() error {
 	}
 	return nil
 }
+
+// initializeMetrics initializes the Metrics collection service and starts it
+// Returns error if service fails to initialize, but this is non-fatal
+func initializeMetrics() error {
+	service, err := metrics.Initialize()
+	if err != nil {
+		return err
+	}
+	return service.Start()
+}
