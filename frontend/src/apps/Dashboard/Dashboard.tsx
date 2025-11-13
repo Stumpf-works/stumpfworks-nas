@@ -4,6 +4,7 @@ import { systemApi } from '@/api/system';
 import { securityApi } from '@/api/security';
 import { auditApi, type AuditLog } from '@/api/audit';
 import Card from '@/components/ui/Card';
+import { MonitoringWidgets } from '@/components/MonitoringWidgets/MonitoringWidgets';
 
 export function Dashboard() {
   const metrics = useSystemStore((state) => state.metrics);
@@ -475,6 +476,9 @@ export function Dashboard() {
           </div>
         </Card>
       )}
+
+      {/* Advanced Monitoring Widgets */}
+      <MonitoringWidgets />
     </div>
   );
 }
