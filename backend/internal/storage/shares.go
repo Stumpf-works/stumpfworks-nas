@@ -251,6 +251,14 @@ func configureSMBShare(share *models.Share) error {
 
 	logger.Info("Found Samba", zap.String("path", smbdPath))
 
+	// Set up share permissions (group, ownership, etc.)
+	if err := setupSharePermissions(share); err != nil {
+		logger.Warn("Failed to set share permissions",
+			zap.String("share", share.Name),
+			zap.Error(err))
+		// Don't fail - share config can still be written
+	}
+
 	// Build Samba configuration
 	config := fmt.Sprintf(`
 [%s]
@@ -444,6 +452,159 @@ func updateShareStatus(id string, enabled bool) error {
 			return configureNFSShare(&model)
 		}
 	}
+
+	return nil
+}
+
+// setupSharePermissions sets up proper permissions for a share directory
+// Creates smbusers group, sets group ownership, and configures permissions
+func setupSharePermissions(share *models.Share) error {
+	const smbGroup = "smbusers"
+
+	// Ensure the smbusers group exists
+	if err := ensureSMBGroup(smbGroup); err != nil {
+		return fmt.Errorf("failed to ensure SMB group: %w", err)
+	}
+
+	// Set group ownership on the share path
+	if err := setShareGroupOwnership(share.Path, smbGroup); err != nil {
+		return fmt.Errorf("failed to set group ownership: %w", err)
+	}
+
+	// Set permissions (775 = rwxrwxr-x)
+	if err := os.Chmod(share.Path, 0775); err != nil {
+		return fmt.Errorf("failed to set permissions: %w", err)
+	}
+
+	// Add valid users to the smbusers group
+	if share.ValidUsers != "" {
+		users := strings.Split(share.ValidUsers, ",")
+		for _, username := range users {
+			username = strings.TrimSpace(username)
+			if username == "" {
+				continue
+			}
+			if err := addUserToGroup(username, smbGroup); err != nil {
+				logger.Warn("Failed to add user to SMB group",
+					zap.String("user", username),
+					zap.String("group", smbGroup),
+					zap.Error(err))
+				// Don't fail the whole operation if one user fails
+			}
+		}
+	}
+
+	logger.Info("Share permissions configured",
+		zap.String("share", share.Name),
+		zap.String("path", share.Path),
+		zap.String("group", smbGroup),
+		zap.String("permissions", "775"))
+
+	return nil
+}
+
+// ensureSMBGroup ensures the smbusers group exists, creates it if not
+func ensureSMBGroup(groupName string) error {
+	// Check if group exists
+	cmd := exec.Command("getent", "group", groupName)
+	if err := cmd.Run(); err == nil {
+		// Group exists
+		return nil
+	}
+
+	// Group doesn't exist, create it
+	cmd = exec.Command("groupadd", groupName)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to create group %s: %s: %w", groupName, string(output), err)
+	}
+
+	logger.Info("Created SMB group", zap.String("group", groupName))
+	return nil
+}
+
+// setShareGroupOwnership sets the group ownership of a path
+func setShareGroupOwnership(path, groupName string) error {
+	// Use chgrp to set group ownership
+	cmd := exec.Command("chgrp", groupName, path)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("chgrp failed: %s: %w", string(output), err)
+	}
+	return nil
+}
+
+// addUserToGroup adds a user to a group
+func addUserToGroup(username, groupName string) error {
+	// Check if user already in group
+	cmd := exec.Command("id", "-nG", username)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to check user groups: %w", err)
+	}
+
+	groups := strings.Fields(string(output))
+	for _, group := range groups {
+		if group == groupName {
+			// User already in group
+			return nil
+		}
+	}
+
+	// Add user to group
+	cmd = exec.Command("usermod", "-aG", groupName, username)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("usermod failed: %s: %w", string(output), err)
+	}
+
+	logger.Info("Added user to SMB group",
+		zap.String("user", username),
+		zap.String("group", groupName))
+
+	return nil
+}
+
+// FixExistingSharePermissions fixes permissions for all existing shares
+// Should be called once at server startup to ensure all shares have correct permissions
+func FixExistingSharePermissions() error {
+	var shares []models.Share
+	if err := database.DB.Find(&shares).Error; err != nil {
+		return fmt.Errorf("failed to list shares: %w", err)
+	}
+
+	logger.Info("Fixing permissions for existing shares", zap.Int("count", len(shares)))
+
+	fixedCount := 0
+	errorCount := 0
+
+	for _, share := range shares {
+		// Only fix enabled shares
+		if !share.Enabled {
+			continue
+		}
+
+		// Check if path exists
+		if _, err := os.Stat(share.Path); os.IsNotExist(err) {
+			logger.Warn("Share path does not exist, skipping permission fix",
+				zap.String("share", share.Name),
+				zap.String("path", share.Path))
+			continue
+		}
+
+		// Fix permissions
+		if err := setupSharePermissions(&share); err != nil {
+			logger.Error("Failed to fix share permissions",
+				zap.String("share", share.Name),
+				zap.String("path", share.Path),
+				zap.Error(err))
+			errorCount++
+		} else {
+			fixedCount++
+		}
+	}
+
+	logger.Info("Share permission fix completed",
+		zap.Int("fixed", fixedCount),
+		zap.Int("errors", errorCount),
+		zap.Int("total", len(shares)))
 
 	return nil
 }
