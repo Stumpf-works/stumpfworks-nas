@@ -79,6 +79,7 @@ export interface Share {
   browseable: boolean;
   guestOk: boolean;
   validUsers?: string[];
+  validGroups?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -133,6 +134,7 @@ export interface CreateShareRequest {
   browseable: boolean;
   guestOk: boolean;
   validUsers?: string[];
+  validGroups?: string[];
 }
 
 export interface FormatDiskRequest {
