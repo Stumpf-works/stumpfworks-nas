@@ -28,6 +28,7 @@ import (
 	"github.com/Stumpf-works/stumpfworks-nas/internal/updates"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/users"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
+	"github.com/Stumpf-works/stumpfworks-nas/pkg/sysutil"
 	"go.uber.org/zap"
 )
 
@@ -62,6 +63,9 @@ func main() {
 	logger.Info("Configuration loaded",
 		zap.String("environment", cfg.App.Environment),
 		zap.String("version", cfg.App.Version))
+
+	// Perform system health check
+	performSystemHealthCheck(cfg)
 
 	// Check system dependencies
 	if cfg.Dependencies.CheckOnStartup {
@@ -364,4 +368,60 @@ func checkDependencies(cfg *config.Config) error {
 
 	installer := dependencies.NewInstaller(mode)
 	return installer.CheckAndInstall()
+}
+
+// performSystemHealthCheck runs a comprehensive system health check
+func performSystemHealthCheck(cfg *config.Config) {
+	logger.Info("Running system health check...")
+
+	report := sysutil.PerformSystemHealthCheck()
+
+	// Log summary
+	logger.Info("System health check completed",
+		zap.String("overallStatus", report.OverallStatus),
+		zap.Int("totalChecks", report.Summary.TotalChecks),
+		zap.Int("passed", report.Summary.Passed),
+		zap.Int("warnings", report.Summary.Warnings),
+		zap.Int("errors", report.Summary.Errors),
+		zap.Int("missing", report.Summary.Missing),
+		zap.Int("requiredMissing", report.Summary.RequiredMissing))
+
+	// In development mode, print full report
+	if cfg.IsDevelopment() {
+		fmt.Println()
+		report.PrintReport()
+		fmt.Println()
+
+		// Also save JSON report to file for debugging
+		if jsonReport, err := report.ToJSON(); err == nil {
+			jsonFile := "./health-check.json"
+			if err := os.WriteFile(jsonFile, []byte(jsonReport), 0644); err == nil {
+				logger.Info("Health check report saved",
+					zap.String("file", jsonFile))
+			}
+		}
+	}
+
+	// Log warnings for missing optional components
+	for _, check := range report.Checks {
+		if check.Status == "warning" || check.Status == "missing" {
+			logger.Warn("Optional component not available",
+				zap.String("component", check.Name),
+				zap.String("status", check.Status),
+				zap.String("message", check.Message))
+		}
+	}
+
+	// Fail startup if required components are missing
+	if report.Summary.RequiredMissing > 0 {
+		logger.Error("Required system components are missing - cannot start server")
+		for _, check := range report.Checks {
+			if check.Required && (check.Status == "error" || check.Status == "missing") {
+				logger.Error("Missing required component",
+					zap.String("component", check.Name),
+					zap.String("message", check.Message))
+			}
+		}
+		os.Exit(1)
+	}
 }

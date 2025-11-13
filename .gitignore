@@ -56,6 +56,9 @@ frontend/coverage/
 *.sqlite
 *.sqlite3
 
+# Health check reports
+health-check.json
+
 # Testing
 coverage/
 *.test
