@@ -328,7 +328,8 @@ func NewRouter(cfg *config.Config) http.Handler {
 				r.Use(mw.AdminOnly)
 				r.Get("/config", alertHandler.GetConfig)
 				r.Put("/config", alertHandler.UpdateConfig)
-				r.Post("/test", alertHandler.TestEmail)
+				r.Post("/test/email", alertHandler.TestEmail)
+				r.Post("/test/webhook", alertHandler.TestWebhook)
 				r.Get("/logs", alertHandler.GetAlertLogs)
 			})
 
