@@ -17,6 +17,8 @@ func RunMigrations() error {
 		&models.AuditLog{},
 		&models.FailedLoginAttempt{},
 		&models.IPBlock{},
+		&models.AlertConfig{},
+		&models.AlertLog{},
 		// Add more models here as they are created
 	); err != nil {
 		return err

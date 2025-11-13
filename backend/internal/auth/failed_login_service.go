@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Stumpf-works/stumpfworks-nas/internal/alerts"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/audit"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database/models"
@@ -161,6 +162,28 @@ func (s *FailedLoginService) checkAndBlockIP(ctx context.Context, ipAddress, use
 				zap.String("ip", ipAddress),
 				zap.Int64("attempts", attemptCount),
 				zap.Duration("duration", s.blockDuration))
+
+			// Send alert notification
+			alertService := alerts.GetService()
+			if alertService != nil {
+				go func() {
+					if err := alertService.SendIPBlockAlert(context.Background(), ipAddress, block.Reason, int(attemptCount)); err != nil {
+						logger.Error("Failed to send IP block alert", zap.Error(err))
+					}
+				}()
+			}
+		}
+	}
+
+	// Send failed login alert if threshold reached (even if not blocked yet)
+	if attemptCount >= int64(s.maxAttempts-2) && attemptCount < int64(s.maxAttempts) {
+		alertService := alerts.GetService()
+		if alertService != nil {
+			go func() {
+				if err := alertService.SendFailedLoginAlert(context.Background(), username, ipAddress, int(attemptCount)); err != nil {
+					logger.Error("Failed to send failed login alert", zap.Error(err))
+				}
+			}()
 		}
 	}
 

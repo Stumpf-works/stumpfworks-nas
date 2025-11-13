@@ -320,6 +320,18 @@ func NewRouter(cfg *config.Config) http.Handler {
 				r.Get("/failed-logins/stats", failedLoginHandler.GetStats)
 			})
 
+			// Alert/Notification routes
+			r.Route("/alerts", func(r chi.Router) {
+				alertHandler := handlers.NewAlertHandler()
+
+				// Alert management (admin only)
+				r.Use(mw.AdminOnly)
+				r.Get("/config", alertHandler.GetConfig)
+				r.Put("/config", alertHandler.UpdateConfig)
+				r.Post("/test", alertHandler.TestEmail)
+				r.Get("/logs", alertHandler.GetAlertLogs)
+			})
+
 			// Plugin routes
 			r.Route("/plugins", func(r chi.Router) {
 				pluginHandler := handlers.NewPluginHandler()
