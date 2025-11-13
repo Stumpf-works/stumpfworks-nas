@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Stumpf-works/stumpfworks-nas/internal/ad"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/alerts"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/api"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/api/handlers"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/audit"
@@ -131,6 +132,15 @@ func main() {
 		logger.Info("Update service initialized")
 	}
 
+	// Initialize Alert service
+	if err := initializeAlertService(); err != nil {
+		logger.Warn("Alert service initialization failed",
+			zap.Error(err),
+			zap.String("message", "Email alerts may be disabled"))
+	} else {
+		logger.Info("Alert service initialized")
+	}
+
 	// Create HTTP router
 	router := api.NewRouter(cfg)
 
@@ -224,5 +234,12 @@ func initializeFailedLoginService() error {
 // Returns error if service fails to initialize, but this is non-fatal
 func initializeUpdateService() error {
 	_, err := updates.Initialize()
+	return err
+}
+
+// initializeAlertService initializes the Alert service
+// Returns error if service fails to initialize, but this is non-fatal
+func initializeAlertService() error {
+	_, err := alerts.Initialize()
 	return err
 }
