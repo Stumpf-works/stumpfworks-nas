@@ -1,0 +1,64 @@
+# Stumpf.Works NAS - Configuration File
+# Copy this file to 'config.yaml' and adjust settings as needed
+
+# Application Settings
+app:
+  name: "Stumpf.Works NAS"
+  version: "0.4.0"
+  environment: "production"  # production | development
+
+# HTTP Server Settings
+server:
+  host: "0.0.0.0"           # Listen on all interfaces
+  port: 8080                 # HTTP port
+  readTimeout: "15s"
+  writeTimeout: "15s"
+  idleTimeout: "60s"
+
+# Database Settings
+database:
+  driver: "sqlite"           # Currently only sqlite supported
+  path: "./data/stumpfworks.db"
+
+# Authentication Settings
+auth:
+  jwtSecret: "CHANGE-THIS-TO-A-SECURE-RANDOM-STRING"  # IMPORTANT: Change in production!
+  jwtExpirationHours: 24     # Token expires after 24 hours
+  jwtRefreshHours: 168       # Refresh token valid for 7 days
+  bcryptCost: 12             # Password hashing cost (10-14 recommended)
+  sessionTimeout: "24h"
+
+# Logging Settings
+logging:
+  level: "info"              # debug | info | warn | error
+  development: false         # Enable development mode logging
+
+# System Dependencies Management
+dependencies:
+  checkOnStartup: true       # Check dependencies when server starts
+  installMode: "check"       # check | auto | interactive
+
+  # Modes explained:
+  #   check: Only check and warn about missing packages (default, safest)
+  #   auto: Automatically install missing packages (requires root/sudo)
+  #   interactive: Ask user before installing
+
+# Required packages that will be checked:
+# - samba: SMB/CIFS file server for Windows network drives
+# - smbclient: Samba client tools for user management
+# - smartmontools: SMART disk monitoring tools
+#
+# Optional packages:
+# - nfs-kernel-server: NFS server for Unix/Linux shares
+# - lvm2: Logical Volume Manager
+# - mdadm: Software RAID management
+# - docker: Container runtime
+
+# Example: Auto-install mode (requires root)
+# dependencies:
+#   checkOnStartup: true
+#   installMode: "auto"
+
+# Example: Disable dependency checking
+# dependencies:
+#   checkOnStartup: false

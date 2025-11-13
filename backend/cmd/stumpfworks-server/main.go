@@ -18,6 +18,7 @@ import (
 	"github.com/Stumpf-works/stumpfworks-nas/internal/backup"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/config"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/dependencies"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/docker"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/metrics"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/plugins"
@@ -61,6 +62,17 @@ func main() {
 	logger.Info("Configuration loaded",
 		zap.String("environment", cfg.App.Environment),
 		zap.String("version", cfg.App.Version))
+
+	// Check system dependencies
+	if cfg.Dependencies.CheckOnStartup {
+		if err := checkDependencies(cfg); err != nil {
+			logger.Warn("Dependency check failed - some features may not work",
+				zap.Error(err))
+			// Don't fail startup - system can work with missing optional packages
+		}
+	} else {
+		logger.Info("Dependency check disabled in configuration")
+	}
 
 	// Initialize database
 	if err := database.Initialize(cfg); err != nil {
@@ -329,4 +341,27 @@ func initializeMetrics() error {
 		return err
 	}
 	return service.Start()
+}
+
+// checkDependencies checks and optionally installs system dependencies
+func checkDependencies(cfg *config.Config) error {
+	logger.Info("Checking system dependencies",
+		zap.String("mode", cfg.Dependencies.InstallMode))
+
+	// Create installer with configured mode
+	mode := dependencies.CheckOnly
+	switch cfg.Dependencies.InstallMode {
+	case "auto":
+		mode = dependencies.AutoInstall
+	case "interactive":
+		mode = dependencies.Interactive
+	case "check":
+		mode = dependencies.CheckOnly
+	default:
+		logger.Warn("Unknown install mode, using 'check'",
+			zap.String("mode", cfg.Dependencies.InstallMode))
+	}
+
+	installer := dependencies.NewInstaller(mode)
+	return installer.CheckAndInstall()
 }
