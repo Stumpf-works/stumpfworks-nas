@@ -24,6 +24,8 @@ func RunMigrations() error {
 		&models.TwoFactorAuth{},
 		&models.TwoFactorBackupCode{},
 		&models.TwoFactorAttempt{},
+		&models.SystemMetric{},
+		&models.HealthScore{},
 		// Add more models here as they are created
 	); err != nil {
 		return err
