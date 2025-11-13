@@ -6,6 +6,7 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import FolderPicker from '@/components/FolderPicker';
 import UserPicker from '@/components/UserPicker';
+import GroupPicker from '@/components/GroupPicker';
 
 export default function ShareManager() {
   const [shares, setShares] = useState<Share[]>([]);
@@ -156,7 +157,22 @@ export default function ShareManager() {
                         key={user}
                         className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 rounded text-xs"
                       >
-                        {user}
+                        👤 {user}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {share.validGroups && share.validGroups.length > 0 && (
+                <div>
+                  <span className="text-gray-600 dark:text-gray-400">Valid Groups:</span>
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {share.validGroups.map((group) => (
+                      <span
+                        key={group}
+                        className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-400 rounded text-xs"
+                      >
+                        👥 @{group}
                       </span>
                     ))}
                   </div>
@@ -245,6 +261,7 @@ function ShareModal({ share, onClose, onSuccess }: ShareModalProps) {
     browseable: share?.browseable !== undefined ? share.browseable : true,
     guestOk: share?.guestOk || false,
     validUsers: share?.validUsers || [],
+    validGroups: share?.validGroups || [],
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -330,10 +347,18 @@ function ShareModal({ share, onClose, onSuccess }: ShareModalProps) {
 
           <UserPicker
             label="Valid Users"
-            value={formData.validUsers}
+            value={formData.validUsers || []}
             onChange={(users) => setFormData({ ...formData, validUsers: users })}
             placeholder="Select users who can access this share"
-            helperText="Leave empty to allow all authenticated users"
+            helperText="Individual users who can access this share"
+          />
+
+          <GroupPicker
+            label="Valid Groups"
+            value={formData.validGroups || []}
+            onChange={(groups) => setFormData({ ...formData, validGroups: groups })}
+            placeholder="Select groups who can access this share"
+            helperText="User groups who can access this share"
           />
 
           <div className="space-y-3">
