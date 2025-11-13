@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import client from './client';
 
 export interface TwoFAStatus {
   enabled: boolean;
@@ -26,7 +26,7 @@ export const twofaApi = {
    * Get 2FA status for the current user
    */
   getStatus: async (): Promise<TwoFAStatus> => {
-    const response = await apiClient.get('/api/v1/2fa/status');
+    const response = await client.get('/api/v1/2fa/status');
     return response.data.data;
   },
 
@@ -34,7 +34,7 @@ export const twofaApi = {
    * Setup 2FA (returns QR code and backup codes)
    */
   setup: async (): Promise<TwoFASetupResponse> => {
-    const response = await apiClient.post('/api/v1/2fa/setup');
+    const response = await client.post('/api/v1/2fa/setup');
     return response.data.data;
   },
 
@@ -42,21 +42,21 @@ export const twofaApi = {
    * Enable 2FA after setup (requires verification code)
    */
   enable: async (code: string): Promise<void> => {
-    await apiClient.post('/api/v1/2fa/enable', { code });
+    await client.post('/api/v1/2fa/enable', { code });
   },
 
   /**
    * Disable 2FA (requires verification code)
    */
   disable: async (code: string): Promise<void> => {
-    await apiClient.post('/api/v1/2fa/disable', { code });
+    await client.post('/api/v1/2fa/disable', { code });
   },
 
   /**
    * Regenerate backup codes (requires verification code)
    */
   regenerateBackupCodes: async (code: string): Promise<string[]> => {
-    const response = await apiClient.post('/api/v1/2fa/backup-codes/regenerate', {
+    const response = await client.post('/api/v1/2fa/backup-codes/regenerate', {
       code,
     });
     return response.data.data.backupCodes;
@@ -66,7 +66,7 @@ export const twofaApi = {
    * Complete login with 2FA code
    */
   loginWith2FA: async (req: TwoFALoginRequest): Promise<any> => {
-    const response = await apiClient.post('/api/v1/auth/login/2fa', req);
+    const response = await client.post('/api/v1/auth/login/2fa', req);
     return response.data.data;
   },
 };
