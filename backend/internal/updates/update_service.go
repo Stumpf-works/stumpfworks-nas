@@ -114,6 +114,18 @@ func (s *UpdateService) CheckForUpdates(ctx context.Context, forceCheck bool) (*
 	}
 	defer resp.Body.Close()
 
+	// Handle 404 gracefully - no releases available
+	if resp.StatusCode == http.StatusNotFound {
+		logger.Info("No releases found on GitHub",
+			zap.String("repository", s.repository))
+		return &UpdateCheckResult{
+			UpdateAvailable: false,
+			CurrentVersion:  s.currentVersion,
+			LatestVersion:   s.currentVersion,
+			Message:         "No releases available on GitHub yet",
+		}, nil
+	}
+
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		return nil, fmt.Errorf("GitHub API returned status %d: %s", resp.StatusCode, string(body))
