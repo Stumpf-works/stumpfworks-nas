@@ -22,8 +22,10 @@ import (
 	"github.com/Stumpf-works/stumpfworks-nas/internal/metrics"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/plugins"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/scheduler"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/storage"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/twofa"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/updates"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/users"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
 	"go.uber.org/zap"
 )
@@ -65,6 +67,24 @@ func main() {
 		logger.Fatal("Failed to initialize database", zap.Error(err))
 	}
 	defer database.Close()
+
+	// Initialize Samba user manager (non-fatal if Samba not installed)
+	if err := initializeSambaUserManager(); err != nil {
+		logger.Warn("Samba user manager initialization failed",
+			zap.Error(err),
+			zap.String("message", "Samba user sync disabled - users will only work for web access"))
+	} else {
+		logger.Info("Samba user manager initialized")
+	}
+
+	// Ensure default shares exist (creates default shares on first run)
+	if err := storage.EnsureDefaultShares(); err != nil {
+		logger.Warn("Failed to ensure default shares",
+			zap.Error(err),
+			zap.String("message", "You may need to create shares manually"))
+	} else {
+		logger.Info("Default shares verified")
+	}
 
 	// Initialize file service
 	if err := handlers.InitFileService(); err != nil {
@@ -291,12 +311,12 @@ func initializeTwoFA() error {
 	return err
 }
 
-// initializeMetrics initializes the Metrics service and starts it
+// initializeSambaUserManager initializes the Samba user synchronization manager
 // Returns error if service fails to initialize, but this is non-fatal
-func initializeMetrics() error {
-	service, err := metrics.Initialize()
-	if err != nil {
-		return err
+func initializeSambaUserManager() error {
+	manager := users.InitSambaUserManager()
+	if !manager.IsEnabled() {
+		return fmt.Errorf("samba not installed")
 	}
-	return service.Start()
+	return nil
 }

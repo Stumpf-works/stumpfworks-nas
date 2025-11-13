@@ -37,12 +37,14 @@ func (pv *PathValidator) ValidateAndSanitize(requestPath string) (string, error)
 
 	// Check for path traversal attempts
 	if strings.Contains(cleanPath, "..") {
-		return "", errors.BadRequest("Invalid path: path traversal detected", nil)
+		return "", errors.BadRequest("Invalid path: path traversal detected (security violation)", nil)
 	}
 
 	// If not absolute, it's relative - we need a base path
 	if !filepath.IsAbs(cleanPath) {
-		return "", errors.BadRequest("Invalid path: must be absolute", nil)
+		return "", errors.BadRequest(
+			fmt.Sprintf("Invalid path '%s': must be absolute (e.g., /mnt/storage/files)", requestPath),
+			nil)
 	}
 
 	// Validate against allowed base paths
@@ -55,7 +57,12 @@ func (pv *PathValidator) ValidateAndSanitize(requestPath string) (string, error)
 			}
 		}
 		if !allowed {
-			return "", errors.Forbidden("Access denied: path not in allowed locations", nil)
+			allowedPaths := strings.Join(pv.basePaths, ", ")
+			return "", errors.Forbidden(
+				fmt.Sprintf("Access denied: Path '%s' is outside allowed share locations. "+
+					"Allowed: %s",
+					cleanPath, allowedPaths),
+				nil)
 		}
 	}
 
@@ -100,7 +107,11 @@ func (pc *PermissionChecker) CanAccess(ctx *SecurityContext, path string) error 
 
 	// Check if the path is within user's allowed paths
 	if len(ctx.AllowedPaths) == 0 {
-		return errors.Forbidden("Access denied: no shares available", nil)
+		return errors.Forbidden(
+			fmt.Sprintf("Access denied: No shares configured for user '%s'. "+
+				"Contact your administrator to grant access to shares or create new shares in the Storage app.",
+				ctx.User.Username),
+			nil)
 	}
 
 	for _, allowedPath := range ctx.AllowedPaths {
@@ -109,7 +120,13 @@ func (pc *PermissionChecker) CanAccess(ctx *SecurityContext, path string) error 
 		}
 	}
 
-	return errors.Forbidden("Access denied: path not accessible", nil)
+	// Build helpful error message with available shares
+	availableShares := strings.Join(ctx.AllowedPaths, ", ")
+	return errors.Forbidden(
+		fmt.Sprintf("Access denied: Path '%s' is not accessible for user '%s'. "+
+			"Available shares: %s",
+			path, ctx.User.Username, availableShares),
+		nil)
 }
 
 // CanWrite checks if a user can write to a given path
