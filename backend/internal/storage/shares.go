@@ -238,7 +238,7 @@ func DeleteShare(id string) error {
 	return nil
 }
 
-// configureSMBShare configures a Samba share
+// configureSMBShare configures a Samba share by writing it directly to smb.conf
 func configureSMBShare(share *models.Share) error {
 	// Check if Samba is installed
 	smbdPath, err := findSmbdPath()
@@ -260,35 +260,13 @@ func configureSMBShare(share *models.Share) error {
 		// Don't fail - share config can still be written
 	}
 
-	// Build Samba configuration
-	config := fmt.Sprintf(`
-[%s]
-   path = %s
-   comment = %s
-   browseable = %s
-   read only = %s
-   guest ok = %s
-`, share.Name, share.Path, share.Description,
-		boolToYesNo(share.Browseable),
-		boolToYesNo(share.ReadOnly),
-		boolToYesNo(share.GuestOK))
+	// Build Samba share configuration
+	shareConfig := buildSambaShareConfig(share)
 
-	if share.ValidUsers != "" {
-		config += fmt.Sprintf("   valid users = %s\n", strings.ReplaceAll(share.ValidUsers, ",", " "))
+	// Write share directly to smb.conf
+	if err := addShareToSmbConf(share.Name, shareConfig); err != nil {
+		return fmt.Errorf("failed to add share to smb.conf: %w", err)
 	}
-
-	// Write to Samba config directory
-	configPath := filepath.Join("/etc/samba/shares.d", share.Name+".conf")
-	if err := os.MkdirAll("/etc/samba/shares.d", 0755); err != nil {
-		return err
-	}
-
-	if err := os.WriteFile(configPath, []byte(config), 0644); err != nil {
-		return err
-	}
-
-	// Ensure main smb.conf includes shares.d
-	ensureSambaInclude()
 
 	// Reload Samba
 	reloadSamba()
@@ -296,12 +274,137 @@ func configureSMBShare(share *models.Share) error {
 	return nil
 }
 
-// removeSMBShare removes a Samba share configuration
-func removeSMBShare(share *models.Share) error {
-	configPath := filepath.Join("/etc/samba/shares.d", share.Name+".conf")
-	if err := os.Remove(configPath); err != nil && !os.IsNotExist(err) {
-		return err
+// buildSambaShareConfig builds the configuration text for a share
+func buildSambaShareConfig(share *models.Share) string {
+	config := fmt.Sprintf(`[%s]
+   path = %s
+   comment = %s
+   browseable = %s
+   read only = %s
+   guest ok = %s`,
+		share.Name,
+		share.Path,
+		share.Description,
+		boolToYesNo(share.Browseable),
+		boolToYesNo(share.ReadOnly),
+		boolToYesNo(share.GuestOK))
+
+	if share.ValidUsers != "" {
+		config += fmt.Sprintf("\n   valid users = %s", strings.ReplaceAll(share.ValidUsers, ",", " "))
 	}
+
+	return config
+}
+
+// addShareToSmbConf adds or updates a share in smb.conf
+func addShareToSmbConf(shareName, shareConfig string) error {
+	smbConfPath := "/etc/samba/smb.conf"
+
+	// Read current smb.conf
+	data, err := os.ReadFile(smbConfPath)
+	if err != nil {
+		return fmt.Errorf("failed to read smb.conf: %w", err)
+	}
+
+	content := string(data)
+	lines := strings.Split(content, "\n")
+
+	// Remove existing share with this name if it exists
+	lines = removeShareFromLines(lines, shareName)
+
+	// Add the new share at the end
+	marker := fmt.Sprintf("# Share '%s' - Managed by Stumpf.Works NAS", shareName)
+
+	// Add newline before marker if file doesn't end with one
+	if len(lines) > 0 && strings.TrimSpace(lines[len(lines)-1]) != "" {
+		lines = append(lines, "")
+	}
+
+	lines = append(lines, marker)
+	for _, line := range strings.Split(shareConfig, "\n") {
+		lines = append(lines, line)
+	}
+	lines = append(lines, "") // Empty line after share
+
+	// Write back to smb.conf
+	newContent := strings.Join(lines, "\n")
+	if err := os.WriteFile(smbConfPath, []byte(newContent), 0644); err != nil {
+		return fmt.Errorf("failed to write smb.conf: %w", err)
+	}
+
+	logger.Info("Share added to smb.conf", zap.String("share", shareName))
+	return nil
+}
+
+// removeShareFromLines removes a share section from smb.conf lines
+func removeShareFromLines(lines []string, shareName string) []string {
+	var newLines []string
+	skipUntilNextSection := false
+	shareMarker := fmt.Sprintf("# Share '%s' - Managed by Stumpf.Works NAS", shareName)
+	shareSection := fmt.Sprintf("[%s]", shareName)
+
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+
+		// Check if this is our managed share marker
+		if trimmed == shareMarker {
+			skipUntilNextSection = true
+			continue
+		}
+
+		// Also detect share section by name (for backward compatibility)
+		if trimmed == shareSection {
+			// Check if previous line is our marker
+			if i > 0 && strings.TrimSpace(lines[i-1]) == shareMarker {
+				// Already handled by marker check above
+			} else {
+				// This is an unmanaged share with the same name - remove it anyway
+				logger.Warn("Removing unmanaged share with same name", zap.String("share", shareName))
+				skipUntilNextSection = true
+				continue
+			}
+		}
+
+		// If we're skipping, check if we've reached the next section
+		if skipUntilNextSection {
+			if strings.HasPrefix(trimmed, "[") && trimmed != shareSection {
+				// New section started, stop skipping
+				skipUntilNextSection = false
+				newLines = append(newLines, line)
+			}
+			// Skip this line (it's part of the share we're removing)
+			continue
+		}
+
+		newLines = append(newLines, line)
+	}
+
+	return newLines
+}
+
+// removeSMBShare removes a Samba share from smb.conf
+func removeSMBShare(share *models.Share) error {
+	smbConfPath := "/etc/samba/smb.conf"
+
+	// Read current smb.conf
+	data, err := os.ReadFile(smbConfPath)
+	if err != nil {
+		return fmt.Errorf("failed to read smb.conf: %w", err)
+	}
+
+	content := string(data)
+	lines := strings.Split(content, "\n")
+
+	// Remove the share
+	newLines := removeShareFromLines(lines, share.Name)
+
+	// Write back to smb.conf
+	newContent := strings.Join(newLines, "\n")
+	if err := os.WriteFile(smbConfPath, []byte(newContent), 0644); err != nil {
+		return fmt.Errorf("failed to write smb.conf: %w", err)
+	}
+
+	logger.Info("Share removed from smb.conf", zap.String("share", share.Name))
 
 	// Reload Samba
 	reloadSamba()
@@ -388,13 +491,10 @@ func removeNFSShare(share *models.Share) error {
 }
 
 // RepairSambaConfig repairs common issues in smb.conf
-// This function is called on startup to fix configuration problems like:
-// - Duplicate include directives
-// - Incorrectly indented include directives (treated as parameters instead of directives)
-// - Missing include directives
+// This function is called on startup to migrate from old include-based config to direct shares in smb.conf
 func RepairSambaConfig() error {
 	smbConfPath := "/etc/samba/smb.conf"
-	includeDirective := "include = /etc/samba/shares.d/*.conf"
+	sharesDir := "/etc/samba/shares.d"
 
 	// Check if smb.conf exists
 	if _, err := os.Stat(smbConfPath); os.IsNotExist(err) {
@@ -411,164 +511,88 @@ func RepairSambaConfig() error {
 	content := string(data)
 	lines := strings.Split(content, "\n")
 
-	// Remove ALL existing include directives (both correct and incorrect)
+	// Step 1: Remove any include directives (old system)
 	var cleanedLines []string
-	needsRepair := false
+	removedInclude := false
 
 	for _, line := range lines {
-		// Skip any line that contains the include directive
-		if strings.Contains(line, "include = /etc/samba/shares.d") {
-			needsRepair = true
-			logger.Info("Removing include directive for repair", zap.String("line", line))
-			continue
-		}
-		// Also skip the comment line if present
-		if strings.Contains(line, "Include dynamic share configurations") {
+		// Skip include directives and their comments
+		if strings.Contains(line, "include = /etc/samba/shares.d") ||
+		   strings.Contains(line, "Include dynamic share configurations") {
+			removedInclude = true
+			logger.Info("Removing obsolete include directive", zap.String("line", strings.TrimSpace(line)))
 			continue
 		}
 		cleanedLines = append(cleanedLines, line)
 	}
 
-	// If no include was found, we need to add one
-	if !needsRepair {
-		logger.Debug("No include directive found, will add one")
-		needsRepair = true
-	}
+	// Step 2: Migrate shares from shares.d/*.conf to smb.conf (if shares.d exists)
+	migratedShares := 0
+	if _, err := os.Stat(sharesDir); err == nil {
+		entries, err := os.ReadDir(sharesDir)
+		if err == nil {
+			for _, entry := range entries {
+				if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".conf") {
+					shareName := strings.TrimSuffix(entry.Name(), ".conf")
+					shareFilePath := filepath.Join(sharesDir, entry.Name())
 
-	if !needsRepair {
-		logger.Debug("Samba config is correct, no repair needed")
-		return nil
-	}
+					// Read the share config
+					shareData, err := os.ReadFile(shareFilePath)
+					if err != nil {
+						logger.Warn("Failed to read share file for migration",
+							zap.String("file", shareFilePath),
+							zap.Error(err))
+						continue
+					}
 
-	logger.Info("Repairing Samba configuration...")
+					shareConfig := string(shareData)
 
-	// Now add ONE correct include directive at the right place
-	var newLines []string
-	addedInclude := false
-	inGlobalSection := false
+					// Add marker comment
+					marker := fmt.Sprintf("# Share '%s' - Managed by Stumpf.Works NAS", shareName)
 
-	for i, line := range cleanedLines {
-		trimmed := strings.TrimSpace(line)
+					// Add to cleaned lines
+					if len(cleanedLines) > 0 && strings.TrimSpace(cleanedLines[len(cleanedLines)-1]) != "" {
+						cleanedLines = append(cleanedLines, "")
+					}
+					cleanedLines = append(cleanedLines, marker)
+					for _, line := range strings.Split(strings.TrimSpace(shareConfig), "\n") {
+						cleanedLines = append(cleanedLines, line)
+					}
+					cleanedLines = append(cleanedLines, "")
 
-		// Detect [global] section start
-		if strings.Contains(trimmed, "[global]") {
-			inGlobalSection = true
-		}
-
-		// Detect when we're leaving global section
-		if inGlobalSection && !addedInclude {
-			if (strings.HasPrefix(trimmed, "[") && !strings.Contains(trimmed, "[global]")) ||
-			   strings.Contains(trimmed, "Share Definitions") {
-				// Insert include directive before this line
-				newLines = append(newLines, "")
-				newLines = append(newLines, "# Include dynamic share configurations")
-				newLines = append(newLines, includeDirective)
-				newLines = append(newLines, "")
-				addedInclude = true
-				inGlobalSection = false
-				logger.Info("Added include directive at correct position")
+					migratedShares++
+					logger.Info("Migrated share from shares.d to smb.conf",
+						zap.String("share", shareName))
+				}
 			}
 		}
+	}
 
-		newLines = append(newLines, line)
-
-		// Fallback: if we reach the end without finding a section marker
-		if !addedInclude && i == len(cleanedLines)-1 {
-			lastLine := newLines[len(newLines)-1]
-			newLines = newLines[:len(newLines)-1]
-			newLines = append(newLines, "")
-			newLines = append(newLines, "# Include dynamic share configurations")
-			newLines = append(newLines, includeDirective)
-			newLines = append(newLines, "")
-			newLines = append(newLines, lastLine)
-			addedInclude = true
-			logger.Info("Added include directive at end of file (fallback)")
+	// Only write back if we made changes
+	if removedInclude || migratedShares > 0 {
+		newContent := strings.Join(cleanedLines, "\n")
+		if err := os.WriteFile(smbConfPath, []byte(newContent), 0644); err != nil {
+			return fmt.Errorf("failed to write repaired smb.conf: %w", err)
 		}
+
+		logger.Info("Samba configuration repaired",
+			zap.Bool("removedInclude", removedInclude),
+			zap.Int("migratedShares", migratedShares))
+
+		// Reload Samba to apply changes
+		reloadSamba()
+	} else {
+		logger.Debug("Samba config is correct, no repair needed")
 	}
-
-	// Write back
-	if err := os.WriteFile(smbConfPath, []byte(strings.Join(newLines, "\n")), 0644); err != nil {
-		return fmt.Errorf("failed to write repaired smb.conf: %w", err)
-	}
-
-	logger.Info("Samba configuration repaired successfully")
-
-	// Reload Samba to apply changes
-	reloadSamba()
 
 	return nil
 }
 
-// ensureSambaInclude ensures the main smb.conf includes shares.d directory
-// This is a simpler check - for more aggressive repair, use RepairSambaConfig()
+// ensureSambaInclude is deprecated - we now write shares directly to smb.conf
+// This function is kept for backward compatibility but does nothing
 func ensureSambaInclude() error {
-	smbConfPath := "/etc/samba/smb.conf"
-	includeDirective := "include = /etc/samba/shares.d/*.conf"
-
-	// Read current config
-	data, err := os.ReadFile(smbConfPath)
-	if err != nil {
-		return err
-	}
-
-	content := string(data)
-
-	// Check if include directive already exists (correctly formatted)
-	if strings.Contains(content, "\n"+includeDirective) || strings.HasPrefix(content, includeDirective) {
-		return nil
-	}
-
-	// Find the right place to insert: at the end of [global] section,
-	// just before the first share definition (anything that starts with [)
-	lines := strings.Split(content, "\n")
-	var newLines []string
-	addedInclude := false
-	inGlobalSection := false
-
-	for i, line := range lines {
-		trimmed := strings.TrimSpace(line)
-
-		// Detect [global] section start
-		if strings.Contains(trimmed, "[global]") {
-			inGlobalSection = true
-		}
-
-		// Detect when we're leaving global section (next section starts with [)
-		// or when we hit the share definitions comment
-		if inGlobalSection && !addedInclude {
-			if (strings.HasPrefix(trimmed, "[") && !strings.Contains(trimmed, "[global]")) ||
-			   strings.Contains(trimmed, "Share Definitions") {
-				// Insert include directive before this line
-				// IMPORTANT: include directive must NOT be indented - it's a directive, not a parameter
-				newLines = append(newLines, "")
-				newLines = append(newLines, "# Include dynamic share configurations")
-				newLines = append(newLines, includeDirective)
-				newLines = append(newLines, "")
-				addedInclude = true
-				inGlobalSection = false
-			}
-		}
-
-		newLines = append(newLines, line)
-
-		// Fallback: if we reach the end without finding a section marker,
-		// add it before the last line
-		if !addedInclude && i == len(lines)-1 {
-			// Insert before the last line
-			// IMPORTANT: include directive must NOT be indented - it's a directive, not a parameter
-			lastLine := newLines[len(newLines)-1]
-			newLines = newLines[:len(newLines)-1]
-			newLines = append(newLines, "")
-			newLines = append(newLines, "# Include dynamic share configurations")
-			newLines = append(newLines, includeDirective)
-			newLines = append(newLines, "")
-			newLines = append(newLines, lastLine)
-			addedInclude = true
-		}
-	}
-
-	// Write back
-	return os.WriteFile(smbConfPath, []byte(strings.Join(newLines, "\n")), 0644)
+	// No longer needed - shares are written directly to smb.conf
+	return nil
 }
 
 // boolToYesNo converts a boolean to yes/no string for Samba config
