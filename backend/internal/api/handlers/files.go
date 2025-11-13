@@ -238,8 +238,26 @@ func FinalizeUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check write permissions
-	// TODO: Implement permission check for destination path
+	// Check write permissions on destination directory BEFORE finalizing
+	// This prevents users from uploading chunks to paths they don't have access to
+	destPath := req.DestinationPath
+	if destPath == "" {
+		utils.RespondError(w, errors.BadRequest("Destination path is required", nil))
+		return
+	}
+
+	// Check permissions on the destination directory (parent of the file)
+	if err := fileService.CheckWritePermission(ctx, destPath); err != nil {
+		// Permission denied - clean up the upload session
+		uploadManager.CancelUpload(req.SessionID)
+		logger.Warn("Upload blocked due to insufficient permissions",
+			zap.String("sessionID", req.SessionID),
+			zap.String("user", ctx.User.Username),
+			zap.String("destinationPath", destPath),
+			zap.Error(err))
+		utils.RespondError(w, err)
+		return
+	}
 
 	if err := uploadManager.FinalizeUpload(req.SessionID, req.DestinationPath); err != nil {
 		logger.Error("Failed to finalize upload", zap.String("sessionID", req.SessionID), zap.Error(err))

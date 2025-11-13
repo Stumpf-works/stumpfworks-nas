@@ -251,11 +251,15 @@ func (m *SambaUserManager) sambaUserExists(username string) (bool, error) {
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
-		// Exit code 1 usually means user not found
-		if strings.Contains(string(output), "Failed to find entry") {
+		// pdbedit returns various messages when user doesn't exist
+		outputStr := string(output)
+		if strings.Contains(outputStr, "Failed to find entry") ||
+		   strings.Contains(outputStr, "Username not found") ||
+		   strings.Contains(outputStr, "user not found") {
+			logger.Debug("Samba user does not exist", zap.String("username", username))
 			return false, nil
 		}
-		return false, fmt.Errorf("pdbedit failed: %s: %w", string(output), err)
+		return false, fmt.Errorf("pdbedit failed: %s: %w", outputStr, err)
 	}
 
 	// If output contains username, user exists

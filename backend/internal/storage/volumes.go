@@ -380,6 +380,17 @@ func createRAIDVolume(req *CreateVolumeRequest) (*Volume, error) {
 		return nil, fmt.Errorf("failed to mount: %s: %w", string(output), err)
 	}
 
+	// Add to /etc/fstab for persistence
+	if err := addToFstab("/dev/md/"+req.Name, req.MountPoint, req.Filesystem); err != nil {
+		logger.Warn("Failed to add RAID to /etc/fstab - volume will not persist across reboots",
+			zap.String("name", req.Name),
+			zap.Error(err))
+		// Don't fail - volume is created and mounted, just won't persist
+	} else {
+		logger.Info("RAID volume added to /etc/fstab for persistence",
+			zap.String("name", req.Name))
+	}
+
 	logger.Info("RAID volume created successfully", zap.String("name", req.Name))
 
 	return GetVolume("md/" + req.Name)
@@ -468,9 +479,18 @@ func createSingleVolume(req *CreateVolumeRequest) (*Volume, error) {
 		return nil, fmt.Errorf("failed to mount: %s: %w", string(output), err)
 	}
 
-	// Add to /etc/fstab for persistence (optional, could be dangerous in dev)
-	logger.Info("Skipping /etc/fstab update - not safe for development")
-	// addToFstab(disk, req.MountPoint, req.Filesystem)
+	// Add to /etc/fstab for persistence
+	if err := addToFstab(disk, req.MountPoint, req.Filesystem); err != nil {
+		logger.Warn("Failed to add entry to /etc/fstab - volume will not persist across reboots",
+			zap.String("disk", disk),
+			zap.String("mountPoint", req.MountPoint),
+			zap.Error(err))
+		// Don't fail - volume is created and mounted, just won't persist
+	} else {
+		logger.Info("Volume added to /etc/fstab for persistence",
+			zap.String("disk", disk),
+			zap.String("mountPoint", req.MountPoint))
+	}
 
 	logger.Info("Single volume created successfully", zap.String("name", req.Name), zap.String("mount", req.MountPoint))
 
@@ -536,29 +556,189 @@ func addToFstab(device, mountPoint, fstype string) error {
 	cmd := exec.Command("blkid", "-s", "UUID", "-o", "value", device)
 	output, err := cmd.Output()
 	if err != nil {
-		return err
+		// Some devices might not have UUID (e.g., some RAID setups)
+		logger.Warn("Failed to get UUID, using device path instead",
+			zap.String("device", device),
+			zap.Error(err))
+		// Fallback to device path
+		return addToFstabByDevice(device, mountPoint, fstype)
 	}
 
 	uuid := strings.TrimSpace(string(output))
 	if uuid == "" {
-		return fmt.Errorf("failed to get UUID")
+		return fmt.Errorf("failed to get UUID for %s", device)
 	}
 
+	// Check if entry already exists
+	data, err := os.ReadFile("/etc/fstab")
+	if err != nil {
+		return fmt.Errorf("failed to read /etc/fstab: %w", err)
+	}
+
+	lines := strings.Split(string(data), "\n")
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+
+		fields := strings.Fields(line)
+		if len(fields) >= 2 {
+			// Check if mount point already exists
+			if fields[1] == mountPoint {
+				logger.Info("/etc/fstab entry already exists for mount point",
+					zap.String("mountPoint", mountPoint))
+				return nil
+			}
+			// Check if UUID already exists
+			if strings.HasPrefix(fields[0], "UUID=") && strings.Contains(fields[0], uuid) {
+				logger.Info("/etc/fstab entry already exists for UUID",
+					zap.String("uuid", uuid))
+				return nil
+			}
+		}
+	}
+
+	// Create backup before modifying
+	backupPath := "/etc/fstab.bak." + time.Now().Format("20060102-150405")
+	if err := os.WriteFile(backupPath, data, 0644); err != nil {
+		logger.Warn("Failed to create /etc/fstab backup", zap.Error(err))
+		// Continue anyway
+	} else {
+		logger.Info("Created /etc/fstab backup", zap.String("path", backupPath))
+	}
+
+	// Add new entry
 	entry := fmt.Sprintf("UUID=%s %s %s defaults 0 2\n", uuid, mountPoint, fstype)
 
 	file, err := os.OpenFile("/etc/fstab", os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to open /etc/fstab: %w", err)
 	}
 	defer file.Close()
 
-	_, err = file.WriteString(entry)
-	return err
+	if _, err = file.WriteString(entry); err != nil {
+		return fmt.Errorf("failed to write to /etc/fstab: %w", err)
+	}
+
+	logger.Info("Added entry to /etc/fstab",
+		zap.String("uuid", uuid),
+		zap.String("mountPoint", mountPoint),
+		zap.String("fstype", fstype))
+
+	return nil
+}
+
+// addToFstabByDevice adds an entry to /etc/fstab using device path (fallback when UUID not available)
+func addToFstabByDevice(device, mountPoint, fstype string) error {
+	// Check if entry already exists
+	data, err := os.ReadFile("/etc/fstab")
+	if err != nil {
+		return fmt.Errorf("failed to read /etc/fstab: %w", err)
+	}
+
+	lines := strings.Split(string(data), "\n")
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+
+		fields := strings.Fields(line)
+		if len(fields) >= 2 && (fields[0] == device || fields[1] == mountPoint) {
+			logger.Info("/etc/fstab entry already exists",
+				zap.String("device", device),
+				zap.String("mountPoint", mountPoint))
+			return nil
+		}
+	}
+
+	// Create backup
+	backupPath := "/etc/fstab.bak." + time.Now().Format("20060102-150405")
+	if err := os.WriteFile(backupPath, data, 0644); err != nil {
+		logger.Warn("Failed to create /etc/fstab backup", zap.Error(err))
+	} else {
+		logger.Info("Created /etc/fstab backup", zap.String("path", backupPath))
+	}
+
+	// Add new entry using device path
+	entry := fmt.Sprintf("%s %s %s defaults 0 2\n", device, mountPoint, fstype)
+
+	file, err := os.OpenFile("/etc/fstab", os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to open /etc/fstab: %w", err)
+	}
+	defer file.Close()
+
+	if _, err = file.WriteString(entry); err != nil {
+		return fmt.Errorf("failed to write to /etc/fstab: %w", err)
+	}
+
+	logger.Info("Added entry to /etc/fstab (by device path)",
+		zap.String("device", device),
+		zap.String("mountPoint", mountPoint),
+		zap.String("fstype", fstype))
+
+	return nil
 }
 
 // removeFromFstab removes an entry from /etc/fstab
 func removeFromFstab(mountPoint string) error {
-	// This is a simplified version
-	// In production, you'd want to parse and rewrite /etc/fstab properly
+	if mountPoint == "" {
+		return nil // Nothing to remove
+	}
+
+	// Read current fstab
+	data, err := os.ReadFile("/etc/fstab")
+	if err != nil {
+		logger.Warn("Failed to read /etc/fstab", zap.Error(err))
+		return err
+	}
+
+	lines := strings.Split(string(data), "\n")
+	var newLines []string
+	removed := false
+
+	for _, line := range lines {
+		// Skip empty lines and comments
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+			newLines = append(newLines, line)
+			continue
+		}
+
+		// Check if line contains the mount point
+		fields := strings.Fields(line)
+		if len(fields) >= 2 && fields[1] == mountPoint {
+			logger.Info("Removing /etc/fstab entry", zap.String("line", line))
+			removed = true
+			continue // Skip this line (remove it)
+		}
+
+		newLines = append(newLines, line)
+	}
+
+	if !removed {
+		logger.Debug("No matching /etc/fstab entry found", zap.String("mountPoint", mountPoint))
+		return nil // Not an error
+	}
+
+	// Create backup before modifying
+	backupPath := "/etc/fstab.bak." + time.Now().Format("20060102-150405")
+	if err := os.WriteFile(backupPath, data, 0644); err != nil {
+		logger.Warn("Failed to create /etc/fstab backup", zap.Error(err))
+		// Continue anyway - we still want to update fstab
+	} else {
+		logger.Info("Created /etc/fstab backup", zap.String("path", backupPath))
+	}
+
+	// Write new fstab
+	newData := strings.Join(newLines, "\n")
+	if err := os.WriteFile("/etc/fstab", []byte(newData), 0644); err != nil {
+		logger.Error("Failed to write /etc/fstab", zap.Error(err))
+		return fmt.Errorf("failed to update /etc/fstab: %w", err)
+	}
+
+	logger.Info("Removed entry from /etc/fstab", zap.String("mountPoint", mountPoint))
 	return nil
 }
