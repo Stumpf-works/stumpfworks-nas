@@ -10,11 +10,12 @@ import (
 
 // Config holds all application configuration
 type Config struct {
-	App      AppConfig
-	Server   ServerConfig
-	Database DatabaseConfig
-	Auth     AuthConfig
-	Logging  LoggingConfig
+	App          AppConfig
+	Server       ServerConfig
+	Database     DatabaseConfig
+	Auth         AuthConfig
+	Logging      LoggingConfig
+	Dependencies DependenciesConfig
 }
 
 // AppConfig contains application-level settings
@@ -52,6 +53,12 @@ type AuthConfig struct {
 type LoggingConfig struct {
 	Level       string
 	Development bool
+}
+
+// DependenciesConfig contains system dependency settings
+type DependenciesConfig struct {
+	CheckOnStartup bool   // Check dependencies when server starts
+	InstallMode    string // "check", "auto", or "interactive"
 }
 
 var GlobalConfig *Config
@@ -118,6 +125,10 @@ func setDefaults(v *viper.Viper) {
 	// Logging defaults
 	v.SetDefault("logging.level", "info")
 	v.SetDefault("logging.development", true)
+
+	// Dependencies defaults
+	v.SetDefault("dependencies.checkOnStartup", true)
+	v.SetDefault("dependencies.installMode", "check") // check | auto | interactive
 }
 
 // Validate validates the configuration
