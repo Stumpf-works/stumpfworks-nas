@@ -387,17 +387,49 @@ func ensureSambaInclude() error {
 		return nil
 	}
 
-	// Append include directive to [global] section
+	// Find the right place to insert: at the end of [global] section,
+	// just before the first share definition (anything that starts with [)
 	lines := strings.Split(content, "\n")
 	var newLines []string
 	addedInclude := false
+	inGlobalSection := false
 
-	for _, line := range lines {
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+
+		// Detect [global] section start
+		if strings.Contains(trimmed, "[global]") {
+			inGlobalSection = true
+		}
+
+		// Detect when we're leaving global section (next section starts with [)
+		// or when we hit the share definitions comment
+		if inGlobalSection && !addedInclude {
+			if (strings.HasPrefix(trimmed, "[") && !strings.Contains(trimmed, "[global]")) ||
+			   strings.Contains(trimmed, "Share Definitions") {
+				// Insert include directive before this line
+				newLines = append(newLines, "")
+				newLines = append(newLines, "# Include dynamic share configurations")
+				newLines = append(newLines, "   "+includeDirective)
+				newLines = append(newLines, "")
+				addedInclude = true
+				inGlobalSection = false
+			}
+		}
+
 		newLines = append(newLines, line)
 
-		// Add include after [global] section
-		if strings.Contains(line, "[global]") && !addedInclude {
+		// Fallback: if we reach the end without finding a section marker,
+		// add it before the last line
+		if !addedInclude && i == len(lines)-1 {
+			// Insert before the last line
+			lastLine := newLines[len(newLines)-1]
+			newLines = newLines[:len(newLines)-1]
+			newLines = append(newLines, "")
+			newLines = append(newLines, "# Include dynamic share configurations")
 			newLines = append(newLines, "   "+includeDirective)
+			newLines = append(newLines, "")
+			newLines = append(newLines, lastLine)
 			addedInclude = true
 		}
 	}
