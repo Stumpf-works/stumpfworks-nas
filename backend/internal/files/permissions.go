@@ -3,6 +3,7 @@ package files
 import (
 	"fmt"
 	"os"
+	"os/user"
 	"path/filepath"
 	"strconv"
 	"syscall"
@@ -100,7 +101,8 @@ func (s *Service) GetPermissions(ctx *SecurityContext, path string) (*Permission
 	if stat, ok := info.Sys().(*syscall.Stat_t); ok {
 		permInfo.UID = int(stat.Uid)
 		permInfo.GID = int(stat.Gid)
-		// TODO: Lookup user/group names from UID/GID
+		permInfo.Owner = lookupUsername(int(stat.Uid))
+		permInfo.Group = lookupGroupname(int(stat.Gid))
 	}
 
 	return permInfo, nil
@@ -156,23 +158,35 @@ func (s *Service) changeOwnership(path, owner, group string, recursive bool) err
 	var uid, gid int = -1, -1 // -1 means no change
 
 	if owner != "" {
-		// TODO: Lookup UID from username
-		// For now, expect numeric UID
-		parsedUID, err := strconv.Atoi(owner)
-		if err != nil {
-			return errors.BadRequest("Invalid owner format (numeric UID expected)", err)
+		// Try to parse as numeric UID first
+		if parsedUID, err := strconv.Atoi(owner); err == nil {
+			uid = parsedUID
+		} else {
+			// Lookup username
+			if u, err := user.Lookup(owner); err == nil {
+				if parsedUID, err := strconv.Atoi(u.Uid); err == nil {
+					uid = parsedUID
+				}
+			} else {
+				return errors.BadRequest(fmt.Sprintf("User '%s' not found", owner), err)
+			}
 		}
-		uid = parsedUID
 	}
 
 	if group != "" {
-		// TODO: Lookup GID from group name
-		// For now, expect numeric GID
-		parsedGID, err := strconv.Atoi(group)
-		if err != nil {
-			return errors.BadRequest("Invalid group format (numeric GID expected)", err)
+		// Try to parse as numeric GID first
+		if parsedGID, err := strconv.Atoi(group); err == nil {
+			gid = parsedGID
+		} else {
+			// Lookup group name
+			if g, err := user.LookupGroup(group); err == nil {
+				if parsedGID, err := strconv.Atoi(g.Gid); err == nil {
+					gid = parsedGID
+				}
+			} else {
+				return errors.BadRequest(fmt.Sprintf("Group '%s' not found", group), err)
+			}
 		}
-		gid = parsedGID
 	}
 
 	// Change ownership
@@ -197,4 +211,22 @@ type PermissionsInfo struct {
 	Group       string `json:"group"`
 	UID         int    `json:"uid"`
 	GID         int    `json:"gid"`
+}
+
+// lookupUsername looks up username from UID
+func lookupUsername(uid int) string {
+	u, err := user.LookupId(strconv.Itoa(uid))
+	if err != nil {
+		return fmt.Sprintf("uid:%d", uid)
+	}
+	return u.Username
+}
+
+// lookupGroupname looks up group name from GID
+func lookupGroupname(gid int) string {
+	g, err := user.LookupGroupId(strconv.Itoa(gid))
+	if err != nil {
+		return fmt.Sprintf("gid:%d", gid)
+	}
+	return g.Name
 }

@@ -35,7 +35,7 @@ import (
 
 const (
 	AppName    = "Stumpf.Works NAS"
-	AppVersion = "0.3.0"
+	AppVersion = "1.0.0"
 )
 
 func main() {
