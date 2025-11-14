@@ -18,7 +18,7 @@ export default function VolumeManager() {
     try {
       const response = await storageApi.listVolumes();
       if (response.success) {
-        setVolumes(response.data);
+        setVolumes(response.data || []);
       } else {
         console.error('Failed to load volumes:', response.error);
       }
@@ -249,7 +249,7 @@ function CreateVolumeModal({ onClose, onSuccess }: CreateVolumeModalProps) {
   const loadAvailableDisks = async () => {
     try {
       const response = await storageApi.listDisks();
-      if (response.success) {
+      if (response.success && response.data) {
         // Filter out system disks
         setAvailableDisks(response.data.filter((d) => !d.isSystem));
       }

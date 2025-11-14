@@ -31,7 +31,7 @@ export default function UserPicker({
   const loadUsers = async () => {
     try {
       const response = await usersApi.list();
-      if (response.success) {
+      if (response.success && response.data) {
         setUsers(response.data);
       } else {
         console.error('Failed to load users:', response.error);

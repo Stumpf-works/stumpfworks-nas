@@ -31,7 +31,7 @@ export default function GroupPicker({
   const loadGroups = async () => {
     try {
       const response = await groupsApi.list();
-      if (response.success) {
+      if (response.success && response.data) {
         setGroups(response.data);
       } else {
         console.error('Failed to load groups:', response.error);

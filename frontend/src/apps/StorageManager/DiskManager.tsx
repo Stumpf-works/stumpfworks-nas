@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { storageApi, Disk, SMARTData } from '@/api/storage';
+import { storageApi, Disk } from '@/api/storage';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 
@@ -17,7 +17,7 @@ export default function DiskManager() {
   const loadDisks = async () => {
     try {
       const response = await storageApi.listDisks();
-      if (response.success) {
+      if (response.success && response.data) {
         setDisks(response.data);
       } else {
         console.error('Failed to load disks:', response.error);

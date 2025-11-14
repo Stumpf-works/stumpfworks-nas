@@ -21,8 +21,8 @@ export default function StorageOverview() {
         storageApi.getHealth(),
       ]);
 
-      if (statsRes.success) setStats(statsRes.data);
-      if (healthRes.success) setHealth(healthRes.data);
+      if (statsRes.success && statsRes.data) setStats(statsRes.data);
+      if (healthRes.success && healthRes.data) setHealth(healthRes.data);
     } catch (error) {
       console.error('Failed to load storage data:', error);
     } finally {
