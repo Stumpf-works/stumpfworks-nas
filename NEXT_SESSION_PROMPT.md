@@ -73,33 +73,236 @@ Wir arbeiten am **Stumpf.Works NAS** Projekt - ein NAS-System mit Web-UI im macO
 
 **Ziel:** Sicherstellen dass ALLE Backend-Endpunkte im Frontend integriert sind
 
-**Methode:**
-1. Alle Backend-Routen auflisten (aus `internal/api/router.go`)
-2. Für jeden Endpunkt prüfen:
-   - Gibt es einen API-Call im Frontend? (`frontend/src/api/*.ts`)
-   - Wird er irgendwo verwendet? (Komponenten checken)
-   - Funktioniert er? (404 Fehler? Type-Fehler?)
-3. Liste erstellen mit:
-   - ✅ Implementiert und funktioniert
-   - ⚠️ Implementiert aber mit Fehlern
-   - ❌ Nicht implementiert
+#### Phase 1: Backend-Routen vollständig auflisten
 
-**Wichtige Bereiche:**
-- `/api/v1/auth/*` - Authentication
-- `/api/v1/users/*` - User Management
-- `/api/v1/groups/*` - User Groups ✅ (neu implementiert)
-- `/api/v1/storage/*` - Storage, Shares, Disks, Volumes
-- `/api/v1/docker/*` - Docker Management
-- `/api/v1/system/*` - System Metrics, Updates, Health
-- `/api/v1/audit/*` - Audit Logs ❌ (404)
-- `/api/v1/security/*` - Security Settings ❌ (404)
-- `/api/v1/scheduler/*` oder `/api/v1/tasks/*` - Scheduled Tasks ⚠️
+```bash
+# 1. ALLE Routen aus router.go extrahieren
+cd backend
+grep -rn "r\.Get\|r\.Post\|r\.Put\|r\.Delete\|r\.Patch" internal/api/router.go > /tmp/backend_routes.txt
+
+# 2. Auch Handler-Dateien prüfen
+find internal/api/handlers -name "*.go" -exec grep -l "func.*http\.ResponseWriter" {} \;
+
+# 3. Ausgabe: Komplette Liste aller Backend-Endpunkte
+# Format: Method + Path + Handler
+```
+
+#### Phase 2: Frontend API-Clients auflisten
+
+```bash
+# 1. Alle API-Client-Dateien finden
+cd frontend/src
+find api -name "*.ts" | sort
+
+# 2. Für jede Datei: Welche Endpunkte werden aufgerufen?
+grep -rn "client\.\(get\|post\|put\|delete\|patch\)" api/*.ts
+
+# 3. Welche Komponenten nutzen welche APIs?
+grep -rn "Api\.\|import.*from.*@/api" apps/ components/
+```
+
+#### Phase 3: Systematischer Abgleich
+
+Erstelle eine **vollständige Mapping-Tabelle**:
+
+| Backend Endpunkt | Method | Handler | Frontend API | Komponente | Status |
+|------------------|--------|---------|--------------|------------|--------|
+| `/api/v1/auth/login` | POST | LoginHandler | `authApi.login()` | Login.tsx | ✅ OK |
+| `/api/v1/audit/logs` | GET | GetAuditLogs | - | - | ❌ FEHLT |
+| ... | ... | ... | ... | ... | ... |
+
+**Status-Codes:**
+- ✅ **OK** - Backend implementiert, Frontend integriert, funktioniert
+- ⚠️ **FEHLER** - Implementiert aber 404/500 Fehler oder Type-Fehler
+- ❌ **FEHLT** - Backend existiert, aber Frontend nutzt es nicht
+- 🔨 **TODO** - Backend fehlt, muss implementiert werden
+
+**Wichtige Bereiche die zu prüfen sind:**
+
+**Authentication & Users:**
+- `/api/v1/auth/*` - Login, Logout, Refresh, Register, 2FA
+- `/api/v1/users/*` - List, Get, Create, Update, Delete
+- `/api/v1/groups/*` - User Groups (neu implementiert) ✅
+
+**Storage:**
+- `/api/v1/storage/disks/*` - List, Get, Format, SMART
+- `/api/v1/storage/volumes/*` - List, Create, Delete, Expand
+- `/api/v1/storage/shares/*` - List, Get, Create, Update, Delete, Enable/Disable
+- `/api/v1/storage/stats` - Storage Statistics
+- `/api/v1/storage/health` - Health Status
+
+**Docker:**
+- `/api/v1/docker/containers/*` - List, Start, Stop, Logs, Stats
+- `/api/v1/docker/images/*` - List, Pull, Remove
+- `/api/v1/docker/networks/*` - List, Create, Remove ⚠️ (UI Crash!)
+- `/api/v1/docker/volumes/*` - List, Create, Remove
+- `/api/v1/docker/compose/*` oder `/stacks/*` - Stack Management
+
+**System:**
+- `/api/v1/system/info` - System Information
+- `/api/v1/system/metrics` - CPU, RAM, Network
+- `/api/v1/system/health` - Health Check
+- `/api/v1/system/check-updates` - Update Checker ✅ (gefixt)
+- `/api/v1/system/logs` - System Logs
+
+**Audit & Security:**
+- `/api/v1/audit/*` - Audit Logs ❌ (404 Fehler)
+- `/api/v1/security/*` - Security Settings ❌ (404 Fehler)
+
+**Scheduled Tasks:**
+- `/api/v1/scheduler/*` oder `/api/v1/tasks/*` - ⚠️ (Fehler)
+
+**Alerts & Notifications:**
 - `/api/v1/alerts/*` - Alerting System
-- `/api/v1/backup/*` - Backup Management
-- `/api/v1/plugins/*` - Plugin System
-- `/api/v1/ad/*` - Active Directory Integration
+- `/api/v1/notifications/*` - Notifications
 
-### 3️⃣ FEHLENDE FEATURES IDENTIFIZIEREN
+**Backup:**
+- `/api/v1/backup/*` - Backup Jobs, Restore
+
+**Plugins:**
+- `/api/v1/plugins/*` - Plugin Management
+
+**Active Directory:**
+- `/api/v1/ad/*` - AD Integration, User Sync
+
+#### Phase 4: Für fehlende/fehlerhafte Endpunkte
+
+**Für jeden ❌ FEHLT oder ⚠️ FEHLER Eintrag:**
+
+1. **Entscheiden:**
+   - Ist dieses Feature wichtig für 1.0? (P0/P1/P2)
+   - Sollte es implementiert werden oder kann es warten?
+
+2. **Wenn wichtig:**
+   - Backend implementieren (falls fehlt)
+   - Frontend API-Client erstellen
+   - Komponente bauen die es nutzt
+   - Testen
+
+3. **Dokumentieren:**
+   - Was fehlt noch bis 1.0
+   - Was kann auf 1.1 oder später verschoben werden
+
+### 3️⃣ MARKDOWN-DATEIEN UND DOKUMENTATION PRÜFEN
+
+**Ziel:** ALLE Markdown-Dateien im Projekt auf TODOs, Feature-Requests und versprochene Funktionalität durchsuchen.
+
+#### Schritt 1: Alle Markdown-Dateien finden
+
+```bash
+# Finde alle .md Dateien im Projekt
+find . -name "*.md" -type f | grep -v node_modules | sort
+
+# Sollte mindestens zeigen:
+# - README.md
+# - .github/RELEASE.md
+# - NEXT_SESSION_PROMPT.md (diese Datei)
+# - Weitere Dokumentation (falls vorhanden)
+```
+
+#### Schritt 2: Nach TODOs und Features suchen
+
+```bash
+# Suche in allen Markdown-Dateien nach:
+# - TODO / FIXME - Offene Aufgaben
+# - Features - Geplante Features
+# - Roadmap - Zukünftige Entwicklung
+# - Implementation - Zu implementierende Dinge
+grep -rn "TODO\|FIXME\|Feature\|TODO:\|TASK\|IMPLEMENT\|Roadmap" \
+  *.md .github/*.md docs/*.md --color=always 2>/dev/null
+```
+
+#### Schritt 3: Systematisch jede .md Datei durchgehen
+
+**Für jede Markdown-Datei:**
+
+1. **README.md**
+   - Prüfe "Features" Sektion: Sind alle aufgelisteten Features implementiert?
+   - Prüfe "Roadmap" Sektion: Was ist für 1.0 geplant?
+   - Prüfe API-Dokumentation: Stimmt sie mit tatsächlichen Endpunkten überein?
+   - Suche nach Begriffen wie "coming soon", "planned", "future"
+
+2. **.github/RELEASE.md**
+   - Prüfe Release-Checklist: Alle Punkte erfüllt?
+   - Prüfe Pre-Release Anforderungen
+   - Prüfe Manual Release Schritte (als Fallback)
+
+3. **NEXT_SESSION_PROMPT.md** (diese Datei)
+   - Alle Bugs (A-F) behoben?
+   - Backend ↔ Frontend Mapping vollständig?
+   - Alle genannten Bereiche geprüft?
+
+4. **Weitere Dokumentation**
+   - docs/API.md (falls vorhanden) - API vollständig dokumentiert?
+   - docs/DEPLOYMENT.md (falls vorhanden) - Deployment-Schritte getestet?
+   - CHANGELOG.md (falls vorhanden) - Aktuell?
+
+#### Schritt 4: Feature-Vergleich mit vorherigen Sessions
+
+**Prüfe welche Features in früheren Sessions besprochen/versprochen wurden:**
+
+**Aus Session-History bekannte Features:**
+- ✅ User Groups (implementiert)
+- ✅ GitHub Actions (implementiert)
+- ✅ Samba Shares (implementiert)
+- ✅ Update Checker (gefixt)
+- ❓ Audit Logging (404 Fehler - zu prüfen!)
+- ❓ Security Settings (404 Fehler - zu prüfen!)
+- ❓ Scheduled Tasks (Fehler - zu prüfen!)
+- ❓ Docker Networks (Crash - zu fixen!)
+- ❓ Advanced Monitoring (unvollständig - zu erweitern!)
+- ❓ Disk Partitions (nicht sichtbar - zu fixen!)
+
+**Prüfe diese weiteren Bereiche systematisch:**
+```bash
+# Im Code suchen nach implementierten aber ungenutzten Features
+grep -r "func.*Handler\|type.*Service" backend/internal/*/
+
+# Im Frontend suchen nach unvollständigen Komponenten
+find frontend/src/apps -name "*.tsx" -exec grep -l "TODO\|FIXME\|WIP" {} \;
+```
+
+#### Schritt 5: Mapping erstellen - Was steht in Docs vs. was ist implementiert
+
+Erstelle Tabelle:
+
+| Feature/Bereich | In Docs erwähnt? | Backend implementiert? | Frontend implementiert? | Status | Action |
+|-----------------|------------------|------------------------|-------------------------|--------|--------|
+| User Management | ✓ README.md | ✅ Ja | ✅ Ja | OK | - |
+| User Groups | ✓ README.md | ✅ Ja | ✅ Ja | OK | - |
+| Audit Logs | ? | ? | ❌ 404 | FEHLT | Implementieren |
+| Security Settings | ? | ? | ❌ 404 | FEHLT | Implementieren |
+| ... | ... | ... | ... | ... | ... |
+
+**Status-Codes:**
+- ✅ **OK** - Dokumentiert, implementiert, funktioniert
+- ⚠️ **UNVOLLSTÄNDIG** - Teil-implementiert oder hat Bugs
+- ❌ **FEHLT** - Dokumentiert aber nicht implementiert
+- 📝 **UNDOKUMENTIERT** - Implementiert aber nicht dokumentiert
+- 🚫 **DEPRECATED** - Veraltet, sollte entfernt werden
+
+#### Schritt 6: Priorisierung für Release 1.0
+
+**Für jedes identifizierte fehlende/kaputte Feature:**
+
+**Frage 1: Ist es kritisch für 1.0?**
+- **JA** → P0 - Muss behoben werden
+- **TEILWEISE** → P1 - Sollte behoben werden
+- **NEIN** → P2 - Kann auf 1.1+ verschoben werden
+
+**Frage 2: Wie viel Aufwand?**
+- **Low** - < 1 Stunde
+- **Medium** - 1-4 Stunden
+- **High** - > 4 Stunden
+
+**Entscheidungsmatrix:**
+| Priorität | Aufwand Low | Aufwand Medium | Aufwand High |
+|-----------|-------------|----------------|--------------|
+| P0 | ✅ Sofort machen | ✅ Machen | ✅ Machen (aber simplify) |
+| P1 | ✅ Machen | ⚠️ Wenn Zeit | ⏭️ Verschieben |
+| P2 | ⚠️ Wenn Zeit | ⏭️ Verschieben | ⏭️ Verschieben |
+
+### 4️⃣ FEHLENDE FEATURES IDENTIFIZIEREN
 
 Prüfe welche großen Features noch fehlen oder unvollständig sind:
 - Backup-Funktionalität vollständig?
@@ -108,7 +311,7 @@ Prüfe welche großen Features noch fehlen oder unvollständig sind:
 - Docker-Features vollständig?
 - AD-Integration vollständig?
 
-### 4️⃣ TODO-LISTE AUFRÄUMEN
+### 5️⃣ TODO-LISTE AUFRÄUMEN
 
 Prüfe das Projekt auf offene TODOs:
 ```bash
@@ -120,7 +323,7 @@ Erstelle eine priorisierte Liste:
 - **P1 - Wichtig:** Sollte behoben werden
 - **P2 - Nice-to-have:** Kann warten
 
-### 5️⃣ GITHUB ACTIONS RELEASE-SYSTEM VORBEREITEN
+### 6️⃣ GITHUB ACTIONS RELEASE-SYSTEM VORBEREITEN
 
 **WICHTIG:** Das Projekt hat automatische Release-Erstellung via GitHub Actions!
 
@@ -229,12 +432,14 @@ curl -L https://github.com/Stumpf-works/stumpfworks-nas/releases/download/v1.0.0
 # Sollte jetzt "v1.0.0" finden statt 404-Fehler
 ```
 
-### 6️⃣ RELEASE 1.0 CHECKLISTE
+### 7️⃣ RELEASE 1.0 CHECKLISTE
 
 **VOR dem Release:**
 - [ ] Alle kritischen Bugs behoben (Schritt 1️⃣)
 - [ ] Backend ↔ Frontend Mapping vollständig (Schritt 2️⃣)
-- [ ] Wichtige TODOs erledigt (Schritt 4️⃣)
+- [ ] Alle Markdown-Dateien geprüft und Docs aktuell (Schritt 3️⃣)
+- [ ] Fehlende Features identifiziert und priorisiert (Schritt 4️⃣)
+- [ ] Wichtige TODOs erledigt (Schritt 5️⃣)
 - [ ] Backend Build erfolgreich: `cd backend && go build ./cmd/stumpfworks-server`
 - [ ] Frontend Build erfolgreich: `cd frontend && npm run build`
 - [ ] Version auf 1.0.0 gebumpt in allen 3 Dateien
@@ -324,13 +529,15 @@ Am Ende dieser Session sollten wir haben:
    - Implementiere Fix
    - Teste
    - Committe mit sinnvoller Message
-3. Danach: **Vollständigkeits-Check** durchführen
-4. TODO-Liste erstellen und priorisieren
-5. **GitHub Actions Release-System vorbereiten:**
+3. Danach: **Backend ↔ Frontend Vollständigkeits-Check** durchführen
+4. **Markdown-Dateien und Dokumentation prüfen**
+5. **Fehlende Features identifizieren und priorisieren**
+6. **TODO-Liste erstellen und priorisieren**
+7. **GitHub Actions Release-System vorbereiten:**
    - Workflows prüfen (`.github/workflows/release.yml` und `ci.yml`)
    - Testweise einen Build laufen lassen (lokal)
    - Version auf 1.0.0 bumpen
-6. **Release 1.0 erstellen:**
+8. **Release 1.0 erstellen:**
    - Branch in main mergen (oder PR erstellen)
    - Tag v1.0.0 erstellen und pushen
    - GitHub Actions Workflow überwachen
