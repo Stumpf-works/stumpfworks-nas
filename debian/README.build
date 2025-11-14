@@ -1,0 +1,141 @@
+# Building StumpfWorks NAS Debian Package
+
+This directory contains the Debian packaging files for StumpfWorks NAS.
+
+## Prerequisites
+
+Install required build tools:
+
+```bash
+sudo apt update
+sudo apt install -y \
+    build-essential \
+    debhelper \
+    devscripts \
+    golang-go \
+    nodejs \
+    npm \
+    dh-systemd
+```
+
+## Building the Package
+
+### Method 1: Using dpkg-buildpackage (Recommended)
+
+From the project root directory:
+
+```bash
+# Build binary package only
+dpkg-buildpackage -b -uc -us
+
+# Build source and binary packages
+dpkg-buildpackage -uc -us
+```
+
+The `.deb` file will be created in the parent directory.
+
+### Method 2: Using debuild
+
+```bash
+# Install debuild
+sudo apt install devscripts
+
+# Build package
+debuild -b -uc -us
+```
+
+### Method 3: Using GitHub Actions
+
+Push a tag to trigger automatic package building:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+The workflow will build and attach the `.deb` package to the GitHub release.
+
+## Installing the Package
+
+```bash
+# Install the package
+sudo dpkg -i ../stumpfworks-nas_1.0.0-1_amd64.deb
+
+# If there are dependency issues, fix them
+sudo apt-get install -f
+```
+
+## Package Contents
+
+- **Binary**: `/usr/bin/stumpfworks-server`
+- **Frontend**: `/usr/share/stumpfworks-nas/`
+- **Config**: `/etc/stumpfworks-nas/config.yaml`
+- **Data**: `/var/lib/stumpfworks-nas/`
+- **Service**: `/lib/systemd/system/stumpfworks-nas.service`
+
+## Post-Installation
+
+After installation:
+
+1. Configure the system:
+   ```bash
+   sudo nano /etc/stumpfworks-nas/config.yaml
+   ```
+
+2. Start the service:
+   ```bash
+   sudo systemctl start stumpfworks-nas
+   ```
+
+3. Access the web UI:
+   ```
+   http://YOUR_SERVER_IP:8080
+   ```
+
+## Uninstalling
+
+```bash
+# Remove package but keep data
+sudo apt remove stumpfworks-nas
+
+# Remove package and all data
+sudo apt purge stumpfworks-nas
+```
+
+## Troubleshooting
+
+### Build fails with missing dependencies
+
+```bash
+sudo apt-get build-dep stumpfworks-nas
+```
+
+### Check package contents
+
+```bash
+dpkg -c ../stumpfworks-nas_1.0.0-1_amd64.deb
+```
+
+### Verify package quality
+
+```bash
+lintian ../stumpfworks-nas_1.0.0-1_amd64.deb
+```
+
+## Package Signing
+
+To sign the package for distribution:
+
+```bash
+# Create GPG key if needed
+gpg --gen-key
+
+# Build and sign
+debuild -S -sa
+```
+
+## More Information
+
+- Debian New Maintainers' Guide: https://www.debian.org/doc/manuals/maint-guide/
+- Debhelper Documentation: https://manpages.debian.org/debhelper
+- StumpfWorks NAS GitHub: https://github.com/Stumpf-works/stumpfworks-nas

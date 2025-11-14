@@ -1,0 +1,49 @@
+Source: stumpfworks-nas
+Section: admin
+Priority: optional
+Maintainer: Stumpf.Works Team <contact@stumpf.works>
+Build-Depends: debhelper (>= 11), golang-go (>= 1.21), nodejs (>= 18), npm
+Standards-Version: 4.5.1
+Homepage: https://github.com/Stumpf-works/stumpfworks-nas
+Vcs-Git: https://github.com/Stumpf-works/stumpfworks-nas.git
+Vcs-Browser: https://github.com/Stumpf-works/stumpfworks-nas
+
+Package: stumpfworks-nas
+Architecture: amd64
+Depends: ${shlibs:Depends}, ${misc:Depends},
+         samba (>= 4.0),
+         smbclient,
+         smartmontools,
+         systemd,
+         sqlite3,
+         sudo
+Recommends: nfs-kernel-server,
+            lvm2,
+            mdadm,
+            docker.io | docker-ce,
+            btrfs-progs,
+            zfsutils-linux
+Description: Modern NAS Management System
+ Stumpf.Works NAS is a production-ready Network Attached Storage management
+ system designed as an alternative to TrueNAS, Unraid, and Synology DSM.
+ .
+ Features:
+  - User & Group Management with Role-Based Access Control (RBAC)
+  - SMB/CIFS Shares with Samba integration
+  - NFS Shares support
+  - Docker Container Management (Portainer alternative)
+  - SMART Monitoring & Disk Health tracking
+  - Storage Management (Volumes, Disks, RAID)
+  - File Manager with permissions control
+  - Active Directory integration
+  - Two-Factor Authentication (2FA)
+  - Audit Logging & Security tracking
+  - Backup & Snapshot management
+  - System Metrics & Health monitoring
+  - Automated Task Scheduling
+  - Email & Webhook Alerts
+  - Plugin System
+  - Network Management & Firewall
+  - Modern React-based Web UI
+ .
+ Perfect for home labs, small businesses, and development environments.
