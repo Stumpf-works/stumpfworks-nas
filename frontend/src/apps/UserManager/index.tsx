@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { UserManager as UserList } from './UserManager';
 import { UserGroupManager } from './UserGroupManager';
-import Button from '@/components/ui/Button';
 
 export function UserManager() {
   const [activeTab, setActiveTab] = useState<'users' | 'groups'>('users');

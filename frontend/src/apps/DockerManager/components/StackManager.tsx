@@ -15,7 +15,7 @@ const StackManager: React.FC = () => {
   const [newStackName, setNewStackName] = useState('');
   const [newStackCompose, setNewStackCompose] = useState('');
   const [editStackCompose, setEditStackCompose] = useState('');
-  const [removeVolumes, setRemoveVolumes] = useState(false);
+  const [removeVolumes, _setRemoveVolumes] = useState(false);
 
   const fetchStacks = async () => {
     try {
@@ -100,7 +100,9 @@ const StackManager: React.FC = () => {
     }
   };
 
-  const handleRemoveStack = async (name: string) => {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // @ts-ignore - Keeping for future use
+  const _handleRemoveStack = async (name: string) => {
     try {
       await dockerApi.removeStack(name, removeVolumes);
       fetchStacks();

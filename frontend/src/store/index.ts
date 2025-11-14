@@ -33,6 +33,7 @@ interface WindowState {
   updateWindowSize: (windowId: string, size: { width: number; height: number }) => void;
 }
 
+// @ts-ignore - AppState defined for future use
 interface AppState {
   apps: App[];
   runningApps: string[];

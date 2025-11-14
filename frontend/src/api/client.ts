@@ -1,4 +1,4 @@
-import axios, { AxiosError, AxiosInstance, AxiosResponse } from 'axios';
+import axios, { AxiosError, AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 
 // API Response types
 export interface ApiResponse<T = any> {
@@ -8,6 +8,11 @@ export interface ApiResponse<T = any> {
     code: number;
     message: string;
   };
+}
+
+// Extended request config to track retries
+interface RetryConfig extends InternalAxiosRequestConfig {
+  _retry?: boolean;
 }
 
 // Create axios instance
@@ -44,10 +49,10 @@ client.interceptors.response.use(
     return response;
   },
   async (error: AxiosError<ApiResponse>) => {
-    const originalRequest = error.config;
+    const originalRequest = error.config as RetryConfig | undefined;
 
     // If 401 and we have a refresh token, try to refresh
-    if (error.response?.status === 401 && !originalRequest?._retry) {
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
       originalRequest._retry = true;
 
       const refreshToken = localStorage.getItem('refreshToken');
@@ -62,10 +67,10 @@ client.interceptors.response.use(
             localStorage.setItem('accessToken', response.data.data.accessToken);
 
             // Retry original request with new token
-            if (originalRequest?.headers) {
+            if (originalRequest) {
               originalRequest.headers.Authorization = `Bearer ${response.data.data.accessToken}`;
+              return client.request(originalRequest);
             }
-            return client(originalRequest);
           }
         } catch (refreshError) {
           // Refresh failed, logout
