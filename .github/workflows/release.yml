@@ -3,138 +3,33 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'  # Trigger on version tags like v0.3.0, v1.0.0, etc.
+      - 'v*'
 
 permissions:
-  contents: write  # Required for creating releases
+  contents: write
 
 jobs:
-  build-and-release:
-    name: Build and Create Release
+  create-release:
+    name: Create Release
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Full history for changelog generation
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.23'
-          cache-dependency-path: backend/go.sum
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Get version from tag
-        id: version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-
-      - name: Build Backend (Linux AMD64)
-        run: |
-          cd backend
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
-            -ldflags "-s -w -X main.Version=${{ steps.version.outputs.VERSION }}" \
-            -o ../dist/stumpfworks-nas-linux-amd64 \
-            ./cmd/stumpfworks-server
-
-      - name: Build Backend (Linux ARM64)
-        run: |
-          cd backend
-          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build \
-            -ldflags "-s -w -X main.Version=${{ steps.version.outputs.VERSION }}" \
-            -o ../dist/stumpfworks-nas-linux-arm64 \
-            ./cmd/stumpfworks-server
-
-      - name: Build Frontend
-        run: |
-          cd frontend
-          npm ci
-          npm run build
-          tar -czf ../dist/stumpfworks-nas-frontend.tar.gz -C dist .
-
-      - name: Generate Changelog
-        id: changelog
-        run: |
-          # Get commits since last tag
-          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-
-          if [ -z "$PREVIOUS_TAG" ]; then
-            # First release - get all commits
-            CHANGELOG=$(git log --pretty=format:"- %s (%h)" --no-merges)
-          else
-            # Get commits between tags
-            CHANGELOG=$(git log ${PREVIOUS_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges)
-          fi
-
-          # Save to file for release notes
-          cat > CHANGELOG.md << EOF
-          ## What's Changed
-
-          ${CHANGELOG}
-
-          ## Installation
-
-          ### Backend (Server)
-
-          Download the appropriate binary for your architecture:
-          - Linux AMD64 (x86_64): \`stumpfworks-nas-linux-amd64\`
-          - Linux ARM64 (aarch64, Raspberry Pi): \`stumpfworks-nas-linux-arm64\`
-
-          Make it executable and run:
-          \`\`\`bash
-          chmod +x stumpfworks-nas-linux-amd64
-          ./stumpfworks-nas-linux-amd64
-          \`\`\`
-
-          ### Frontend (Web UI)
-
-          Extract the frontend archive:
-          \`\`\`bash
-          mkdir -p /var/www/stumpfworks-nas
-          tar -xzf stumpfworks-nas-frontend.tar.gz -C /var/www/stumpfworks-nas
-          \`\`\`
-
-          Configure your web server to serve the files.
-
-          ## System Requirements
-
-          - Linux kernel 4.4+
-          - For SMB shares: Samba 4.x
-          - For NFS shares: nfs-kernel-server
-          - Recommended: 1GB RAM, 10GB disk space
-          EOF
-
-      - name: Create GitHub Release
+      - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ steps.version.outputs.VERSION }}
-          name: Release ${{ steps.version.outputs.VERSION }}
-          body_path: CHANGELOG.md
+          name: Release ${{ github.ref_name }}
+          body: |
+            # Stumpf.Works NAS ${{ github.ref_name }}
+            
+            Production-ready NAS management system.
+            
+            ## Installation
+            
+            See README.md for installation instructions.
           draft: false
           prerelease: false
-          files: |
-            dist/stumpfworks-nas-linux-amd64
-            dist/stumpfworks-nas-linux-arm64
-            dist/stumpfworks-nas-frontend.tar.gz
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Generate checksums
-        run: |
-          cd dist
-          sha256sum * > SHA256SUMS.txt
-
-      - name: Upload checksums
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ steps.version.outputs.VERSION }}
-          files: dist/SHA256SUMS.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
