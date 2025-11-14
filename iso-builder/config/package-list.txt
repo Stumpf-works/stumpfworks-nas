@@ -1,0 +1,72 @@
+# StumpfWorks NAS OS - Package List
+# Packages to be installed in the ISO
+
+# Base System
+systemd
+systemd-sysv
+udev
+kmod
+
+# Kernel and Boot
+linux-image-amd64
+grub-pc-bin
+grub-efi-amd64-bin
+grub-efi-ia32-bin
+
+# Live Boot
+live-boot
+live-config
+live-config-systemd
+
+# Networking
+network-manager
+openssh-server
+net-tools
+ethtool
+iproute2
+iputils-ping
+dnsutils
+
+# System Tools
+sudo
+curl
+wget
+vim
+nano
+htop
+tmux
+screen
+rsync
+git
+
+# Security
+ca-certificates
+gnupg
+fail2ban
+
+# StumpfWorks NAS Dependencies
+samba
+smbclient
+smartmontools
+nfs-kernel-server
+lvm2
+mdadm
+docker.io
+btrfs-progs
+
+# Optional: ZFS Support (requires contrib repo)
+# zfsutils-linux
+
+# Optional: Additional Filesystems
+xfsprogs
+e2fsprogs
+dosfstools
+ntfs-3g
+
+# Monitoring
+lm-sensors
+smartmontools
+
+# Hardware Support
+firmware-linux
+firmware-linux-nonfree

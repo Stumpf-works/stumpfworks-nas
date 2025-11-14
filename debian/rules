@@ -1,0 +1,91 @@
+#!/usr/bin/make -f
+
+# Debian package build rules for StumpfWorks NAS
+# Uses dh (debhelper) for automated build steps
+
+export DH_VERBOSE = 1
+export GO111MODULE = on
+export CGO_ENABLED = 1
+
+# Build directory paths
+BUILDDIR = $(CURDIR)/build
+BACKEND_DIR = $(CURDIR)/backend
+FRONTEND_DIR = $(CURDIR)/frontend
+
+# Installation paths
+PREFIX = /usr
+BINDIR = $(PREFIX)/bin
+DATADIR = $(PREFIX)/share/stumpfworks-nas
+SYSCONFDIR = /etc/stumpfworks-nas
+VARDIR = /var/lib/stumpfworks-nas
+
+%:
+	dh $@
+
+override_dh_auto_clean:
+	# Clean backend
+	cd $(BACKEND_DIR) && go clean || true
+	rm -rf $(BUILDDIR)
+	# Clean frontend
+	cd $(FRONTEND_DIR) && rm -rf dist node_modules || true
+
+override_dh_auto_build:
+	# Create build directory
+	mkdir -p $(BUILDDIR)
+
+	# Build backend
+	@echo "Building Go backend..."
+	cd $(BACKEND_DIR) && \
+		go build -v \
+		-ldflags="-w -s -X main.AppVersion=1.0.0" \
+		-o $(BUILDDIR)/stumpfworks-server \
+		./cmd/stumpfworks-server
+
+	# Build frontend
+	@echo "Building React frontend..."
+	cd $(FRONTEND_DIR) && \
+		npm ci && \
+		npm run build
+
+	# Copy frontend build to build directory
+	mkdir -p $(BUILDDIR)/frontend
+	cp -r $(FRONTEND_DIR)/dist/* $(BUILDDIR)/frontend/
+
+override_dh_auto_test:
+	# Run backend tests
+	@echo "Running backend tests..."
+	cd $(BACKEND_DIR) && go test -v ./... || true
+
+	# Frontend tests (if available)
+	@echo "Frontend tests skipped (add 'npm test' if available)"
+
+override_dh_auto_install:
+	# Create installation directories
+	mkdir -p debian/stumpfworks-nas$(BINDIR)
+	mkdir -p debian/stumpfworks-nas$(DATADIR)
+	mkdir -p debian/stumpfworks-nas$(SYSCONFDIR)
+	mkdir -p debian/stumpfworks-nas$(VARDIR)
+	mkdir -p debian/stumpfworks-nas/lib/systemd/system
+
+	# Install binary
+	install -m 0755 $(BUILDDIR)/stumpfworks-server debian/stumpfworks-nas$(BINDIR)/
+
+	# Install frontend
+	cp -r $(BUILDDIR)/frontend/* debian/stumpfworks-nas$(DATADIR)/
+
+	# Install default config
+	install -m 0644 config.example.yaml debian/stumpfworks-nas$(SYSCONFDIR)/config.yaml
+
+	# Install systemd service
+	install -m 0644 debian/stumpfworks-nas.service debian/stumpfworks-nas/lib/systemd/system/
+
+override_dh_installinit:
+	# Skip traditional init.d, we use systemd
+
+override_dh_systemd_enable:
+	dh_systemd_enable --name=stumpfworks-nas
+
+override_dh_systemd_start:
+	dh_systemd_start --restart-after-upgrade
+
+.PHONY: override_dh_auto_clean override_dh_auto_build override_dh_auto_test override_dh_auto_install
