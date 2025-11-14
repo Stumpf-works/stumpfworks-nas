@@ -18,19 +18,25 @@ export default function NetworkManager() {
     try {
       const response = await dockerApi.listNetworks();
       if (response.success && response.data) {
-        setNetworks(response.data);
+        // Ensure data is an array and filter out any invalid entries
+        const validNetworks = Array.isArray(response.data)
+          ? response.data.filter((n) => n && n.id && n.name)
+          : [];
+        setNetworks(validNetworks);
         setError('');
       } else {
         setError(response.error?.message || 'Failed to load networks');
       }
     } catch (err) {
+      console.error('Failed to load Docker networks:', err);
       setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
   };
 
-  const getDriverColor = (driver: string) => {
+  const getDriverColor = (driver?: string) => {
+    if (!driver) return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400';
     switch (driver.toLowerCase()) {
       case 'bridge':
         return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
@@ -47,7 +53,8 @@ export default function NetworkManager() {
     }
   };
 
-  const getScopeColor = (scope: string) => {
+  const getScopeColor = (scope?: string) => {
+    if (!scope) return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400';
     switch (scope.toLowerCase()) {
       case 'local':
         return 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400';
