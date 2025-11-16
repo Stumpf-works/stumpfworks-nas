@@ -301,3 +301,19 @@ func (r *RAIDManager) GrowArray(device string, newDeviceCount int) error {
 
 	return nil
 }
+
+// GetArray returns information about a specific RAID array
+func (r *RAIDManager) GetArray(name string) (*RAIDArray, error) {
+	arrays, err := r.ListArrays()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, array := range arrays {
+		if array.Name == name {
+			return &array, nil
+		}
+	}
+
+	return nil, fmt.Errorf("array %s not found", name)
+}

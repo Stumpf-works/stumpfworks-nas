@@ -181,8 +181,8 @@ func (s *SystemLibrary) Stop() error {
 	return nil
 }
 
-// Health returns the health status of all subsystems
-func (s *SystemLibrary) Health() (*HealthStatus, error) {
+// HealthCheck returns the health status of all subsystems
+func (s *SystemLibrary) HealthCheck() (*HealthStatus, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -328,3 +328,4 @@ func MustGet() *SystemLibrary {
 	}
 	return lib
 }
+

@@ -430,3 +430,19 @@ func (z *ZFSManager) GetProperty(name string, property string) (string, error) {
 	}
 	return strings.TrimSpace(result.Stdout), nil
 }
+
+// GetPool returns information about a specific ZFS pool
+func (z *ZFSManager) GetPool(name string) (*ZFSPool, error) {
+	pools, err := z.ListPools()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, pool := range pools {
+		if pool.Name == name {
+			return &pool, nil
+		}
+	}
+
+	return nil, fmt.Errorf("pool %s not found", name)
+}
