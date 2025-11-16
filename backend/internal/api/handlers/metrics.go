@@ -1,3 +1,4 @@
+// Revision: 2025-11-16 | Author: StumpfWorks AI | Version: 1.1.0
 package handlers
 
 import (
@@ -6,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Stumpf-works/stumpfworks-nas/internal/metrics"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/system"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/errors"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/utils"
@@ -174,4 +176,60 @@ func (h *MetricsHandler) GetTrends(w http.ResponseWriter, r *http.Request) {
 		"trends":   trends,
 		"duration": duration.String(),
 	})
+}
+
+// PrometheusMetricsHandler handles GET /metrics for Prometheus scraping
+// This endpoint exposes system metrics in Prometheus text format
+func PrometheusMetricsHandler(w http.ResponseWriter, r *http.Request) {
+	// Get system library instance
+	lib := system.Get()
+	if lib == nil || lib.Metrics == nil {
+		logger.Warn("System metrics collector not available")
+		http.Error(w, "Metrics collector not initialized", http.StatusServiceUnavailable)
+		return
+	}
+
+	// Get current metrics
+	current := lib.Metrics.GetCurrent()
+	if current == nil {
+		logger.Warn("No system metrics available")
+		http.Error(w, "No metrics available", http.StatusServiceUnavailable)
+		return
+	}
+
+	// Convert to Prometheus format
+	prometheusOutput := current.ToPrometheusFormat()
+
+	// Set content type for Prometheus
+	w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+
+	// Write metrics
+	_, err := w.Write([]byte(prometheusOutput))
+	if err != nil {
+		logger.Error("Failed to write Prometheus metrics response", zap.Error(err))
+	}
+
+	logger.Debug("Prometheus metrics exported",
+		zap.String("remote_addr", r.RemoteAddr),
+		zap.Int("response_size", len(prometheusOutput)))
+}
+
+// SystemHealthHandler handles GET /api/v1/system/health
+// Returns overall system health status from centralized system library
+func SystemHealthHandler(w http.ResponseWriter, r *http.Request) {
+	lib := system.Get()
+	if lib == nil {
+		utils.RespondError(w, errors.InternalServerError("System library not initialized", nil))
+		return
+	}
+
+	health, err := lib.Health()
+	if err != nil {
+		logger.Error("Failed to get system health", zap.Error(err))
+		utils.RespondError(w, errors.InternalServerError("Failed to get system health", err))
+		return
+	}
+
+	utils.RespondSuccess(w, health)
 }
