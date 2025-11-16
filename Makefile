@@ -1,4 +1,4 @@
-.PHONY: help install dev build test clean docker-build docker-up docker-down lint format
+.PHONY: help install dev build release test clean docker-build docker-up docker-down lint format
 
 # Default target
 help:
@@ -8,6 +8,7 @@ help:
 	@echo "  make install       - Install all dependencies (backend + frontend)"
 	@echo "  make dev           - Run development servers (backend + frontend)"
 	@echo "  make build         - Build for production"
+	@echo "  make release       - Build release binaries for all platforms"
 	@echo "  make test          - Run all tests"
 	@echo "  make lint          - Run linters"
 	@echo "  make format        - Format code"
@@ -94,6 +95,58 @@ docker-down:
 	@echo "Stopping Docker Compose stack..."
 	docker-compose down
 	@echo "✓ Stack stopped"
+
+# Build release binaries for multiple platforms
+release:
+	@echo "Building release binaries for multiple platforms..."
+	@mkdir -p dist/releases
+
+	# Linux AMD64
+	@echo "Building for Linux AMD64..."
+	cd backend && GOOS=linux GOARCH=amd64 go build \
+		-ldflags="-s -w -X main.AppVersion=$(shell git describe --tags --always)" \
+		-o ../dist/releases/stumpfworks-nas-linux-amd64 \
+		cmd/stumpfworks-server/main.go
+
+	# Linux ARM64
+	@echo "Building for Linux ARM64..."
+	cd backend && GOOS=linux GOARCH=arm64 go build \
+		-ldflags="-s -w -X main.AppVersion=$(shell git describe --tags --always)" \
+		-o ../dist/releases/stumpfworks-nas-linux-arm64 \
+		cmd/stumpfworks-server/main.go
+
+	# Linux ARM (Raspberry Pi)
+	@echo "Building for Linux ARM..."
+	cd backend && GOOS=linux GOARCH=arm GOARM=7 go build \
+		-ldflags="-s -w -X main.AppVersion=$(shell git describe --tags --always)" \
+		-o ../dist/releases/stumpfworks-nas-linux-armv7 \
+		cmd/stumpfworks-server/main.go
+
+	# Darwin AMD64 (Intel Mac)
+	@echo "Building for Darwin AMD64..."
+	cd backend && GOOS=darwin GOARCH=amd64 go build \
+		-ldflags="-s -w -X main.AppVersion=$(shell git describe --tags --always)" \
+		-o ../dist/releases/stumpfworks-nas-darwin-amd64 \
+		cmd/stumpfworks-server/main.go
+
+	# Darwin ARM64 (Apple Silicon)
+	@echo "Building for Darwin ARM64..."
+	cd backend && GOOS=darwin GOARCH=arm64 go build \
+		-ldflags="-s -w -X main.AppVersion=$(shell git describe --tags --always)" \
+		-o ../dist/releases/stumpfworks-nas-darwin-arm64 \
+		cmd/stumpfworks-server/main.go
+
+	# Build frontend
+	@echo "Building frontend..."
+	cd frontend && npm run build
+	@cp -r frontend/dist dist/releases/frontend
+
+	# Create checksums
+	@echo "Creating checksums..."
+	cd dist/releases && sha256sum stumpfworks-nas-* > checksums.txt
+
+	@echo "✓ Release build complete. Binaries in ./dist/releases/"
+	@ls -lh dist/releases/
 
 # ISO builder (future)
 iso:
