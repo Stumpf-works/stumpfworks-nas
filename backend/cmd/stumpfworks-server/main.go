@@ -25,6 +25,7 @@ import (
 	"github.com/Stumpf-works/stumpfworks-nas/internal/plugins"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/scheduler"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/storage"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/system"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/twofa"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/updates"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/usergroups"
@@ -85,6 +86,12 @@ func main() {
 		logger.Fatal("Failed to initialize database", zap.Error(err))
 	}
 	defer database.Close()
+
+	// Initialize System Library
+	if err := system.Initialize(nil); err != nil {
+		logger.Fatal("Failed to initialize system library", zap.Error(err))
+	}
+	logger.Info("System library initialized")
 
 	// Initialize Samba user manager (non-fatal if Samba not installed)
 	if err := initializeSambaUserManager(); err != nil {
