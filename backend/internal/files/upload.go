@@ -19,13 +19,13 @@ import (
 
 const (
 	// MaxUploadSize is the maximum file size for uploads (10GB default)
-	MaxUploadSize = 10 * 1024 * 1024 * 1024
+	MaxUploadSize int64 = 10 * 1024 * 1024 * 1024
 	// ChunkSize is the default chunk size for chunked uploads (10MB)
 	ChunkSize = 10 * 1024 * 1024
 	// UploadSessionTimeout is how long to keep upload sessions alive
 	UploadSessionTimeout = 24 * time.Hour
 	// MinimumFreeSpace is the minimum free space required (1GB buffer)
-	MinimumFreeSpace = 1 * 1024 * 1024 * 1024
+	MinimumFreeSpace int64 = 1 * 1024 * 1024 * 1024
 )
 
 // UploadManager manages file uploads
