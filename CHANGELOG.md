@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 🚀 Advanced Features & Plugin System
+
+#### Added
+
+**Phase 4: Plugin System with Runtime Execution**
+- Plugin Runtime Engine for sandboxed execution
+- `StartPlugin()` / `StopPlugin()` / `RestartPlugin()` - Full lifecycle control
+- `GetPluginStatus()` - Runtime status monitoring
+- `ListRunningPlugins()` - Active plugin tracking
+- Plugin process isolation with separate execution contexts
+- Automatic stdout/stderr capture with plugin-tagged logging
+- Graceful shutdown handling (5s timeout, force kill if needed)
+- Crash detection and automatic status updates
+- Environment variables: PLUGIN_ID, PLUGIN_DIR, NAS_API_URL
+- Configuration loading from plugin.json
+- Example "Hello World" plugin in Go
+- Comprehensive Plugin SDK documentation (200+ lines)
+- Multi-language support (Go, Python, Node.js examples)
+- 5 new API endpoints for runtime control
+
 ### 🚀 Advanced Sharing Protocols & Critical Improvements
 
 #### Added
