@@ -1,6 +1,6 @@
 // Revision: 2025-11-16 | Author: StumpfWorks AI | Version: 1.1.0
 import { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Database,
   Plus,
@@ -8,19 +8,17 @@ import {
   Trash2,
   HardDrive,
   Activity,
-  Camera,
   AlertTriangle,
   CheckCircle,
   XCircle,
 } from 'lucide-react';
-import { syslibApi, type ZFSPool, type ZFSDataset, type CreateZFSPoolRequest } from '@/api/syslib';
+import { syslibApi, type ZFSPool, type ZFSDataset } from '@/api/syslib';
 
 export default function ZFSManager() {
   const [pools, setPools] = useState<ZFSPool[]>([]);
   const [selectedPool, setSelectedPool] = useState<ZFSPool | null>(null);
   const [datasets, setDatasets] = useState<ZFSDataset[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isCreating, setIsCreating] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   // Fetch pools
