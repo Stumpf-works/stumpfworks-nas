@@ -4,7 +4,7 @@ import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 
-export function BrandingSection({ user, systemInfo }: { user: any; systemInfo: any }) {
+export function BrandingSection() {
   const [companyName, setCompanyName] = useState('StumpfWorks NAS');
   const [logoUrl, setLogoUrl] = useState('');
   const [primaryColor, setPrimaryColor] = useState('#0071e3');

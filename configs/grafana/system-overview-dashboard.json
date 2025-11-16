@@ -1,0 +1,183 @@
+{
+  "dashboard": {
+    "title": "StumpfWorks NAS - System Overview",
+    "tags": ["stumpfworks", "nas", "system"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "CPU Usage",
+        "type": "timeseries",
+        "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "stumpfworks_cpu_usage_percent",
+            "legendFormat": "CPU Usage %",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 70, "color": "yellow"},
+                {"value": 90, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Memory Usage",
+        "type": "timeseries",
+        "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "stumpfworks_memory_used_bytes / stumpfworks_memory_total_bytes * 100",
+            "legendFormat": "Memory Usage %",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 80, "color": "yellow"},
+                {"value": 95, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Memory Breakdown",
+        "type": "gauge",
+        "gridPos": {"x": 0, "y": 8, "w": 6, "h": 6},
+        "targets": [
+          {
+            "expr": "stumpfworks_memory_used_bytes",
+            "legendFormat": "Used",
+            "refId": "A"
+          },
+          {
+            "expr": "stumpfworks_memory_total_bytes - stumpfworks_memory_used_bytes",
+            "legendFormat": "Free",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "bytes"
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Disk I/O",
+        "type": "timeseries",
+        "gridPos": {"x": 6, "y": 8, "w": 18, "h": 6},
+        "targets": [
+          {
+            "expr": "rate(stumpfworks_disk_read_bytes[5m])",
+            "legendFormat": "Read",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(stumpfworks_disk_write_bytes[5m])",
+            "legendFormat": "Write",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "Bps"
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Network Traffic",
+        "type": "timeseries",
+        "gridPos": {"x": 0, "y": 14, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "rate(stumpfworks_network_rx_bytes[5m])",
+            "legendFormat": "RX {{interface}}",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(stumpfworks_network_tx_bytes[5m])",
+            "legendFormat": "TX {{interface}}",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "Bps"
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "System Uptime",
+        "type": "stat",
+        "gridPos": {"x": 12, "y": 14, "w": 6, "h": 4},
+        "targets": [
+          {
+            "expr": "stumpfworks_uptime_seconds",
+            "legendFormat": "Uptime",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s"
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "Load Average",
+        "type": "timeseries",
+        "gridPos": {"x": 18, "y": 14, "w": 6, "h": 8},
+        "targets": [
+          {
+            "expr": "stumpfworks_load_average_1m",
+            "legendFormat": "1m",
+            "refId": "A"
+          },
+          {
+            "expr": "stumpfworks_load_average_5m",
+            "legendFormat": "5m",
+            "refId": "B"
+          },
+          {
+            "expr": "stumpfworks_load_average_15m",
+            "legendFormat": "15m",
+            "refId": "C"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          }
+        }
+      }
+    ]
+  }
+}

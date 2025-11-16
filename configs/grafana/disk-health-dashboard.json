@@ -1,0 +1,156 @@
+{
+  "dashboard": {
+    "title": "StumpfWorks NAS - Disk Health (SMART)",
+    "tags": ["stumpfworks", "nas", "smart", "disks", "health"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "5m",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Disk Health Status",
+        "type": "stat",
+        "gridPos": {"x": 0, "y": 0, "w": 24, "h": 6},
+        "targets": [
+          {
+            "expr": "stumpfworks_disk_smart_healthy",
+            "legendFormat": "{{device}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "mappings": [
+              {"type": "value", "value": "1", "text": "Healthy"},
+              {"type": "value", "value": "0", "text": "Unhealthy"}
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 1, "color": "green"}
+              ]
+            }
+          }
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none",
+          "textMode": "value_and_name"
+        }
+      },
+      {
+        "id": 2,
+        "title": "Disk Temperatures",
+        "type": "timeseries",
+        "gridPos": {"x": 0, "y": 6, "w": 24, "h": 8},
+        "targets": [
+          {
+            "expr": "stumpfworks_disk_smart_temperature",
+            "legendFormat": "{{device}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "celsius",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 45, "color": "yellow"},
+                {"value": 55, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Current Temperature by Disk",
+        "type": "gauge",
+        "gridPos": {"x": 0, "y": 14, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "stumpfworks_disk_smart_temperature",
+            "legendFormat": "{{device}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "celsius",
+            "min": 0,
+            "max": 70,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 45, "color": "yellow"},
+                {"value": 55, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Disk Health Summary",
+        "type": "table",
+        "gridPos": {"x": 12, "y": 14, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "stumpfworks_disk_smart_healthy",
+            "legendFormat": "{{device}}",
+            "refId": "A",
+            "format": "table"
+          },
+          {
+            "expr": "stumpfworks_disk_smart_temperature",
+            "legendFormat": "{{device}}",
+            "refId": "B",
+            "format": "table"
+          }
+        ],
+        "transformations": [
+          {
+            "id": "merge",
+            "options": {}
+          },
+          {
+            "id": "organize",
+            "options": {
+              "renameByName": {
+                "device": "Device",
+                "Value #A": "Health",
+                "Value #B": "Temperature (°C)"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Unhealthy Disk Alert",
+        "type": "alert-list",
+        "gridPos": {"x": 0, "y": 22, "w": 24, "h": 6},
+        "options": {
+          "showOptions": "current",
+          "maxItems": 20,
+          "sortOrder": 1,
+          "dashboardAlerts": true,
+          "alertName": "",
+          "dashboardTitle": "",
+          "tags": ["disk", "smart"],
+          "stateFilter": {
+            "firing": true,
+            "pending": true,
+            "ok": false
+          }
+        }
+      }
+    ]
+  }
+}

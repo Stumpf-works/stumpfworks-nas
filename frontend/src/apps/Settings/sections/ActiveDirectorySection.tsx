@@ -5,7 +5,7 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { adApi, type ADConfig } from '@/api/ad';
 
-export function ActiveDirectorySection({ user, systemInfo }: { user: any; systemInfo: any }) {
+export function ActiveDirectorySection() {
   const [adConfig, setAdConfig] = useState<ADConfig | null>(null);
   const [adConfigEditing, setAdConfigEditing] = useState(false);
   const [adTestResult, setAdTestResult] = useState<{ success: boolean; message: string } | null>(null);

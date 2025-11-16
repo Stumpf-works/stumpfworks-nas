@@ -5,7 +5,7 @@ import Button from '@/components/ui/Button';
 import { backupApi } from '@/api/backup';
 import { getErrorMessage } from '@/api/client';
 
-export function BackupSection({ user, systemInfo }: { user: any; systemInfo: any }) {
+export function BackupSection() {
   const [backups, setBackups] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -18,7 +18,7 @@ export function BackupSection({ user, systemInfo }: { user: any; systemInfo: any
     setLoading(true);
     setError(null);
     try {
-      const response = await backupApi.list();
+      const response = await backupApi.listJobs();
       if (response.success && response.data) {
         setBackups(response.data);
       }

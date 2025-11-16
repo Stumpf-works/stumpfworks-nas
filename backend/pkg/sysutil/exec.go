@@ -1,3 +1,4 @@
+// Revision: 2025-11-16 | Author: Claude | Version: 1.1.1
 package sysutil
 
 import (

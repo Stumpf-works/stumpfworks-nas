@@ -1,0 +1,170 @@
+{
+  "dashboard": {
+    "title": "StumpfWorks NAS - ZFS Pools",
+    "tags": ["stumpfworks", "nas", "zfs", "storage"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "1m",
+    "panels": [
+      {
+        "id": 1,
+        "title": "ZFS Pool Health Status",
+        "type": "stat",
+        "gridPos": {"x": 0, "y": 0, "w": 24, "h": 4},
+        "targets": [
+          {
+            "expr": "stumpfworks_zfs_pool_health",
+            "legendFormat": "{{pool}} - {{health}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "mappings": [
+              {"type": "value", "value": "1", "text": "ONLINE"},
+              {"type": "value", "value": "0.5", "text": "DEGRADED"},
+              {"type": "value", "value": "0", "text": "OFFLINE"}
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 0.5, "color": "yellow"},
+                {"value": 1, "color": "green"}
+              ]
+            }
+          }
+        },
+        "options": {
+          "colorMode": "background"
+        }
+      },
+      {
+        "id": 2,
+        "title": "Pool Capacity - Total",
+        "type": "timeseries",
+        "gridPos": {"x": 0, "y": 4, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "stumpfworks_zfs_pool_total_bytes",
+            "legendFormat": "{{pool}} Total",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "bytes"
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Pool Capacity - Used",
+        "type": "timeseries",
+        "gridPos": {"x": 12, "y": 4, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "stumpfworks_zfs_pool_used_bytes",
+            "legendFormat": "{{pool}} Used",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "bytes",
+            "color": {
+              "mode": "palette-classic"
+            }
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Pool Usage Percentage",
+        "type": "gauge",
+        "gridPos": {"x": 0, "y": 12, "w": 8, "h": 6},
+        "targets": [
+          {
+            "expr": "stumpfworks_zfs_pool_used_bytes / stumpfworks_zfs_pool_total_bytes * 100",
+            "legendFormat": "{{pool}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 75, "color": "yellow"},
+                {"value": 90, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Pool Free Space",
+        "type": "timeseries",
+        "gridPos": {"x": 8, "y": 12, "w": 16, "h": 6},
+        "targets": [
+          {
+            "expr": "stumpfworks_zfs_pool_free_bytes",
+            "legendFormat": "{{pool}} Free",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "bytes"
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "Fragmentation",
+        "type": "timeseries",
+        "gridPos": {"x": 0, "y": 18, "w": 12, "h": 6},
+        "targets": [
+          {
+            "expr": "stumpfworks_zfs_pool_fragmentation_percent",
+            "legendFormat": "{{pool}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "Deduplication Ratio",
+        "type": "stat",
+        "gridPos": {"x": 12, "y": 18, "w": 12, "h": 6},
+        "targets": [
+          {
+            "expr": "stumpfworks_zfs_pool_dedup_ratio",
+            "legendFormat": "{{pool}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "decimals": 2
+          }
+        }
+      }
+    ]
+  }
+}

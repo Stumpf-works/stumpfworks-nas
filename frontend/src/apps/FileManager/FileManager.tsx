@@ -17,6 +17,7 @@ const FileManager: React.FC = () => {
   const [currentPath, setCurrentPath] = useState<string>('/');
   const [files, setFiles] = useState<FileInfo[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
+  const [lastSelectedIndex, setLastSelectedIndex] = useState<number>(-1);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [browseData, setBrowseData] = useState<BrowseResponse | null>(null);
@@ -82,20 +83,32 @@ const FileManager: React.FC = () => {
       // Handle multi-selection
       if (event.ctrlKey || event.metaKey) {
         const newSelected = new Set(selectedFiles);
+        const currentIndex = filteredFiles.findIndex((f) => f.path === file.path);
         if (newSelected.has(file.path)) {
           newSelected.delete(file.path);
         } else {
           newSelected.add(file.path);
         }
         setSelectedFiles(newSelected);
-      } else if (event.shiftKey && selectedFiles.size > 0) {
-        // TODO: Implement shift-click range selection
+        setLastSelectedIndex(currentIndex);
+      } else if (event.shiftKey && lastSelectedIndex >= 0) {
+        // Shift-click range selection
+        const currentIndex = filteredFiles.findIndex((f) => f.path === file.path);
+        const startIndex = Math.min(lastSelectedIndex, currentIndex);
+        const endIndex = Math.max(lastSelectedIndex, currentIndex);
+
         const newSelected = new Set(selectedFiles);
-        newSelected.add(file.path);
+        for (let i = startIndex; i <= endIndex; i++) {
+          if (!filteredFiles[i].isDir) {
+            newSelected.add(filteredFiles[i].path);
+          }
+        }
         setSelectedFiles(newSelected);
       } else {
         // Single selection
+        const currentIndex = filteredFiles.findIndex((f) => f.path === file.path);
         setSelectedFiles(new Set([file.path]));
+        setLastSelectedIndex(currentIndex);
       }
     }
   };

@@ -1,0 +1,162 @@
+{
+  "dashboard": {
+    "title": "StumpfWorks NAS - Services & Shares",
+    "tags": ["stumpfworks", "nas", "services", "shares"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Service Status",
+        "type": "stat",
+        "gridPos": {"x": 0, "y": 0, "w": 24, "h": 6},
+        "targets": [
+          {
+            "expr": "stumpfworks_service_status",
+            "legendFormat": "{{service}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "mappings": [
+              {"type": "value", "value": "1", "text": "Running"},
+              {"type": "value", "value": "0", "text": "Stopped"}
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 1, "color": "green"}
+              ]
+            }
+          }
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none",
+          "textMode": "value_and_name"
+        }
+      },
+      {
+        "id": 2,
+        "title": "Samba Connections",
+        "type": "timeseries",
+        "gridPos": {"x": 0, "y": 6, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "stumpfworks_share_samba_connections",
+            "legendFormat": "Samba Connections",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "min": 0
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "NFS Connections",
+        "type": "timeseries",
+        "gridPos": {"x": 12, "y": 6, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "stumpfworks_share_nfs_connections",
+            "legendFormat": "NFS Connections",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "min": 0
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Total Active Connections",
+        "type": "stat",
+        "gridPos": {"x": 0, "y": 14, "w": 12, "h": 4},
+        "targets": [
+          {
+            "expr": "stumpfworks_share_samba_connections + stumpfworks_share_nfs_connections",
+            "legendFormat": "Total Connections",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "blue"},
+                {"value": 10, "color": "green"},
+                {"value": 50, "color": "yellow"},
+                {"value": 100, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Service Uptime",
+        "type": "table",
+        "gridPos": {"x": 12, "y": 14, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "stumpfworks_service_status",
+            "legendFormat": "{{service}}",
+            "refId": "A",
+            "format": "table"
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "renameByName": {
+                "service": "Service",
+                "Value": "Status"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Connection Rate (5m)",
+        "type": "timeseries",
+        "gridPos": {"x": 0, "y": 22, "w": 24, "h": 6},
+        "targets": [
+          {
+            "expr": "rate(stumpfworks_share_samba_connections[5m])",
+            "legendFormat": "Samba Rate",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(stumpfworks_share_nfs_connections[5m])",
+            "legendFormat": "NFS Rate",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops"
+          }
+        }
+      }
+    ]
+  }
+}

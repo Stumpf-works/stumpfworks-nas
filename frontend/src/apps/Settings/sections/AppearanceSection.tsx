@@ -2,7 +2,7 @@
 import Card from '@/components/ui/Card';
 import { useThemeStore } from '@/store';
 
-export function AppearanceSection({ user, systemInfo }: { user: any; systemInfo: any }) {
+export function AppearanceSection() {
   const isDark = useThemeStore((state) => state.isDark);
   const toggleTheme = useThemeStore((state) => state.toggleTheme);
 

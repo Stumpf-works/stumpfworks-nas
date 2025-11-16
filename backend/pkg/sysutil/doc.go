@@ -1,3 +1,4 @@
+// Revision: 2025-11-16 | Author: Claude | Version: 1.1.1
 // Package sysutil provides system-level utility functions for the Stumpf.Works NAS.
 //
 // This package centralizes common operations that interact with the operating system,

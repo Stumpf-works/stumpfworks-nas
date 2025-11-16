@@ -5,7 +5,7 @@ import Button from '@/components/ui/Button';
 import { syslibApi, type ZFSPool } from '@/api/syslib';
 import { getErrorMessage } from '@/api/client';
 
-export function StorageSection({ user, systemInfo }: { user: any; systemInfo: any }) {
+export function StorageSection() {
   const [pools, setPools] = useState<ZFSPool[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

@@ -6,7 +6,7 @@ import Input from '@/components/ui/Input';
 import { syslibApi, type SambaShare, type NFSExport } from '@/api/syslib';
 import { getErrorMessage } from '@/api/client';
 
-export function SharesSection({ user, systemInfo }: { user: any; systemInfo: any }) {
+export function SharesSection() {
   const [activeTab, setActiveTab] = useState<'samba' | 'nfs'>('samba');
   const [sambaShares, setSambaShares] = useState<SambaShare[]>([]);
   const [nfsExports, setNfsExports] = useState<NFSExport[]>([]);
