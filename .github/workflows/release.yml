@@ -34,67 +34,89 @@ jobs:
       - name: Build release binaries
         run: make release
 
-      - name: Delete existing release (if any)
-        continue-on-error: true
+      - name: Create GitHub Release with all assets
         run: |
+          # Delete existing release and tag if they exist
           gh release delete ${{ github.ref_name }} --yes || true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          git push --delete origin ${{ github.ref_name }} || true
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          name: Stumpf.Works NAS ${{ github.ref_name }}
-          body: |
-            # Stumpf.Works NAS ${{ github.ref_name }}
+          # Recreate tag
+          git tag -f ${{ github.ref_name }}
+          git push -f origin ${{ github.ref_name }}
 
-            Production-ready NAS management system with web UI.
+          # Create release with all assets in one go
+          gh release create ${{ github.ref_name }} \
+            --title "Stumpf.Works NAS ${{ github.ref_name }}" \
+            --notes-file - \
+            dist/releases/stumpfworks-nas-linux-amd64 \
+            dist/releases/stumpfworks-nas-linux-arm64 \
+            dist/releases/stumpfworks-nas-linux-armv7 \
+            dist/releases/stumpfworks-nas-darwin-amd64 \
+            dist/releases/stumpfworks-nas-darwin-arm64 \
+            dist/releases/checksums.txt << 'EOF'
+          # Stumpf.Works NAS ${{ github.ref_name }}
 
-            ## 📦 Downloads
+          Production-ready NAS management system with web UI.
 
-            ### Linux
-            - **AMD64 (x86_64)**: `stumpfworks-nas-linux-amd64`
-            - **ARM64 (aarch64)**: `stumpfworks-nas-linux-arm64`
-            - **ARMv7 (Raspberry Pi)**: `stumpfworks-nas-linux-armv7`
+          ## 📦 Downloads
 
-            ### macOS
-            - **Intel (AMD64)**: `stumpfworks-nas-darwin-amd64`
-            - **Apple Silicon (ARM64)**: `stumpfworks-nas-darwin-arm64`
+          ### Linux
+          - **AMD64 (x86_64)**: `stumpfworks-nas-linux-amd64`
+          - **ARM64 (aarch64)**: `stumpfworks-nas-linux-arm64`
+          - **ARMv7 (Raspberry Pi)**: `stumpfworks-nas-linux-armv7`
 
-            ## 🚀 Quick Start
+          ### macOS
+          - **Intel (AMD64)**: `stumpfworks-nas-darwin-amd64`
+          - **Apple Silicon (ARM64)**: `stumpfworks-nas-darwin-arm64`
 
-            ```bash
-            # Download for your platform
-            wget https://github.com/Stumpf-works/stumpfworks-nas/releases/download/${{ github.ref_name }}/stumpfworks-nas-linux-amd64
+          ## 🚀 Quick Start
 
-            # Make executable
-            chmod +x stumpfworks-nas-linux-amd64
+          ```bash
+          # Download for your platform
+          wget https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/stumpfworks-nas-linux-amd64
 
-            # Run
-            ./stumpfworks-nas-linux-amd64
-            ```
+          # Make executable
+          chmod +x stumpfworks-nas-linux-amd64
 
-            ## 📋 Installation
+          # Run
+          ./stumpfworks-nas-linux-amd64
+          ```
 
-            See [README.md](https://github.com/Stumpf-works/stumpfworks-nas/blob/main/README.md) for detailed installation instructions.
+          ## 📋 Installation
 
-            ## ✅ Checksums
+          See [README.md](https://github.com/${{ github.repository }}/blob/main/README.md) for detailed installation instructions.
 
-            Verify your download with `checksums.txt`
+          ## ✅ Checksums
 
-            ## 📝 What's New
+          Verify your download with SHA256 checksums in `checksums.txt`:
 
-            See [CHANGELOG.md](https://github.com/Stumpf-works/stumpfworks-nas/blob/main/CHANGELOG.md) for details.
-          draft: false
-          prerelease: false
-          fail_on_unmatched_files: true
-          make_latest: true
-          files: |
-            dist/releases/stumpfworks-nas-linux-amd64
-            dist/releases/stumpfworks-nas-linux-arm64
-            dist/releases/stumpfworks-nas-linux-armv7
-            dist/releases/stumpfworks-nas-darwin-amd64
-            dist/releases/stumpfworks-nas-darwin-arm64
-            dist/releases/checksums.txt
+          ```bash
+          sha256sum -c checksums.txt
+          ```
+
+          ## 📝 What's New
+
+          See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.
+
+          ---
+
+          **Installation via wget:**
+          ```bash
+          # Linux AMD64
+          wget https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/stumpfworks-nas-linux-amd64
+          chmod +x stumpfworks-nas-linux-amd64
+          sudo mv stumpfworks-nas-linux-amd64 /usr/local/bin/stumpfworks-nas
+
+          # Linux ARM64
+          wget https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/stumpfworks-nas-linux-arm64
+          chmod +x stumpfworks-nas-linux-arm64
+          sudo mv stumpfworks-nas-linux-arm64 /usr/local/bin/stumpfworks-nas
+
+          # Raspberry Pi
+          wget https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/stumpfworks-nas-linux-armv7
+          chmod +x stumpfworks-nas-linux-armv7
+          sudo mv stumpfworks-nas-linux-armv7 /usr/local/bin/stumpfworks-nas
+          ```
+          EOF
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
