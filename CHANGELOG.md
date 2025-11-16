@@ -5,6 +5,114 @@ All notable changes to Stumpf.Works NAS will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-11-16
+
+### 🎉 Major System Architecture Improvements
+
+This release introduces the **StumpfWorks System Library v1.1.0**, a complete architectural refactoring that centralizes all system management operations into a unified, thread-safe API.
+
+#### Added
+
+**System Library v1.1.0**
+- Centralized SystemLibrary providing unified API for all system operations
+- Thread-safe operation with proper mutex locking for all subsystems
+- Global instance management with Initialize() and Get() methods
+- Comprehensive health monitoring with HealthCheck() returning detailed subsystem status
+- Graceful degradation when optional components are unavailable
+
+**Storage Management Enhancements**
+- Added `GetPool(name string)` method to ZFSManager for retrieving specific ZFS pools
+- Added `GetArray(name string)` method to RAIDManager for retrieving specific RAID arrays
+- Improved error handling and type safety across storage operations
+- Better integration with the centralized System Library
+
+**Shell Executor Refactoring**
+- Centralized ShellExecutor in `internal/system/executor` package
+- Eliminated duplicate executor implementations across subsystems
+- Improved security with dry-run support for testing
+- Better error messages and logging
+- Consistent command execution across all system components
+
+**Network Management**
+- Complete interface management with bonding support
+- Firewall configuration and rule management
+- DNS configuration management
+- Fixed type references for BondConfig (proper Slaves field mapping)
+
+**Health & Monitoring**
+- Enhanced health check system returning detailed subsystem status
+- HealthStatus struct with timestamp, overall status, and per-subsystem health
+- SubsystemHealth tracking for: Storage, Network, Sharing, Users, Shell, Metrics
+- Proper error handling and reporting in health checks
+
+#### Fixed
+
+**Backend Compilation & Type Safety**
+- Fixed all API handler compilation errors in syslib.go
+- Corrected type references: `sharing.SambaShare`, `sharing.NFSExport`, `network.BondConfig`
+- Fixed field access: Network.Interface → Network.Interfaces
+- Fixed BondConfig initialization: Interfaces → Slaves field
+- Renamed Health() to HealthCheck() for consistency across codebase
+- Updated all handlers to use proper error handling with HealthCheck()
+- Added required package imports (sharing, network) to API handlers
+- Resolved SystemMetrics type conflicts and LoadAvg import issues
+
+**Code Organization**
+- Eliminated circular dependencies in system packages
+- Centralized executor interface and implementation
+- Improved package structure and separation of concerns
+- Better type safety throughout the codebase
+
+#### Changed
+
+**Architecture**
+- Migrated from scattered system operations to centralized System Library
+- All subsystems now accessed through single SystemLibrary instance
+- Improved initialization order and dependency management
+- Better error propagation from subsystems to API layer
+
+**API Handlers**
+- Updated all handlers to use centralized System Library
+- Improved error responses with proper error types
+- Better validation of requests and responses
+- Enhanced logging for debugging and monitoring
+
+**Documentation**
+- Updated README.md to v1.1.0 with comprehensive improvements
+- Added "System Library Components" section detailing all subsystems
+- Enhanced architecture diagram showing System Library integration
+- Added "What Makes StumpfWorks NAS Different?" section
+- Updated metrics: 170 features, 160+ endpoints, 22 API handlers
+- Improved installation instructions with APT repository support
+- Updated feature completion tracking (Phase 5 complete)
+
+#### Technical Details
+
+**System Library Components:**
+- **Storage Manager**: ZFS pools, RAID arrays, disk operations, SMART monitoring
+- **Network Manager**: Interfaces, bonding, firewall rules, DNS configuration
+- **Sharing Manager**: Samba (SMB) and NFS exports with user permissions
+- **User Manager**: System users, authentication, permissions
+- **Metrics Collector**: Real-time system metrics and health monitoring
+- **Shell Executor**: Secure command execution with dry-run support
+
+**Build & Quality:**
+- Backend compiles without errors ✅
+- Frontend builds successfully ✅
+- All type mismatches resolved ✅
+- Comprehensive error handling ✅
+- Thread-safe operations ✅
+
+#### Migration Notes
+
+For users upgrading from v1.0.0:
+- No breaking API changes - all existing endpoints remain compatible
+- System Library initialization is automatic on startup
+- Improved error messages may change log output format
+- Health check response format enhanced with more detailed information
+
+---
+
 ## [1.0.0] - 2025-11-14
 
 ### 🎉 Initial Production Release
