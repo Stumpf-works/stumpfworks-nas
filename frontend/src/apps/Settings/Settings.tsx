@@ -1,31 +1,124 @@
+// Revision: 2025-11-16 | Author: Claude | Version: 1.1.1
 import { useState, useEffect } from 'react';
-import { useAuthStore, useThemeStore } from '@/store';
-import { systemApi, type UpdateCheckResult } from '@/api/system';
-import { authApi } from '@/api/auth';
-import { adApi, type ADConfig } from '@/api/ad';
-import { getErrorMessage } from '@/api/client';
-import Card from '@/components/ui/Card';
-import Button from '@/components/ui/Button';
+import { useAuthStore } from '@/store';
+import { systemApi } from '@/api/system';
 import Input from '@/components/ui/Input';
-import { TwoFactorAuth } from '@/components/TwoFactorAuth/TwoFactorAuth';
+
+// Section imports
+import { GeneralSection } from './sections/GeneralSection';
+import { AppearanceSection } from './sections/AppearanceSection';
+import { StorageSection } from './sections/StorageSection';
+import { SharesSection } from './sections/SharesSection';
+import { NetworkSection } from './sections/NetworkSection';
+import { UsersGroupsSection } from './sections/UsersGroupsSection';
+import { BackupSection } from './sections/BackupSection';
+import { TasksSection } from './sections/TasksSection';
+import { MonitoringSection } from './sections/MonitoringSection';
+import { BrandingSection } from './sections/BrandingSection';
+import { ActiveDirectorySection } from './sections/ActiveDirectorySection';
+import { UpdatesSection } from './sections/UpdatesSection';
+
+type SettingsSection = {
+  id: string;
+  label: string;
+  icon: string;
+  component: React.ComponentType<{ user: any; systemInfo: any }>;
+  searchTerms: string[];
+};
+
+const sections: SettingsSection[] = [
+  {
+    id: 'general',
+    label: 'General',
+    icon: '⚙️',
+    component: GeneralSection,
+    searchTerms: ['general', 'user', 'account', 'profile', '2fa', 'two-factor'],
+  },
+  {
+    id: 'appearance',
+    label: 'Appearance',
+    icon: '🎨',
+    component: AppearanceSection,
+    searchTerms: ['appearance', 'theme', 'dark', 'light'],
+  },
+  {
+    id: 'storage',
+    label: 'Storage',
+    icon: '💾',
+    component: StorageSection,
+    searchTerms: ['storage', 'zfs', 'pool', 'disk', 'raid', 'volume'],
+  },
+  {
+    id: 'shares',
+    label: 'Shares',
+    icon: '📁',
+    component: SharesSection,
+    searchTerms: ['shares', 'samba', 'nfs', 'smb', 'iscsi', 'webdav', 'ftp'],
+  },
+  {
+    id: 'network',
+    label: 'Network',
+    icon: '🌐',
+    component: NetworkSection,
+    searchTerms: ['network', 'interface', 'dns', 'firewall', 'ip', 'vlan', 'bonding'],
+  },
+  {
+    id: 'users',
+    label: 'Users & Groups',
+    icon: '👥',
+    component: UsersGroupsSection,
+    searchTerms: ['users', 'groups', 'permissions', 'access'],
+  },
+  {
+    id: 'backup',
+    label: 'Backup',
+    icon: '💼',
+    component: BackupSection,
+    searchTerms: ['backup', 'snapshot', 'rsync', 'cloud', 'restore'],
+  },
+  {
+    id: 'tasks',
+    label: 'Scheduled Tasks',
+    icon: '⏱️',
+    component: TasksSection,
+    searchTerms: ['tasks', 'schedule', 'cron', 'job', 'automation'],
+  },
+  {
+    id: 'monitoring',
+    label: 'Monitoring',
+    icon: '📊',
+    component: MonitoringSection,
+    searchTerms: ['monitoring', 'prometheus', 'grafana', 'datadog', 'metrics'],
+  },
+  {
+    id: 'branding',
+    label: 'Branding',
+    icon: '🎭',
+    component: BrandingSection,
+    searchTerms: ['branding', 'logo', 'color', 'theme', 'customization'],
+  },
+  {
+    id: 'ad',
+    label: 'Active Directory',
+    icon: '🔐',
+    component: ActiveDirectorySection,
+    searchTerms: ['active directory', 'ad', 'ldap', 'authentication'],
+  },
+  {
+    id: 'updates',
+    label: 'Updates',
+    icon: '🔄',
+    component: UpdatesSection,
+    searchTerms: ['updates', 'version', 'upgrade', 'release'],
+  },
+];
 
 export function Settings() {
   const user = useAuthStore((state) => state.user);
   const clearAuth = useAuthStore((state) => state.clearAuth);
-  const isDark = useThemeStore((state) => state.isDark);
-  const toggleTheme = useThemeStore((state) => state.toggleTheme);
-
+  const [activeSection, setActiveSection] = useState('general');
+  const [searchQuery, setSearchQuery] = useState('');
   const [systemInfo, setSystemInfo] = useState<any>(null);
-  const [adConfig, setAdConfig] = useState<ADConfig | null>(null);
-  const [adConfigEditing, setAdConfigEditing] = useState(false);
-  const [adTestResult, setAdTestResult] = useState<{ success: boolean; message: string } | null>(null);
-  const [adLoading, setAdLoading] = useState(false);
-  const [showAdSetup, setShowAdSetup] = useState(false);
-
-  // Update checking state
-  const [updateCheckResult, setUpdateCheckResult] = useState<UpdateCheckResult | null>(null);
-  const [checkingUpdates, setCheckingUpdates] = useState(false);
-  const [updateError, setUpdateError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchSystemInfo = async () => {
@@ -39,23 +132,12 @@ export function Settings() {
       }
     };
 
-    const fetchAdConfig = async () => {
-      try {
-        const response = await adApi.getConfig();
-        if (response.success && response.data) {
-          setAdConfig(response.data);
-        }
-      } catch (error) {
-        console.error('Failed to fetch AD config:', error);
-      }
-    };
-
     fetchSystemInfo();
-    fetchAdConfig();
   }, []);
 
   const handleLogout = async () => {
     try {
+      const { authApi } = await import('@/api/auth');
       await authApi.logout();
     } catch (error) {
       console.error('Logout error:', error);
@@ -65,637 +147,69 @@ export function Settings() {
     }
   };
 
-  const handleSetupAd = () => {
-    // Create a default AD config
-    const defaultConfig: ADConfig = {
-      enabled: false,
-      server: '',
-      port: 389,
-      baseDN: '',
-      bindUser: '',
-      bindPassword: '',
-      userFilter: '(&(objectClass=user)(sAMAccountName=%s))',
-      groupFilter: '(&(objectClass=group)(member=%s))',
-      useTLS: false,
-      skipVerify: false,
-    };
-    setAdConfig(defaultConfig);
-    setAdConfigEditing(true);
-    setShowAdSetup(false);
-  };
+  // Filter sections based on search query
+  const filteredSections = searchQuery
+    ? sections.filter((section) =>
+        section.searchTerms.some((term) =>
+          term.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      )
+    : sections;
 
-  const handleAdConfigSave = async () => {
-    if (!adConfig) return;
-
-    setAdLoading(true);
-    try {
-      const response = await adApi.updateConfig(adConfig);
-      if (response.success && response.data) {
-        setAdConfig(response.data);
-        setAdConfigEditing(false);
-        setAdTestResult({ success: true, message: 'Configuration saved successfully' });
-      }
-    } catch (error) {
-      console.error('Failed to save AD config:', error);
-      setAdTestResult({ success: false, message: 'Failed to save configuration' });
-    } finally {
-      setAdLoading(false);
-    }
-  };
-
-  const handleAdTestConnection = async () => {
-    setAdLoading(true);
-    setAdTestResult(null);
-    try {
-      const response = await adApi.testConnection();
-      if (response.success && response.data) {
-        setAdTestResult(response.data);
-      }
-    } catch (error) {
-      console.error('Failed to test AD connection:', error);
-      setAdTestResult({ success: false, message: 'Connection test failed' });
-    } finally {
-      setAdLoading(false);
-    }
-  };
-
-  const handleCheckForUpdates = async (forceCheck = false) => {
-    setCheckingUpdates(true);
-    setUpdateError(null);
-    try {
-      const response = await systemApi.checkForUpdates(forceCheck);
-      if (response.success && response.data) {
-        setUpdateCheckResult(response.data);
-      } else {
-        setUpdateError(response.error?.message || 'Failed to check for updates');
-      }
-    } catch (error) {
-      console.error('Failed to check for updates:', error);
-      setUpdateError(getErrorMessage(error));
-    } finally {
-      setCheckingUpdates(false);
-    }
-  };
-
-  const formatUptime = (seconds: number) => {
-    const days = Math.floor(seconds / 86400);
-    const hours = Math.floor((seconds % 86400) / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    return `${days}d ${hours}h ${minutes}m`;
-  };
+  const ActiveComponent = sections.find((s) => s.id === activeSection)?.component || GeneralSection;
 
   return (
-    <div className="p-6 h-full overflow-auto bg-gray-50 dark:bg-macos-dark-50">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-          Settings
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">
-          System configuration and preferences
-        </p>
+    <div className="flex h-full bg-gray-50 dark:bg-macos-dark-50">
+      {/* Sidebar */}
+      <div className="w-64 bg-white dark:bg-macos-dark-100 border-r border-gray-200 dark:border-macos-dark-300 flex flex-col">
+        {/* Search */}
+        <div className="p-4 border-b border-gray-200 dark:border-macos-dark-300">
+          <Input
+            type="text"
+            placeholder="Search settings..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full"
+          />
+        </div>
+
+        {/* Navigation */}
+        <div className="flex-1 overflow-y-auto py-2">
+          {filteredSections.map((section) => (
+            <button
+              key={section.id}
+              onClick={() => {
+                setActiveSection(section.id);
+                setSearchQuery('');
+              }}
+              className={`w-full px-4 py-2.5 flex items-center gap-3 transition-colors ${
+                activeSection === section.id
+                  ? 'bg-macos-blue text-white'
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-macos-dark-200'
+              }`}
+            >
+              <span className="text-xl">{section.icon}</span>
+              <span className="text-sm font-medium">{section.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Footer - Logout */}
+        <div className="p-4 border-t border-gray-200 dark:border-macos-dark-300">
+          <button
+            onClick={handleLogout}
+            className="w-full px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+          >
+            Logout
+          </button>
+        </div>
       </div>
 
-      <div className="space-y-6 max-w-4xl">
-        {/* User Information */}
-        <Card>
-          <div className="p-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-              User Information
-            </h2>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Username:</span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">
-                  {user?.username}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Email:</span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">
-                  {user?.email}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Role:</span>
-                <span className="font-medium text-gray-900 dark:text-gray-100 capitalize">
-                  {user?.role}
-                </span>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        {/* Two-Factor Authentication */}
-        <Card>
-          <div className="p-6">
-            <TwoFactorAuth />
-          </div>
-        </Card>
-
-        {/* Appearance */}
-        <Card>
-          <div className="p-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-              Appearance
-            </h2>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-gray-900 dark:text-gray-100">
-                  Dark Mode
-                </p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Toggle dark/light theme
-                </p>
-              </div>
-              <button
-                onClick={toggleTheme}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  isDark ? 'bg-macos-blue' : 'bg-gray-300'
-                }`}
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    isDark ? 'translate-x-6' : 'translate-x-1'
-                  }`}
-                />
-              </button>
-            </div>
-          </div>
-        </Card>
-
-        {/* Active Directory Configuration */}
-        <Card>
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                Active Directory
-              </h2>
-              {!adConfig && !showAdSetup && (
-                <Button
-                  variant="primary"
-                  onClick={handleSetupAd}
-                  size="sm"
-                >
-                  Setup AD
-                </Button>
-              )}
-              {adConfig && !adConfigEditing && (
-                <Button
-                  variant="secondary"
-                  onClick={() => setAdConfigEditing(true)}
-                  size="sm"
-                >
-                  Edit
-                </Button>
-              )}
-            </div>
-
-            {!adConfig && !showAdSetup ? (
-              <div className="text-center py-8">
-                <p className="text-gray-600 dark:text-gray-400 mb-4">
-                  Active Directory integration is not configured yet.
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-500 mb-4">
-                  Configure AD to enable user authentication and synchronization with your directory services.
-                </p>
-                <Button variant="primary" onClick={handleSetupAd}>
-                  Configure Active Directory
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {/* Enabled Toggle */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-gray-100">
-                      AD Integration
-                    </p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Enable Active Directory authentication
-                    </p>
-                  </div>
-                  <button
-                    onClick={() =>
-                      adConfigEditing &&
-                      adConfig &&
-                      setAdConfig({ ...adConfig, enabled: !adConfig.enabled })
-                    }
-                    disabled={!adConfigEditing}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      adConfig?.enabled ? 'bg-macos-blue' : 'bg-gray-300'
-                    } ${!adConfigEditing ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        adConfig?.enabled ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                </div>
-
-                {/* AD Server Configuration */}
-                {adConfigEditing ? (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Server
-                      </label>
-                      <Input
-                        value={adConfig?.server || ''}
-                        onChange={(e) =>
-                          adConfig && setAdConfig({ ...adConfig, server: e.target.value })
-                        }
-                        placeholder="ldap.example.com"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Port
-                      </label>
-                      <Input
-                        type="number"
-                        value={adConfig?.port || 389}
-                        onChange={(e) =>
-                          adConfig && setAdConfig({ ...adConfig, port: parseInt(e.target.value) })
-                        }
-                        placeholder="389"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Base DN
-                      </label>
-                      <Input
-                        value={adConfig?.baseDN || ''}
-                        onChange={(e) =>
-                          adConfig && setAdConfig({ ...adConfig, baseDN: e.target.value })
-                        }
-                        placeholder="dc=example,dc=com"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Bind User
-                      </label>
-                      <Input
-                        value={adConfig?.bindUser || ''}
-                        onChange={(e) =>
-                          adConfig && setAdConfig({ ...adConfig, bindUser: e.target.value })
-                        }
-                        placeholder="cn=admin,dc=example,dc=com"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Bind Password
-                      </label>
-                      <Input
-                        type="password"
-                        value={adConfig?.bindPassword || ''}
-                        onChange={(e) =>
-                          adConfig && setAdConfig({ ...adConfig, bindPassword: e.target.value })
-                        }
-                        placeholder="••••••••"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        User Filter
-                      </label>
-                      <Input
-                        value={adConfig?.userFilter || ''}
-                        onChange={(e) =>
-                          adConfig && setAdConfig({ ...adConfig, userFilter: e.target.value })
-                        }
-                        placeholder="(&(objectClass=user)(sAMAccountName=%s))"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Group Filter
-                      </label>
-                      <Input
-                        value={adConfig?.groupFilter || ''}
-                        onChange={(e) =>
-                          adConfig && setAdConfig({ ...adConfig, groupFilter: e.target.value })
-                        }
-                        placeholder="(&(objectClass=group)(member=%s))"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-gray-900 dark:text-gray-100">
-                          Use TLS
-                        </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Enable secure connection
-                        </p>
-                      </div>
-                      <button
-                        onClick={() =>
-                          adConfig && setAdConfig({ ...adConfig, useTLS: !adConfig.useTLS })
-                        }
-                        className={`relative inline-flex h-6 w-11 items-centers rounded-full transition-colors ${
-                          adConfig?.useTLS ? 'bg-macos-blue' : 'bg-gray-300'
-                        }`}
-                      >
-                        <span
-                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                            adConfig?.useTLS ? 'translate-x-6' : 'translate-x-1'
-                          }`}
-                        />
-                      </button>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-gray-900 dark:text-gray-100">
-                          Skip TLS Verification
-                        </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Skip certificate verification (use for self-signed certs)
-                        </p>
-                      </div>
-                      <button
-                        onClick={() =>
-                          adConfig && setAdConfig({ ...adConfig, skipVerify: !adConfig.skipVerify })
-                        }
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                          adConfig?.skipVerify ? 'bg-macos-blue' : 'bg-gray-300'
-                        }`}
-                      >
-                        <span
-                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                            adConfig?.skipVerify ? 'translate-x-6' : 'translate-x-1'
-                          }`}
-                        />
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Server:</span>
-                        <p className="font-medium text-gray-900 dark:text-gray-100">
-                          {adConfig?.server}:{adConfig?.port}
-                        </p>
-                      </div>
-                      <div>
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Base DN:</span>
-                        <p className="font-medium text-gray-900 dark:text-gray-100">
-                          {adConfig?.baseDN}
-                        </p>
-                      </div>
-                      <div>
-                        <span className="text-sm text-gray-600 dark:text-gray-400">TLS:</span>
-                        <p className="font-medium text-gray-900 dark:text-gray-100">
-                          {adConfig?.useTLS ? 'Enabled' : 'Disabled'}
-                        </p>
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                {/* Test Result */}
-                {adTestResult && (
-                  <div
-                    className={`p-3 rounded-lg ${
-                      adTestResult.success
-                        ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
-                        : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
-                    }`}
-                  >
-                    <p
-                      className={`text-sm ${
-                        adTestResult.success
-                          ? 'text-green-800 dark:text-green-200'
-                          : 'text-red-800 dark:text-red-200'
-                      }`}
-                    >
-                      {adTestResult.message}
-                    </p>
-                  </div>
-                )}
-
-                {/* Action Buttons */}
-                <div className="flex gap-2">
-                  {adConfigEditing ? (
-                    <>
-                      <Button
-                        variant="primary"
-                        onClick={handleAdConfigSave}
-                        disabled={adLoading}
-                        className="flex-1"
-                      >
-                        {adLoading ? 'Saving...' : 'Save'}
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        onClick={() => setAdConfigEditing(false)}
-                        disabled={adLoading}
-                        className="flex-1"
-                      >
-                        Cancel
-                      </Button>
-                    </>
-                  ) : (
-                    <Button
-                      variant="secondary"
-                      onClick={handleAdTestConnection}
-                      disabled={adLoading}
-                      className="flex-1"
-                    >
-                      {adLoading ? 'Testing...' : 'Test Connection'}
-                    </Button>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </Card>
-
-        {/* System Information */}
-        {systemInfo && (
-          <Card>
-            <div className="p-6">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                System Information
-              </h2>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Hostname:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">
-                    {systemInfo.hostname}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Platform:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">
-                    {systemInfo.platform}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">OS:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">
-                    {systemInfo.os}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Architecture:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">
-                    {systemInfo.architecture}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">CPU Cores:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">
-                    {systemInfo.cpuCores}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Uptime:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">
-                    {formatUptime(systemInfo.uptime)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </Card>
-        )}
-
-        {/* About & Updates */}
-        <Card>
-          <div className="p-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-              About & Updates
-            </h2>
-            <div className="space-y-4">
-              {/* Application Info */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Application:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">
-                    Stumpf.Works NAS
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Version:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">
-                    v0.3.0
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">License:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">
-                    MIT
-                  </span>
-                </div>
-              </div>
-
-              {/* Update Check Section */}
-              <div className="pt-4 border-t border-gray-200 dark:border-macos-dark-300">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                    Software Updates
-                  </h3>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => handleCheckForUpdates(true)}
-                    disabled={checkingUpdates}
-                  >
-                    {checkingUpdates ? 'Checking...' : 'Check for Updates'}
-                  </Button>
-                </div>
-
-                {/* Update Check Result */}
-                {updateCheckResult && (
-                  <div className="space-y-3">
-                    {updateCheckResult.updateAvailable ? (
-                      <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <p className="font-semibold text-blue-900 dark:text-blue-100">
-                              Update Available!
-                            </p>
-                            <p className="text-sm text-blue-800 dark:text-blue-200 mt-1">
-                              {updateCheckResult.currentVersion} → {updateCheckResult.latestVersion}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Release Notes */}
-                        {updateCheckResult.releaseInfo && (
-                          <div className="mt-3">
-                            <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
-                              Release Notes:
-                            </p>
-                            <div className="text-xs text-blue-800 dark:text-blue-200 max-h-32 overflow-y-auto bg-blue-100/50 dark:bg-blue-900/10 p-2 rounded">
-                              <pre className="whitespace-pre-wrap font-mono">
-                                {updateCheckResult.releaseInfo.body || 'No release notes available'}
-                              </pre>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Download Button */}
-                        {updateCheckResult.releaseInfo?.html_url && (
-                          <div className="mt-3">
-                            <Button
-                              variant="primary"
-                              size="sm"
-                              onClick={() => window.open(updateCheckResult.releaseInfo!.html_url, '_blank')}
-                              className="w-full"
-                            >
-                              Download Update from GitHub
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                        <p className="text-sm text-green-800 dark:text-green-200">
-                          ✓ {updateCheckResult.message}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Error Message */}
-                {updateError && (
-                  <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                    <p className="text-sm text-red-800 dark:text-red-200">
-                      {updateError}
-                    </p>
-                  </div>
-                )}
-
-                {/* Initial State */}
-                {!updateCheckResult && !updateError && !checkingUpdates && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Click "Check for Updates" to see if a new version is available.
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        {/* Actions */}
-        <Card>
-          <div className="p-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-              Actions
-            </h2>
-            <div className="space-y-3">
-              <Button variant="danger" onClick={handleLogout} className="w-full">
-                Logout
-              </Button>
-            </div>
-          </div>
-        </Card>
+      {/* Content Area */}
+      <div className="flex-1 overflow-auto">
+        <div className="p-6 max-w-5xl">
+          <ActiveComponent user={user} systemInfo={systemInfo} />
+        </div>
       </div>
     </div>
   );

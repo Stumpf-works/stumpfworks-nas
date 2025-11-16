@@ -512,6 +512,59 @@ func DeleteSambaShare(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// UpdateSambaShare updates an existing Samba share
+func UpdateSambaShare(w http.ResponseWriter, r *http.Request) {
+	shareName := chi.URLParam(r, "name")
+
+	var req struct {
+		Path        string   `json:"path"`
+		Comment     string   `json:"comment"`
+		ValidUsers  []string `json:"valid_users"`
+		ValidGroups []string `json:"valid_groups"`
+		ReadOnly    bool     `json:"read_only"`
+		Browseable  bool     `json:"browseable"`
+		GuestOK     bool     `json:"guest_ok"`
+		RecycleBin  bool     `json:"recycle_bin"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.RespondError(w, errors.BadRequest("Invalid request", err))
+		return
+	}
+
+	lib := getSystemLib(w)
+	if lib == nil {
+		return
+	}
+	if lib.Sharing == nil || lib.Sharing.Samba == nil {
+		utils.RespondError(w, errors.BadRequest("Samba not available", nil))
+		return
+	}
+
+	share := sharing.SambaShare{
+		Name:        shareName,
+		Path:        req.Path,
+		Comment:     req.Comment,
+		ValidUsers:  req.ValidUsers,
+		ValidGroups: req.ValidGroups,
+		ReadOnly:    req.ReadOnly,
+		Browseable:  req.Browseable,
+		GuestOK:     req.GuestOK,
+		RecycleBin:  req.RecycleBin,
+	}
+
+	if err := lib.Sharing.Samba.UpdateShare(share); err != nil {
+		logger.Error("Failed to update Samba share", zap.String("share", shareName), zap.Error(err))
+		utils.RespondError(w, errors.InternalServerError("Failed to update share", err))
+		return
+	}
+
+	utils.RespondSuccess(w, map[string]string{
+		"message": "Samba share updated successfully",
+		"share":   shareName,
+	})
+}
+
 // GetSambaStatus gets Samba service status
 func GetSambaStatus(w http.ResponseWriter, r *http.Request) {
 	lib := getSystemLib(w)

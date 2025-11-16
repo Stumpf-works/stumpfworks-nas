@@ -193,6 +193,7 @@ func NewRouter(cfg *config.Config) http.Handler {
 					r.Get("/shares", handlers.ListSambaShares)
 					r.Get("/shares/{name}", handlers.GetSambaShare)
 					r.Post("/shares", handlers.CreateSambaShare)
+					r.Put("/shares/{name}", handlers.UpdateSambaShare)
 					r.Delete("/shares/{name}", handlers.DeleteSambaShare)
 				})
 
