@@ -1,12 +1,14 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useThemeStore } from '@/store';
 import TopBar from './TopBar';
 import Dock from './Dock';
 import WindowManager from './WindowManager';
+import WidgetSidebar from '@/components/WidgetSidebar';
 
 export default function Desktop() {
   const setTheme = useThemeStore((state) => state.setTheme);
   const isDark = useThemeStore((state) => state.isDark);
+  const [isWidgetSidebarOpen, setIsWidgetSidebarOpen] = useState(false);
 
   useEffect(() => {
     // Initialize theme
@@ -35,6 +37,12 @@ export default function Desktop() {
 
       {/* Dock */}
       <Dock />
+
+      {/* Widget Sidebar */}
+      <WidgetSidebar
+        isOpen={isWidgetSidebarOpen}
+        onToggle={() => setIsWidgetSidebarOpen(!isWidgetSidebarOpen)}
+      />
     </div>
   );
 }
