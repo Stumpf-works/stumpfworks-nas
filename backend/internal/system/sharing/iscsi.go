@@ -131,3 +131,328 @@ func (i *ISCSIManager) DeleteTarget(iqn string) error {
 
 	return nil
 }
+
+// ===== Advanced iSCSI Features =====
+
+// ISCSIInitiator represents an iSCSI initiator (client)
+type ISCSIInitiator struct {
+	IQN         string `json:"iqn"`
+	IPAddress   string `json:"ip_address"`
+	CHAPEnabled bool   `json:"chap_enabled"`
+	CHAPUser    string `json:"chap_user"`
+}
+
+// ISCSILUN represents a Logical Unit Number
+type ISCSILUN struct {
+	Number        int    `json:"number"`
+	BackstoreName string `json:"backstore_name"`
+	Size          uint64 `json:"size"`
+	Path          string `json:"path"`
+	WriteBack     bool   `json:"write_back"`
+}
+
+// ISCSIPortal represents a network portal
+type ISCSIPortal struct {
+	IPAddress string `json:"ip_address"`
+	Port      int    `json:"port"`
+}
+
+// AddACL adds an ACL (allowed initiator) to a target
+func (i *ISCSIManager) AddACL(targetIQN string, initiatorIQN string) error {
+	if !i.enabled {
+		return fmt.Errorf("iSCSI not available")
+	}
+
+	aclPath := fmt.Sprintf("/iscsi/%s/tpg1/acls", targetIQN)
+	_, err := i.shell.Execute("targetcli", aclPath, "create", initiatorIQN)
+	if err != nil {
+		return fmt.Errorf("failed to add ACL: %w", err)
+	}
+
+	_, _ = i.shell.Execute("targetcli", "saveconfig")
+	return nil
+}
+
+// RemoveACL removes an ACL from a target
+func (i *ISCSIManager) RemoveACL(targetIQN string, initiatorIQN string) error {
+	if !i.enabled {
+		return fmt.Errorf("iSCSI not available")
+	}
+
+	aclPath := fmt.Sprintf("/iscsi/%s/tpg1/acls", targetIQN)
+	_, err := i.shell.Execute("targetcli", aclPath, "delete", initiatorIQN)
+	if err != nil {
+		return fmt.Errorf("failed to remove ACL: %w", err)
+	}
+
+	_, _ = i.shell.Execute("targetcli", "saveconfig")
+	return nil
+}
+
+// SetCHAPAuth configures CHAP authentication for an ACL
+func (i *ISCSIManager) SetCHAPAuth(targetIQN string, initiatorIQN string, username string, password string) error {
+	if !i.enabled {
+		return fmt.Errorf("iSCSI not available")
+	}
+
+	aclPath := fmt.Sprintf("/iscsi/%s/tpg1/acls/%s", targetIQN, initiatorIQN)
+
+	// Set CHAP username
+	_, err := i.shell.Execute("targetcli", aclPath, "set", "auth", "userid="+username)
+	if err != nil {
+		return fmt.Errorf("failed to set CHAP username: %w", err)
+	}
+
+	// Set CHAP password
+	_, err = i.shell.Execute("targetcli", aclPath, "set", "auth", "password="+password)
+	if err != nil {
+		return fmt.Errorf("failed to set CHAP password: %w", err)
+	}
+
+	_, _ = i.shell.Execute("targetcli", "saveconfig")
+	return nil
+}
+
+// DisableCHAPAuth disables CHAP authentication for an ACL
+func (i *ISCSIManager) DisableCHAPAuth(targetIQN string, initiatorIQN string) error {
+	if !i.enabled {
+		return fmt.Errorf("iSCSI not available")
+	}
+
+	aclPath := fmt.Sprintf("/iscsi/%s/tpg1/acls/%s", targetIQN, initiatorIQN)
+	_, err := i.shell.Execute("targetcli", aclPath, "set", "auth", "userid=")
+	if err != nil {
+		return fmt.Errorf("failed to disable CHAP: %w", err)
+	}
+
+	_, _ = i.shell.Execute("targetcli", "saveconfig")
+	return nil
+}
+
+// AddPortal adds a network portal to a target
+func (i *ISCSIManager) AddPortal(targetIQN string, ipAddress string, port int) error {
+	if !i.enabled {
+		return fmt.Errorf("iSCSI not available")
+	}
+
+	portalPath := fmt.Sprintf("/iscsi/%s/tpg1/portals", targetIQN)
+	portalSpec := fmt.Sprintf("%s:%d", ipAddress, port)
+
+	_, err := i.shell.Execute("targetcli", portalPath, "create", portalSpec)
+	if err != nil {
+		return fmt.Errorf("failed to add portal: %w", err)
+	}
+
+	_, _ = i.shell.Execute("targetcli", "saveconfig")
+	return nil
+}
+
+// RemovePortal removes a network portal from a target
+func (i *ISCSIManager) RemovePortal(targetIQN string, ipAddress string, port int) error {
+	if !i.enabled {
+		return fmt.Errorf("iSCSI not available")
+	}
+
+	portalPath := fmt.Sprintf("/iscsi/%s/tpg1/portals", targetIQN)
+	portalSpec := fmt.Sprintf("%s:%d", ipAddress, port)
+
+	_, err := i.shell.Execute("targetcli", portalPath, "delete", portalSpec)
+	if err != nil {
+		return fmt.Errorf("failed to remove portal: %w", err)
+	}
+
+	_, _ = i.shell.Execute("targetcli", "saveconfig")
+	return nil
+}
+
+// CreateBlockBackstore creates a block device backstore
+func (i *ISCSIManager) CreateBlockBackstore(name string, devicePath string) error {
+	if !i.enabled {
+		return fmt.Errorf("iSCSI not available")
+	}
+
+	_, err := i.shell.Execute("targetcli", "/backstores/block", "create", name, devicePath)
+	if err != nil {
+		return fmt.Errorf("failed to create block backstore: %w", err)
+	}
+
+	_, _ = i.shell.Execute("targetcli", "saveconfig")
+	return nil
+}
+
+// CreateFileIOBackstore creates a file-based backstore
+func (i *ISCSIManager) CreateFileIOBackstore(name string, filePath string, size uint64, writeBack bool) error {
+	if !i.enabled {
+		return fmt.Errorf("iSCSI not available")
+	}
+
+	args := []string{"/backstores/fileio", "create", name, filePath, fmt.Sprintf("%d", size)}
+	if writeBack {
+		args = append(args, "write_back=true")
+	}
+
+	_, err := i.shell.Execute("targetcli", args...)
+	if err != nil {
+		return fmt.Errorf("failed to create fileio backstore: %w", err)
+	}
+
+	_, _ = i.shell.Execute("targetcli", "saveconfig")
+	return nil
+}
+
+// DeleteBackstore deletes a backstore
+func (i *ISCSIManager) DeleteBackstore(backstoreType string, name string) error {
+	if !i.enabled {
+		return fmt.Errorf("iSCSI not available")
+	}
+
+	path := fmt.Sprintf("/backstores/%s", backstoreType)
+	_, err := i.shell.Execute("targetcli", path, "delete", name)
+	if err != nil {
+		return fmt.Errorf("failed to delete backstore: %w", err)
+	}
+
+	_, _ = i.shell.Execute("targetcli", "saveconfig")
+	return nil
+}
+
+// AddLUN adds a LUN to a target
+func (i *ISCSIManager) AddLUN(targetIQN string, backstorePath string, lunNumber int) error {
+	if !i.enabled {
+		return fmt.Errorf("iSCSI not available")
+	}
+
+	lunPath := fmt.Sprintf("/iscsi/%s/tpg1/luns", targetIQN)
+	args := []string{lunPath, "create", backstorePath}
+	if lunNumber >= 0 {
+		args = append(args, fmt.Sprintf("lun=%d", lunNumber))
+	}
+
+	_, err := i.shell.Execute("targetcli", args...)
+	if err != nil {
+		return fmt.Errorf("failed to add LUN: %w", err)
+	}
+
+	_, _ = i.shell.Execute("targetcli", "saveconfig")
+	return nil
+}
+
+// RemoveLUN removes a LUN from a target
+func (i *ISCSIManager) RemoveLUN(targetIQN string, lunNumber int) error {
+	if !i.enabled {
+		return fmt.Errorf("iSCSI not available")
+	}
+
+	lunPath := fmt.Sprintf("/iscsi/%s/tpg1/luns", targetIQN)
+	_, err := i.shell.Execute("targetcli", lunPath, "delete", fmt.Sprintf("lun%d", lunNumber))
+	if err != nil {
+		return fmt.Errorf("failed to remove LUN: %w", err)
+	}
+
+	_, _ = i.shell.Execute("targetcli", "saveconfig")
+	return nil
+}
+
+// SetTargetAttribute sets an attribute on a target
+func (i *ISCSIManager) SetTargetAttribute(targetIQN string, attribute string, value string) error {
+	if !i.enabled {
+		return fmt.Errorf("iSCSI not available")
+	}
+
+	tpgPath := fmt.Sprintf("/iscsi/%s/tpg1", targetIQN)
+	_, err := i.shell.Execute("targetcli", tpgPath, "set", "attribute", fmt.Sprintf("%s=%s", attribute, value))
+	if err != nil {
+		return fmt.Errorf("failed to set attribute: %w", err)
+	}
+
+	_, _ = i.shell.Execute("targetcli", "saveconfig")
+	return nil
+}
+
+// EnableTarget enables a target portal group
+func (i *ISCSIManager) EnableTarget(targetIQN string) error {
+	if !i.enabled {
+		return fmt.Errorf("iSCSI not available")
+	}
+
+	tpgPath := fmt.Sprintf("/iscsi/%s/tpg1", targetIQN)
+	_, err := i.shell.Execute("targetcli", tpgPath, "enable")
+	if err != nil {
+		return fmt.Errorf("failed to enable target: %w", err)
+	}
+
+	_, _ = i.shell.Execute("targetcli", "saveconfig")
+	return nil
+}
+
+// DisableTarget disables a target portal group
+func (i *ISCSIManager) DisableTarget(targetIQN string) error {
+	if !i.enabled {
+		return fmt.Errorf("iSCSI not available")
+	}
+
+	tpgPath := fmt.Sprintf("/iscsi/%s/tpg1", targetIQN)
+	_, err := i.shell.Execute("targetcli", tpgPath, "disable")
+	if err != nil {
+		return fmt.Errorf("failed to disable target: %w", err)
+	}
+
+	_, _ = i.shell.Execute("targetcli", "saveconfig")
+	return nil
+}
+
+// GetSessions returns active iSCSI sessions
+func (i *ISCSIManager) GetSessions() (string, error) {
+	if !i.enabled {
+		return "", fmt.Errorf("iSCSI not available")
+	}
+
+	result, err := i.shell.Execute("targetcli", "sessions")
+	if err != nil {
+		return "", fmt.Errorf("failed to get sessions: %w", err)
+	}
+
+	return result.Stdout, nil
+}
+
+// SaveConfig saves the current iSCSI configuration
+func (i *ISCSIManager) SaveConfig() error {
+	if !i.enabled {
+		return fmt.Errorf("iSCSI not available")
+	}
+
+	_, err := i.shell.Execute("targetcli", "saveconfig")
+	if err != nil {
+		return fmt.Errorf("failed to save config: %w", err)
+	}
+
+	return nil
+}
+
+// RestoreConfig restores iSCSI configuration from file
+func (i *ISCSIManager) RestoreConfig() error {
+	if !i.enabled {
+		return fmt.Errorf("iSCSI not available")
+	}
+
+	_, err := i.shell.Execute("targetcli", "restoreconfig")
+	if err != nil {
+		return fmt.Errorf("failed to restore config: %w", err)
+	}
+
+	return nil
+}
+
+// ClearConfig clears all iSCSI configuration
+func (i *ISCSIManager) ClearConfig() error {
+	if !i.enabled {
+		return fmt.Errorf("iSCSI not available")
+	}
+
+	_, err := i.shell.Execute("targetcli", "clearconfig", "confirm=True")
+	if err != nil {
+		return fmt.Errorf("failed to clear config: %w", err)
+	}
+
+	return nil
+}
