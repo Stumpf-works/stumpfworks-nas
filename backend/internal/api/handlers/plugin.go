@@ -15,12 +15,15 @@ import (
 // PluginHandler handles plugin-related HTTP requests
 type PluginHandler struct {
 	service *plugins.Service
+	runtime *plugins.Runtime
 }
 
 // NewPluginHandler creates a new plugin handler
 func NewPluginHandler() *PluginHandler {
+	svc := plugins.GetService()
 	return &PluginHandler{
-		service: plugins.GetService(),
+		service: svc,
+		runtime: plugins.NewRuntime(svc),
 	}
 }
 
@@ -155,4 +158,86 @@ func (h *PluginHandler) UpdatePluginConfig(w http.ResponseWriter, r *http.Reques
 
 	logger.Info("Plugin config updated", zap.String("pluginID", pluginID))
 	utils.RespondSuccess(w, map[string]string{"message": "Plugin config updated successfully"})
+}
+
+// StartPlugin starts a plugin's runtime execution
+func (h *PluginHandler) StartPlugin(w http.ResponseWriter, r *http.Request) {
+	pluginID := chi.URLParam(r, "id")
+
+	if err := h.runtime.StartPlugin(r.Context(), pluginID); err != nil {
+		logger.Error("Failed to start plugin", zap.Error(err), zap.String("pluginID", pluginID))
+		utils.RespondError(w, errors.InternalServerError("Failed to start plugin", err))
+		return
+	}
+
+	logger.Info("Plugin started", zap.String("pluginID", pluginID))
+	utils.RespondSuccess(w, map[string]string{"message": "Plugin started successfully"})
+}
+
+// StopPlugin stops a running plugin
+func (h *PluginHandler) StopPlugin(w http.ResponseWriter, r *http.Request) {
+	pluginID := chi.URLParam(r, "id")
+
+	if err := h.runtime.StopPlugin(r.Context(), pluginID); err != nil {
+		logger.Error("Failed to stop plugin", zap.Error(err), zap.String("pluginID", pluginID))
+		utils.RespondError(w, errors.InternalServerError("Failed to stop plugin", err))
+		return
+	}
+
+	logger.Info("Plugin stopped", zap.String("pluginID", pluginID))
+	utils.RespondSuccess(w, map[string]string{"message": "Plugin stopped successfully"})
+}
+
+// RestartPlugin restarts a plugin
+func (h *PluginHandler) RestartPlugin(w http.ResponseWriter, r *http.Request) {
+	pluginID := chi.URLParam(r, "id")
+
+	if err := h.runtime.RestartPlugin(r.Context(), pluginID); err != nil {
+		logger.Error("Failed to restart plugin", zap.Error(err), zap.String("pluginID", pluginID))
+		utils.RespondError(w, errors.InternalServerError("Failed to restart plugin", err))
+		return
+	}
+
+	logger.Info("Plugin restarted", zap.String("pluginID", pluginID))
+	utils.RespondSuccess(w, map[string]string{"message": "Plugin restarted successfully"})
+}
+
+// GetPluginStatus returns the runtime status of a plugin
+func (h *PluginHandler) GetPluginStatus(w http.ResponseWriter, r *http.Request) {
+	pluginID := chi.URLParam(r, "id")
+
+	status, err := h.runtime.GetPluginStatus(pluginID)
+	if err != nil {
+		// Plugin not running, return basic status
+		utils.RespondSuccess(w, map[string]interface{}{
+			"pluginID": pluginID,
+			"status":   "stopped",
+			"running":  false,
+		})
+		return
+	}
+
+	utils.RespondSuccess(w, map[string]interface{}{
+		"pluginID":  status.PluginID,
+		"status":    status.Status,
+		"running":   status.Status == "running",
+		"startedAt": status.StartedAt,
+		"error":     status.LastError,
+	})
+}
+
+// ListRunningPlugins returns all currently running plugins
+func (h *PluginHandler) ListRunningPlugins(w http.ResponseWriter, r *http.Request) {
+	procs := h.runtime.ListRunningPlugins()
+
+	running := make([]map[string]interface{}, len(procs))
+	for i, proc := range procs {
+		running[i] = map[string]interface{}{
+			"pluginID":  proc.PluginID,
+			"status":    proc.Status,
+			"startedAt": proc.StartedAt,
+		}
+	}
+
+	utils.RespondSuccess(w, running)
 }

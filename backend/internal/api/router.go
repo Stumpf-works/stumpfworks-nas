@@ -468,6 +468,13 @@ func NewRouter(cfg *config.Config) http.Handler {
 				r.Post("/{id}/enable", pluginHandler.EnablePlugin)
 				r.Post("/{id}/disable", pluginHandler.DisablePlugin)
 				r.Put("/{id}/config", pluginHandler.UpdatePluginConfig)
+
+				// Plugin runtime control
+				r.Post("/{id}/start", pluginHandler.StartPlugin)
+				r.Post("/{id}/stop", pluginHandler.StopPlugin)
+				r.Post("/{id}/restart", pluginHandler.RestartPlugin)
+				r.Get("/{id}/status", pluginHandler.GetPluginStatus)
+				r.Get("/running", pluginHandler.ListRunningPlugins)
 			})
 		})
 	})

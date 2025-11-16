@@ -1,0 +1,13 @@
+{
+  "id": "com.stumpfworks.hello-world",
+  "name": "Hello World",
+  "version": "1.0.0",
+  "author": "StumpfWorks Team",
+  "description": "A simple example plugin that demonstrates the plugin system",
+  "icon": "🌍",
+  "entryPoint": "hello-world",
+  "config": {
+    "message": "Hello from StumpfWorks NAS!",
+    "interval": 5
+  }
+}
