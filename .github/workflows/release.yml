@@ -34,6 +34,13 @@ jobs:
       - name: Build release binaries
         run: make release
 
+      - name: Delete existing release (if any)
+        continue-on-error: true
+        run: |
+          gh release delete ${{ github.ref_name }} --yes || true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
@@ -80,6 +87,8 @@ jobs:
             See [CHANGELOG.md](https://github.com/Stumpf-works/stumpfworks-nas/blob/main/CHANGELOG.md) for details.
           draft: false
           prerelease: false
+          fail_on_unmatched_files: true
+          make_latest: true
           files: |
             dist/releases/stumpfworks-nas-linux-amd64
             dist/releases/stumpfworks-nas-linux-arm64
