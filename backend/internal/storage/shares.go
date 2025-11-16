@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 	"strings"
 
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database/models"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/users"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/sysutil"
 	"go.uber.org/zap"
@@ -131,6 +133,26 @@ func CreateShare(req *CreateShareRequest) (*Share, error) {
 		return nil, fmt.Errorf("path does not exist: %s", req.Path)
 	}
 
+	// Validate that all users in ValidUsers exist
+	for _, username := range req.ValidUsers {
+		if username == "" {
+			continue // Skip empty usernames
+		}
+		if _, err := users.GetUserByUsername(username); err != nil {
+			return nil, fmt.Errorf("user '%s' does not exist - cannot add to valid users list", username)
+		}
+	}
+
+	// Validate that all groups in ValidGroups exist (system groups)
+	for _, groupname := range req.ValidGroups {
+		if groupname == "" {
+			continue // Skip empty group names
+		}
+		if _, err := user.LookupGroup(groupname); err != nil {
+			return nil, fmt.Errorf("group '%s' does not exist - cannot add to valid groups list", groupname)
+		}
+	}
+
 	// Create database record
 	model := &models.Share{
 		Name:        req.Name,
@@ -186,6 +208,26 @@ func UpdateShare(id string, req *CreateShareRequest) (*Share, error) {
 	var model models.Share
 	if err := database.DB.First(&model, id).Error; err != nil {
 		return nil, err
+	}
+
+	// Validate that all users in ValidUsers exist
+	for _, username := range req.ValidUsers {
+		if username == "" {
+			continue // Skip empty usernames
+		}
+		if _, err := users.GetUserByUsername(username); err != nil {
+			return nil, fmt.Errorf("user '%s' does not exist - cannot add to valid users list", username)
+		}
+	}
+
+	// Validate that all groups in ValidGroups exist (system groups)
+	for _, groupname := range req.ValidGroups {
+		if groupname == "" {
+			continue // Skip empty group names
+		}
+		if _, err := user.LookupGroup(groupname); err != nil {
+			return nil, fmt.Errorf("group '%s' does not exist - cannot add to valid groups list", groupname)
+		}
 	}
 
 	// Update fields

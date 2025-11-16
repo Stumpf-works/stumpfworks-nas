@@ -48,7 +48,35 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Add validation
+	// Validate required fields
+	if req.Username == "" {
+		utils.RespondError(w, errors.BadRequest("Username is required", nil))
+		return
+	}
+	if len(req.Username) < 3 || len(req.Username) > 100 {
+		utils.RespondError(w, errors.BadRequest("Username must be between 3 and 100 characters", nil))
+		return
+	}
+	if req.Email == "" {
+		utils.RespondError(w, errors.BadRequest("Email is required", nil))
+		return
+	}
+	if req.Password == "" {
+		utils.RespondError(w, errors.BadRequest("Password is required", nil))
+		return
+	}
+	if len(req.Password) < 8 {
+		utils.RespondError(w, errors.BadRequest("Password must be at least 8 characters", nil))
+		return
+	}
+	if req.Role == "" {
+		utils.RespondError(w, errors.BadRequest("Role is required", nil))
+		return
+	}
+	if req.Role != "admin" && req.Role != "user" && req.Role != "guest" {
+		utils.RespondError(w, errors.BadRequest("Role must be one of: admin, user, guest", nil))
+		return
+	}
 
 	user, err := users.CreateUser(&req)
 	if err != nil {
@@ -74,7 +102,18 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Add validation
+	// Validate optional fields (only if provided)
+	if req.Password != nil && len(*req.Password) < 8 {
+		utils.RespondError(w, errors.BadRequest("Password must be at least 8 characters", nil))
+		return
+	}
+	if req.Role != nil {
+		role := *req.Role
+		if role != "admin" && role != "user" && role != "guest" {
+			utils.RespondError(w, errors.BadRequest("Role must be one of: admin, user, guest", nil))
+			return
+		}
+	}
 
 	user, err := users.UpdateUser(uint(id), &req)
 	if err != nil {

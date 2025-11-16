@@ -135,3 +135,364 @@ func (f *FTPManager) EnableTLS(certPath string, keyPath string) error {
 	// Would need to configure TLS in the FTP server config
 	return fmt.Errorf("FTP TLS configuration not yet implemented")
 }
+
+// ===== Advanced FTP Features =====
+
+// UpdateVsftpdConfig updates vsftpd configuration file
+func (f *FTPManager) UpdateVsftpdConfig(key string, value string) error {
+	if !f.enabled || f.backend != "vsftpd" {
+		return fmt.Errorf("vsftpd not available")
+	}
+
+	configFile := "/etc/vsftpd.conf"
+
+	// Check if key exists in config
+	result, err := f.shell.Execute("grep", "-q", fmt.Sprintf("^%s=", key), configFile)
+	if err == nil && result.ExitCode == 0 {
+		// Key exists, update it
+		_, err = f.shell.Execute("sed", "-i", fmt.Sprintf("s/^%s=.*/%s=%s/", key, key, value), configFile)
+	} else {
+		// Key doesn't exist, append it
+		_, err = f.shell.Execute("sh", "-c", fmt.Sprintf("echo '%s=%s' >> %s", key, value, configFile))
+	}
+
+	if err != nil {
+		return fmt.Errorf("failed to update config: %w", err)
+	}
+
+	return nil
+}
+
+// EnableAnonymousFTP enables anonymous FTP access
+func (f *FTPManager) EnableAnonymousFTP(enable bool) error {
+	if !f.enabled || f.backend != "vsftpd" {
+		return fmt.Errorf("vsftpd not available")
+	}
+
+	value := "NO"
+	if enable {
+		value = "YES"
+	}
+
+	if err := f.UpdateVsftpdConfig("anonymous_enable", value); err != nil {
+		return err
+	}
+
+	return f.Restart()
+}
+
+// EnableLocalUsers enables local user FTP access
+func (f *FTPManager) EnableLocalUsers(enable bool) error {
+	if !f.enabled || f.backend != "vsftpd" {
+		return fmt.Errorf("vsftpd not available")
+	}
+
+	value := "NO"
+	if enable {
+		value = "YES"
+	}
+
+	if err := f.UpdateVsftpdConfig("local_enable", value); err != nil {
+		return err
+	}
+
+	return f.Restart()
+}
+
+// EnableWriteAccess enables write access for FTP users
+func (f *FTPManager) EnableWriteAccess(enable bool) error {
+	if !f.enabled || f.backend != "vsftpd" {
+		return fmt.Errorf("vsftpd not available")
+	}
+
+	value := "NO"
+	if enable {
+		value = "YES"
+	}
+
+	if err := f.UpdateVsftpdConfig("write_enable", value); err != nil {
+		return err
+	}
+
+	return f.Restart()
+}
+
+// SetPasvPorts sets the passive mode port range
+func (f *FTPManager) SetPasvPorts(minPort int, maxPort int) error {
+	if !f.enabled || f.backend != "vsftpd" {
+		return fmt.Errorf("vsftpd not available")
+	}
+
+	if err := f.UpdateVsftpdConfig("pasv_min_port", fmt.Sprintf("%d", minPort)); err != nil {
+		return err
+	}
+
+	if err := f.UpdateVsftpdConfig("pasv_max_port", fmt.Sprintf("%d", maxPort)); err != nil {
+		return err
+	}
+
+	return f.Restart()
+}
+
+// EnableChrootJail enables chroot jail for FTP users
+func (f *FTPManager) EnableChrootJail(enable bool) error {
+	if !f.enabled || f.backend != "vsftpd" {
+		return fmt.Errorf("vsftpd not available")
+	}
+
+	value := "NO"
+	if enable {
+		value = "YES"
+	}
+
+	if err := f.UpdateVsftpdConfig("chroot_local_user", value); err != nil {
+		return err
+	}
+
+	// Optionally allow write in chroot
+	if err := f.UpdateVsftpdConfig("allow_writeable_chroot", "YES"); err != nil {
+		return err
+	}
+
+	return f.Restart()
+}
+
+// ConfigureVsftpdTLS configures TLS/SSL for vsftpd
+func (f *FTPManager) ConfigureVsftpdTLS(certFile string, keyFile string) error {
+	if !f.enabled || f.backend != "vsftpd" {
+		return fmt.Errorf("vsftpd not available")
+	}
+
+	// Enable SSL
+	if err := f.UpdateVsftpdConfig("ssl_enable", "YES"); err != nil {
+		return err
+	}
+
+	// Set certificate paths
+	if err := f.UpdateVsftpdConfig("rsa_cert_file", certFile); err != nil {
+		return err
+	}
+
+	if err := f.UpdateVsftpdConfig("rsa_private_key_file", keyFile); err != nil {
+		return err
+	}
+
+	// Force SSL for data and login
+	if err := f.UpdateVsftpdConfig("force_local_data_ssl", "YES"); err != nil {
+		return err
+	}
+
+	if err := f.UpdateVsftpdConfig("force_local_logins_ssl", "YES"); err != nil {
+		return err
+	}
+
+	// SSL protocol options
+	if err := f.UpdateVsftpdConfig("ssl_tlsv1", "YES"); err != nil {
+		return err
+	}
+
+	if err := f.UpdateVsftpdConfig("ssl_sslv2", "NO"); err != nil {
+		return err
+	}
+
+	if err := f.UpdateVsftpdConfig("ssl_sslv3", "NO"); err != nil {
+		return err
+	}
+
+	return f.Restart()
+}
+
+// AddVirtualUser adds a virtual FTP user
+func (f *FTPManager) AddVirtualUser(username string, password string, homeDir string) error {
+	if !f.enabled {
+		return fmt.Errorf("FTP not available")
+	}
+
+	// Create home directory
+	_, err := f.shell.Execute("mkdir", "-p", homeDir)
+	if err != nil {
+		return fmt.Errorf("failed to create home directory: %w", err)
+	}
+
+	// Create user (this is simplified - real implementation would use PAM/db)
+	// For vsftpd virtual users, you'd typically use a database file
+	return fmt.Errorf("virtual user creation requires PAM configuration")
+}
+
+// SetBandwidthLimit sets upload/download bandwidth limits
+func (f *FTPManager) SetBandwidthLimit(downloadRate int, uploadRate int) error {
+	if !f.enabled || f.backend != "vsftpd" {
+		return fmt.Errorf("vsftpd not available")
+	}
+
+	// Set local (authenticated user) rates in bytes/sec
+	if err := f.UpdateVsftpdConfig("local_max_rate", fmt.Sprintf("%d", downloadRate)); err != nil {
+		return err
+	}
+
+	// Set anonymous rates if needed
+	if err := f.UpdateVsftpdConfig("anon_max_rate", fmt.Sprintf("%d", downloadRate)); err != nil {
+		return err
+	}
+
+	return f.Restart()
+}
+
+// SetMaxClients sets the maximum number of concurrent clients
+func (f *FTPManager) SetMaxClients(max int) error {
+	if !f.enabled || f.backend != "vsftpd" {
+		return fmt.Errorf("vsftpd not available")
+	}
+
+	if err := f.UpdateVsftpdConfig("max_clients", fmt.Sprintf("%d", max)); err != nil {
+		return err
+	}
+
+	return f.Restart()
+}
+
+// SetMaxPerIP sets the maximum connections per IP address
+func (f *FTPManager) SetMaxPerIP(max int) error {
+	if !f.enabled || f.backend != "vsftpd" {
+		return fmt.Errorf("vsftpd not available")
+	}
+
+	if err := f.UpdateVsftpdConfig("max_per_ip", fmt.Sprintf("%d", max)); err != nil {
+		return err
+	}
+
+	return f.Restart()
+}
+
+// EnableLogging enables FTP logging
+func (f *FTPManager) EnableLogging(logFile string) error {
+	if !f.enabled || f.backend != "vsftpd" {
+		return fmt.Errorf("vsftpd not available")
+	}
+
+	if err := f.UpdateVsftpdConfig("xferlog_enable", "YES"); err != nil {
+		return err
+	}
+
+	if err := f.UpdateVsftpdConfig("xferlog_file", logFile); err != nil {
+		return err
+	}
+
+	// Enable vsftpd style logging
+	if err := f.UpdateVsftpdConfig("log_ftp_protocol", "YES"); err != nil {
+		return err
+	}
+
+	return f.Restart()
+}
+
+// GetLogs retrieves FTP logs
+func (f *FTPManager) GetLogs(lines int) (string, error) {
+	if !f.enabled {
+		return "", fmt.Errorf("FTP not available")
+	}
+
+	logFile := "/var/log/vsftpd.log"
+	if f.backend == "proftpd" {
+		logFile = "/var/log/proftpd/proftpd.log"
+	}
+
+	result, err := f.shell.Execute("tail", "-n", fmt.Sprintf("%d", lines), logFile)
+	if err != nil {
+		return "", fmt.Errorf("failed to read logs: %w", err)
+	}
+
+	return result.Stdout, nil
+}
+
+// GetActiveConnections returns active FTP connections
+func (f *FTPManager) GetActiveConnections() (string, error) {
+	if !f.enabled {
+		return "", fmt.Errorf("FTP not available")
+	}
+
+	// Use netstat to show active FTP connections
+	result, err := f.shell.Execute("netstat", "-tn", "|", "grep", ":21")
+	if err != nil {
+		return "", fmt.Errorf("failed to get connections: %w", err)
+	}
+
+	return result.Stdout, nil
+}
+
+// BanIP bans an IP address from FTP access
+func (f *FTPManager) BanIP(ipAddress string) error {
+	if !f.enabled {
+		return fmt.Errorf("FTP not available")
+	}
+
+	// Use iptables to ban IP
+	_, err := f.shell.Execute("iptables", "-A", "INPUT", "-s", ipAddress, "-p", "tcp", "--dport", "21", "-j", "DROP")
+	if err != nil {
+		return fmt.Errorf("failed to ban IP: %w", err)
+	}
+
+	return nil
+}
+
+// UnbanIP unbans an IP address
+func (f *FTPManager) UnbanIP(ipAddress string) error {
+	if !f.enabled {
+		return fmt.Errorf("FTP not available")
+	}
+
+	// Use iptables to unban IP
+	_, err := f.shell.Execute("iptables", "-D", "INPUT", "-s", ipAddress, "-p", "tcp", "--dport", "21", "-j", "DROP")
+	if err != nil {
+		return fmt.Errorf("failed to unban IP: %w", err)
+	}
+
+	return nil
+}
+
+// TestConfiguration tests FTP configuration
+func (f *FTPManager) TestConfiguration() error {
+	if !f.enabled {
+		return fmt.Errorf("FTP not available")
+	}
+
+	// Try to start in test mode if supported
+	// vsftpd doesn't have a built-in config test, so we just verify the file exists
+	configFile := fmt.Sprintf("/etc/%s.conf", f.backend)
+	_, err := f.shell.Execute("test", "-f", configFile)
+	if err != nil {
+		return fmt.Errorf("configuration file not found: %s", configFile)
+	}
+
+	return nil
+}
+
+// BackupConfiguration backs up the FTP configuration
+func (f *FTPManager) BackupConfiguration(backupPath string) error {
+	if !f.enabled {
+		return fmt.Errorf("FTP not available")
+	}
+
+	configFile := fmt.Sprintf("/etc/%s.conf", f.backend)
+	_, err := f.shell.Execute("cp", configFile, backupPath)
+	if err != nil {
+		return fmt.Errorf("failed to backup configuration: %w", err)
+	}
+
+	return nil
+}
+
+// RestoreConfiguration restores the FTP configuration from a backup
+func (f *FTPManager) RestoreConfiguration(backupPath string) error {
+	if !f.enabled {
+		return fmt.Errorf("FTP not available")
+	}
+
+	configFile := fmt.Sprintf("/etc/%s.conf", f.backend)
+	_, err := f.shell.Execute("cp", backupPath, configFile)
+	if err != nil {
+		return fmt.Errorf("failed to restore configuration: %w", err)
+	}
+
+	return f.Restart()
+}

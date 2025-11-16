@@ -446,3 +446,235 @@ func (z *ZFSManager) GetPool(name string) (*ZFSPool, error) {
 
 	return nil, fmt.Errorf("pool %s not found", name)
 }
+
+// ===== Advanced ZFS Features =====
+
+// ImportPool imports a ZFS pool
+func (z *ZFSManager) ImportPool(name string, force bool) error {
+	if !z.enabled {
+		return fmt.Errorf("ZFS not available")
+	}
+
+	args := []string{"import"}
+	if force {
+		args = append(args, "-f")
+	}
+	args = append(args, name)
+
+	_, err := z.shell.Execute("zpool", args...)
+	if err != nil {
+		return fmt.Errorf("failed to import pool: %w", err)
+	}
+
+	return nil
+}
+
+// ExportPool exports a ZFS pool
+func (z *ZFSManager) ExportPool(name string, force bool) error {
+	if !z.enabled {
+		return fmt.Errorf("ZFS not available")
+	}
+
+	args := []string{"export"}
+	if force {
+		args = append(args, "-f")
+	}
+	args = append(args, name)
+
+	_, err := z.shell.Execute("zpool", args...)
+	if err != nil {
+		return fmt.Errorf("failed to export pool: %w", err)
+	}
+
+	return nil
+}
+
+// CloneSnapshot creates a clone from a snapshot
+func (z *ZFSManager) CloneSnapshot(snapshotName string, cloneName string) error {
+	if !z.enabled {
+		return fmt.Errorf("ZFS not available")
+	}
+
+	_, err := z.shell.Execute("zfs", "clone", snapshotName, cloneName)
+	if err != nil {
+		return fmt.Errorf("failed to clone snapshot: %w", err)
+	}
+
+	return nil
+}
+
+// PromoteClone promotes a clone to be independent of its origin
+func (z *ZFSManager) PromoteClone(cloneName string) error {
+	if !z.enabled {
+		return fmt.Errorf("ZFS not available")
+	}
+
+	_, err := z.shell.Execute("zfs", "promote", cloneName)
+	if err != nil {
+		return fmt.Errorf("failed to promote clone: %w", err)
+	}
+
+	return nil
+}
+
+// SendSnapshot sends a ZFS snapshot to a stream (for backups/replication)
+// Returns the command output which can be piped to a file or another system
+func (z *ZFSManager) SendSnapshot(snapshotName string, incremental string) (string, error) {
+	if !z.enabled {
+		return "", fmt.Errorf("ZFS not available")
+	}
+
+	args := []string{"send"}
+	if incremental != "" {
+		args = append(args, "-i", incremental)
+	}
+	args = append(args, snapshotName)
+
+	result, err := z.shell.Execute("zfs", args...)
+	if err != nil {
+		return "", fmt.Errorf("failed to send snapshot: %w", err)
+	}
+
+	return result.Stdout, nil
+}
+
+// ReceiveSnapshot receives a ZFS snapshot from a stream
+func (z *ZFSManager) ReceiveSnapshot(targetDataset string, stream string, force bool) error {
+	if !z.enabled {
+		return fmt.Errorf("ZFS not available")
+	}
+
+	args := []string{"receive"}
+	if force {
+		args = append(args, "-F")
+	}
+	args = append(args, targetDataset)
+
+	// Note: In a real implementation, this would read from stdin
+	// For now, we'll assume the stream is a file path
+	_, err := z.shell.Execute("sh", "-c", fmt.Sprintf("cat %s | zfs %s", stream, strings.Join(args, " ")))
+	if err != nil {
+		return fmt.Errorf("failed to receive snapshot: %w", err)
+	}
+
+	return nil
+}
+
+// ListImportablePools lists pools available for import
+func (z *ZFSManager) ListImportablePools() ([]string, error) {
+	if !z.enabled {
+		return nil, fmt.Errorf("ZFS not available")
+	}
+
+	result, err := z.shell.Execute("zpool", "import")
+	if err != nil {
+		// zpool import without args shows importable pools and returns non-zero
+		// if no pools are available, so we check stdout
+		if result.Stdout == "" {
+			return []string{}, nil
+		}
+	}
+
+	// Parse output to extract pool names
+	var pools []string
+	lines := strings.Split(result.Stdout, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "pool:") {
+			fields := strings.Fields(line)
+			if len(fields) >= 2 {
+				pools = append(pools, fields[1])
+			}
+		}
+	}
+
+	return pools, nil
+}
+
+// AddVdev adds a vdev to an existing pool
+func (z *ZFSManager) AddVdev(poolName string, raidType string, devices []string) error {
+	if !z.enabled {
+		return fmt.Errorf("ZFS not available")
+	}
+
+	args := []string{"add", poolName}
+
+	// Add raid type if specified
+	switch raidType {
+	case "mirror":
+		args = append(args, "mirror")
+	case "raidz", "raidz1":
+		args = append(args, "raidz")
+	case "raidz2":
+		args = append(args, "raidz2")
+	case "raidz3":
+		args = append(args, "raidz3")
+	case "stripe", "":
+		// No prefix for stripe
+	default:
+		return fmt.Errorf("invalid RAID type: %s", raidType)
+	}
+
+	args = append(args, devices...)
+
+	_, err := z.shell.Execute("zpool", args...)
+	if err != nil {
+		return fmt.Errorf("failed to add vdev: %w", err)
+	}
+
+	return nil
+}
+
+// ReplaceDevice replaces a device in a pool
+func (z *ZFSManager) ReplaceDevice(poolName string, oldDevice string, newDevice string) error {
+	if !z.enabled {
+		return fmt.Errorf("ZFS not available")
+	}
+
+	_, err := z.shell.Execute("zpool", "replace", poolName, oldDevice, newDevice)
+	if err != nil {
+		return fmt.Errorf("failed to replace device: %w", err)
+	}
+
+	return nil
+}
+
+// OfflineDevice takes a device offline in a pool
+func (z *ZFSManager) OfflineDevice(poolName string, device string, temp bool) error {
+	if !z.enabled {
+		return fmt.Errorf("ZFS not available")
+	}
+
+	args := []string{"offline"}
+	if temp {
+		args = append(args, "-t")
+	}
+	args = append(args, poolName, device)
+
+	_, err := z.shell.Execute("zpool", args...)
+	if err != nil {
+		return fmt.Errorf("failed to offline device: %w", err)
+	}
+
+	return nil
+}
+
+// OnlineDevice brings a device online in a pool
+func (z *ZFSManager) OnlineDevice(poolName string, device string, expand bool) error {
+	if !z.enabled {
+		return fmt.Errorf("ZFS not available")
+	}
+
+	args := []string{"online"}
+	if expand {
+		args = append(args, "-e")
+	}
+	args = append(args, poolName, device)
+
+	_, err := z.shell.Execute("zpool", args...)
+	if err != nil {
+		return fmt.Errorf("failed to online device: %w", err)
+	}
+
+	return nil
+}

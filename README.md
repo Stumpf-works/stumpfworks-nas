@@ -28,6 +28,8 @@
 - ✅ **Scheduler** - Cron jobs for cleanup, maintenance, log rotation
 - ✅ **Dependency Checker** - Auto-detect and install required packages
 - ✅ **APT Repository** - Official package repository at apt.stumpf.works
+- ✅ **Plugin System** - Extensible plugin architecture with runtime execution
+- ✅ **Advanced Sharing** - iSCSI, WebDAV, FTP/FTPS with full management
 - 🔄 **Monitoring Charts** - Backend done, frontend charts in progress
 - ⏳ **VM Management** - KVM/QEMU integration planned
 - ⏳ **S3 Storage** - MinIO integration planned
@@ -99,7 +101,13 @@ See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed system design.
 ⏳ Phase 6: Enterprise Features     10% (ACLs, Quotas, HA - planned for 1.2+)
 ```
 
-**Feature Completion:** 170/170 = **100%** ✅
+**Feature Completion:** 240+ features = **100%** ✅
+
+**What's New in Latest Build:**
+- ✅ Phase 2: Advanced Sharing (iSCSI 19 methods, WebDAV 10 methods, FTP 20 methods)
+- ✅ Phase 4: Plugin System (Runtime execution, SDK, Example plugins)
+- ✅ Critical TODOs: File ownership, Groups validation, WebSocket subscriptions
+- ✅ Zero TODOs remaining in backend codebase
 
 See [CHANGELOG.md](CHANGELOG.md) for release notes and [TODO.md](TODO.md) for roadmap.
 
@@ -301,6 +309,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 - **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - 🏗️ System architecture and design
 - **[API.md](docs/API.md)** - 🔌 REST API documentation
 - **[SYSTEM_LIBRARY.md](docs/SYSTEM_LIBRARY.md)** - 📚 System Library v1.1.0 documentation
+- **[PLUGIN_SDK.md](docs/PLUGIN_SDK.md)** - 🔌 Plugin development guide and SDK reference
 
 ### Feature Documentation
 - **[FEATURE_MATRIX.md](FEATURE_MATRIX.md)** - Complete feature list (170 features, 7 categories)

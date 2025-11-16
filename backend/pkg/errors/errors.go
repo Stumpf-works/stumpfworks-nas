@@ -70,3 +70,8 @@ func Conflict(message string, err error) *AppError {
 func ValidationError(message string, err error) *AppError {
 	return NewAppError(http.StatusUnprocessableEntity, message, err)
 }
+
+// InsufficientStorage creates a 507 error
+func InsufficientStorage(message string, err error) *AppError {
+	return NewAppError(http.StatusInsufficientStorage, message, err)
+}
