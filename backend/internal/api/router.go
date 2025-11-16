@@ -476,6 +476,12 @@ func NewRouter(cfg *config.Config) http.Handler {
 				r.Get("/{id}/status", pluginHandler.GetPluginStatus)
 				r.Get("/running", pluginHandler.ListRunningPlugins)
 			})
+
+			// Terminal WebSocket endpoint
+			r.Route("/terminal", func(r chi.Router) {
+				r.Use(mw.AdminOnly) // Terminal access requires admin privileges
+				r.Get("/ws", handlers.TerminalWebSocketHandler)
+			})
 		})
 	})
 
