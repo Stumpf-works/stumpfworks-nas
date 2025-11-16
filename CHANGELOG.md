@@ -5,6 +5,115 @@ All notable changes to Stumpf.Works NAS will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### 🚀 Advanced Sharing Protocols & Critical Improvements
+
+#### Added
+
+**Phase 2: Advanced iSCSI Management** (19 new methods)
+- `AddACL()` - ACL management for initiator access control
+- `RemoveACL()` - Remove initiator from target ACL
+- `SetCHAPAuth()` - Configure CHAP authentication for secure access
+- `DisableCHAPAuth()` - Disable CHAP authentication
+- `AddPortal()` - Network portal management for multi-path
+- `RemovePortal()` - Remove network portal
+- `CreateBlockBackstore()` - Block device backstore creation
+- `CreateFileIOBackstore()` - FileIO backstore for file-backed LUNs
+- `DeleteBackstore()` - Remove backstores
+- `AddLUN()` - LUN management and mapping
+- `RemoveLUN()` - Remove LUN from target
+- `EnableTarget()` / `DisableTarget()` - Target state control
+- `SetTargetAttribute()` - Configure target parameters
+- `GetSessions()` - Active session monitoring
+- `SaveConfig()` / `RestoreConfig()` / `ClearConfig()` - Configuration management
+- Enhanced `ListTargets()` with proper targetcli output parsing
+
+**Phase 2: Advanced WebDAV Management** (10 new methods)
+- `EnableApacheWebDAV()` - Enable WebDAV modules in Apache
+- `CreateApacheVHost()` - Virtual host creation for WebDAV shares
+- `DeleteApacheVHost()` - Remove virtual host configuration
+- `CreateHTPasswdFile()` - HTPasswd-based authentication
+- `AddUserToHTPasswd()` / `RemoveUserFromHTPasswd()` - User management
+- `SetPermissions()` - File system permission control
+- `EnableSSL()` - SSL/TLS configuration for secure WebDAV
+- `TestConfiguration()` - Apache configuration validation
+- `GetApacheLogs()` - Log retrieval for debugging
+
+**Phase 2: Advanced FTP Management** (20 new methods)
+- `UpdateVsftpdConfig()` - Dynamic vsftpd configuration management
+- `ConfigureVsftpdTLS()` - FTPS/TLS setup with modern security
+- `EnableAnonymousFTP()` / `EnableLocalUsers()` / `EnableWriteAccess()` - Access control
+- `SetBandwidthLimit()` - Upload/download rate limiting
+- `SetMaxClients()` / `SetMaxPerIP()` - Connection limiting
+- `SetPasvPorts()` - Passive mode port configuration
+- `EnableChrootJail()` - Security isolation for FTP users
+- `AddVirtualUser()` - Virtual user management
+- `BanIP()` / `UnbanIP()` - IP-based access control
+- `EnableLogging()` / `GetLogs()` - Comprehensive logging
+- `GetActiveConnections()` - Connection monitoring
+- `BackupConfiguration()` / `RestoreConfiguration()` - Config management
+- `TestConfiguration()` - Configuration validation
+
+**File Service Improvements**
+- Proper owner/group extraction using syscall for Unix file metadata
+- `getUsername()` and `getGroupname()` helper functions with UID/GID lookup
+- File info now displays actual Unix user/group names instead of generic "system"
+- Graceful fallback to "uid:N" / "gid:N" format when lookup fails
+
+**Share Management Security**
+- ValidGroups validation in `CreateShare()` and `UpdateShare()`
+- System group validation using `os/user.LookupGroup()`
+- Prevents invalid group names from being added to share configurations
+- Consistent with existing ValidUsers validation pattern
+
+**WebSocket Enhancements**
+- Full subscription/unsubscription logic with channel tracking
+- Subscriptions map in Client struct for per-channel filtering
+- Confirmation messages on subscribe/unsubscribe events
+- `IsSubscribed()` and `GetSubscriptions()` helper methods
+- Enables real-time channel-based message filtering
+
+**WebSocket Security**
+- Proper origin checking in WebSocket upgrader
+- Allows localhost, 127.0.0.1, and same-origin requests
+- Logs and denies unknown origins for security
+- Production-ready with configurable whitelist support
+
+**User API Validation**
+- Comprehensive CreateUser validation:
+  - Username: required, 3-100 characters
+  - Email: required format validation
+  - Password: required, minimum 8 characters
+  - Role: required, must be admin/user/guest
+- UpdateUser validation for optional fields:
+  - Password: minimum 8 characters if provided
+  - Role: must be admin/user/guest if provided
+- Improved error messages for better developer/user experience
+
+#### Fixed
+
+**iSCSI Target Management**
+- Implemented proper targetcli output parsing in `ListTargets()`
+- Extracts IQN from targetcli tree structure
+- Added `extractTargetName()` helper for friendly name parsing
+- Returns proper `ISCSITarget` structs instead of empty list
+
+**Code Quality**
+- ✅ Zero TODOs remaining in backend codebase
+- ✅ All critical security validations implemented
+- ✅ Proper error handling across all new features
+- ✅ Comprehensive logging for debugging
+
+#### Technical Details
+- All implementations use centralized ShellExecutor pattern
+- No breaking API changes
+- Zero new dependencies added
+- Maintains backward compatibility
+- Build Status: ✅ All code compiles successfully
+
+---
+
 ## [1.1.0] - 2025-11-16
 
 ### 🎉 Major System Architecture Improvements
