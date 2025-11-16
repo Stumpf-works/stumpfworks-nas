@@ -9,6 +9,7 @@ import (
 
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database/models"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/users"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/sysutil"
 	"go.uber.org/zap"
@@ -131,6 +132,19 @@ func CreateShare(req *CreateShareRequest) (*Share, error) {
 		return nil, fmt.Errorf("path does not exist: %s", req.Path)
 	}
 
+	// Validate that all users in ValidUsers exist
+	for _, username := range req.ValidUsers {
+		if username == "" {
+			continue // Skip empty usernames
+		}
+		if _, err := users.GetUserByUsername(username); err != nil {
+			return nil, fmt.Errorf("user '%s' does not exist - cannot add to valid users list", username)
+		}
+	}
+
+	// TODO: Validate that all groups in ValidGroups exist
+	// This would require a GetGroupByName function in the groups package
+
 	// Create database record
 	model := &models.Share{
 		Name:        req.Name,
@@ -187,6 +201,19 @@ func UpdateShare(id string, req *CreateShareRequest) (*Share, error) {
 	if err := database.DB.First(&model, id).Error; err != nil {
 		return nil, err
 	}
+
+	// Validate that all users in ValidUsers exist
+	for _, username := range req.ValidUsers {
+		if username == "" {
+			continue // Skip empty usernames
+		}
+		if _, err := users.GetUserByUsername(username); err != nil {
+			return nil, fmt.Errorf("user '%s' does not exist - cannot add to valid users list", username)
+		}
+	}
+
+	// TODO: Validate that all groups in ValidGroups exist
+	// This would require a GetGroupByName function in the groups package
 
 	// Update fields
 	model.Name = req.Name
