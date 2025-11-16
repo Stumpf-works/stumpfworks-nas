@@ -1,0 +1,2 @@
+# Ignore dist directory (copied from frontend during build)
+dist/
