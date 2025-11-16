@@ -4,8 +4,13 @@ import StorageOverview from './StorageOverview';
 import DiskManager from './DiskManager';
 import VolumeManager from './VolumeManager';
 import ShareManager from './ShareManager';
+import ZFSManager from './ZFSManager';
+import RAIDManager from './RAIDManager';
+import SMARTMonitor from './SMARTMonitor';
+import SambaManager from './SambaManager';
+import NFSManager from './NFSManager';
 
-type Tab = 'overview' | 'disks' | 'volumes' | 'shares';
+type Tab = 'overview' | 'disks' | 'volumes' | 'shares' | 'zfs' | 'raid' | 'smart' | 'samba' | 'nfs';
 
 export function StorageManager() {
   const [activeTab, setActiveTab] = useState<Tab>('overview');
@@ -15,6 +20,11 @@ export function StorageManager() {
     { id: 'disks' as Tab, name: 'Disks', icon: '💿' },
     { id: 'volumes' as Tab, name: 'Volumes', icon: '📦' },
     { id: 'shares' as Tab, name: 'Shares', icon: '📁' },
+    { id: 'zfs' as Tab, name: 'ZFS', icon: '🗄️' },
+    { id: 'raid' as Tab, name: 'RAID', icon: '🛡️' },
+    { id: 'smart' as Tab, name: 'SMART', icon: '🔍' },
+    { id: 'samba' as Tab, name: 'Samba', icon: '🔗' },
+    { id: 'nfs' as Tab, name: 'NFS', icon: '🌐' },
   ];
 
   return (
@@ -48,11 +58,32 @@ export function StorageManager() {
       </div>
 
       {/* Tab Content */}
-      <div className="flex-1 overflow-auto p-6">
-        {activeTab === 'overview' && <StorageOverview />}
-        {activeTab === 'disks' && <DiskManager />}
-        {activeTab === 'volumes' && <VolumeManager />}
-        {activeTab === 'shares' && <ShareManager />}
+      <div className="flex-1 overflow-auto">
+        {activeTab === 'overview' && (
+          <div className="p-6">
+            <StorageOverview />
+          </div>
+        )}
+        {activeTab === 'disks' && (
+          <div className="p-6">
+            <DiskManager />
+          </div>
+        )}
+        {activeTab === 'volumes' && (
+          <div className="p-6">
+            <VolumeManager />
+          </div>
+        )}
+        {activeTab === 'shares' && (
+          <div className="p-6">
+            <ShareManager />
+          </div>
+        )}
+        {activeTab === 'zfs' && <ZFSManager />}
+        {activeTab === 'raid' && <RAIDManager />}
+        {activeTab === 'smart' && <SMARTMonitor />}
+        {activeTab === 'samba' && <SambaManager />}
+        {activeTab === 'nfs' && <NFSManager />}
       </div>
     </div>
   );

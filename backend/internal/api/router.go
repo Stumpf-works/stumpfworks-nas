@@ -149,6 +149,64 @@ func NewRouter(cfg *config.Config) http.Handler {
 				})
 			})
 
+			// System Library routes (Phase 1 integration)
+			r.Route("/syslib", func(r chi.Router) {
+				r.Use(mw.AdminOnly) // All system library operations require admin
+
+				// System Library Health
+				r.Get("/health", handlers.SystemLibraryHealth)
+
+				// ZFS operations
+				r.Route("/zfs", func(r chi.Router) {
+					r.Get("/pools", handlers.ListZFSPools)
+					r.Get("/pools/{name}", handlers.GetZFSPool)
+					r.Post("/pools", handlers.CreateZFSPool)
+					r.Delete("/pools/{name}", handlers.DestroyZFSPool)
+					r.Post("/pools/{name}/scrub", handlers.ScrubZFSPool)
+
+					r.Get("/pools/{pool}/datasets", handlers.ListZFSDatasets)
+					r.Post("/snapshots", handlers.CreateZFSSnapshot)
+					r.Get("/datasets/{dataset}/snapshots", handlers.ListZFSSnapshots)
+				})
+
+				// RAID operations
+				r.Route("/raid", func(r chi.Router) {
+					r.Get("/arrays", handlers.ListRAIDArrays)
+					r.Get("/arrays/{name}", handlers.GetRAIDArray)
+					r.Post("/arrays", handlers.CreateRAIDArray)
+				})
+
+				// SMART operations
+				r.Route("/smart", func(r chi.Router) {
+					r.Get("/{device}", handlers.GetSMARTInfo)
+					r.Post("/{device}/test", handlers.RunSMARTTest)
+				})
+
+				// Samba operations
+				r.Route("/samba", func(r chi.Router) {
+					r.Get("/status", handlers.GetSambaStatus)
+					r.Post("/restart", handlers.RestartSamba)
+					r.Get("/shares", handlers.ListSambaShares)
+					r.Get("/shares/{name}", handlers.GetSambaShare)
+					r.Post("/shares", handlers.CreateSambaShare)
+					r.Delete("/shares/{name}", handlers.DeleteSambaShare)
+				})
+
+				// NFS operations
+				r.Route("/nfs", func(r chi.Router) {
+					r.Post("/restart", handlers.RestartNFS)
+					r.Get("/exports", handlers.ListNFSExports)
+					r.Post("/exports", handlers.CreateNFSExport)
+					r.Delete("/exports", handlers.DeleteNFSExport)
+				})
+
+				// Network operations
+				r.Route("/network", func(r chi.Router) {
+					r.Post("/bond", handlers.CreateBondInterface)
+					r.Post("/vlan", handlers.CreateVLANInterface)
+				})
+			})
+
 			// File Management routes
 			r.Route("/files", func(r chi.Router) {
 				// File browsing and info

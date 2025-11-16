@@ -5,14 +5,16 @@ import DNSSettings from './components/DNSSettings';
 import FirewallManager from './components/FirewallManager';
 import DiagnosticsTool from './components/DiagnosticsTool';
 import BandwidthMonitor from './components/BandwidthMonitor';
+import NetworkConfig from './components/NetworkConfig';
 
-type Tab = 'interfaces' | 'dns' | 'firewall' | 'diagnostics' | 'bandwidth';
+type Tab = 'interfaces' | 'dns' | 'firewall' | 'diagnostics' | 'bandwidth' | 'advanced';
 
 export function NetworkManager() {
   const [activeTab, setActiveTab] = useState<Tab>('interfaces');
 
   const tabs = [
     { id: 'interfaces' as Tab, name: 'Interfaces', icon: '🌐' },
+    { id: 'advanced' as Tab, name: 'Advanced', icon: '⚙️' },
     { id: 'dns' as Tab, name: 'DNS & Routes', icon: '📡' },
     { id: 'firewall' as Tab, name: 'Firewall', icon: '🛡️' },
     { id: 'diagnostics' as Tab, name: 'Diagnostics', icon: '🔍' },
@@ -59,6 +61,7 @@ export function NetworkManager() {
       {/* Tab Content */}
       <div className="flex-1 overflow-auto">
         {activeTab === 'interfaces' && <InterfaceManager />}
+        {activeTab === 'advanced' && <NetworkConfig />}
         {activeTab === 'dns' && <DNSSettings />}
         {activeTab === 'firewall' && <FirewallManager />}
         {activeTab === 'diagnostics' && <DiagnosticsTool />}

@@ -1,0 +1,549 @@
+// Revision: 2025-11-16 | Author: StumpfWorks AI | Version: 1.1.0
+import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
+import {
+  Network,
+  RefreshCw,
+  Wifi,
+  Cable,
+  Activity,
+  X,
+  Info,
+  Layers,
+  Link2,
+} from 'lucide-react';
+import { networkApi, type NetworkInterface } from '@/api/network';
+import { syslibApi, type CreateBondRequest, type CreateVLANRequest } from '@/api/syslib';
+
+type DialogType = 'none' | 'bond' | 'vlan';
+
+export default function NetworkConfig() {
+  const [interfaces, setInterfaces] = useState<NetworkInterface[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [dialogType, setDialogType] = useState<DialogType>('none');
+
+  const [bondFormData, setBondFormData] = useState<CreateBondRequest>({
+    name: 'bond0',
+    mode: 'balance-rr',
+    interfaces: [],
+  });
+
+  const [vlanFormData, setVlanFormData] = useState<CreateVLANRequest>({
+    parent: '',
+    vlan_id: 100,
+  });
+
+  // Bond modes
+  const bondModes = [
+    { value: 'balance-rr', label: 'Balance Round-Robin (0)', description: 'Sequential transmission across all slaves' },
+    { value: 'active-backup', label: 'Active-Backup (1)', description: 'One slave active, others on standby' },
+    { value: 'balance-xor', label: 'Balance XOR (2)', description: 'XOR hash-based distribution' },
+    { value: 'broadcast', label: 'Broadcast (3)', description: 'Transmit on all slaves' },
+    { value: '802.3ad', label: '802.3ad LACP (4)', description: 'IEEE 802.3ad Dynamic link aggregation' },
+    { value: 'balance-tlb', label: 'Adaptive Transmit Load Balancing (5)', description: 'Outgoing traffic distribution' },
+    { value: 'balance-alb', label: 'Adaptive Load Balancing (6)', description: 'TX and RX load balancing' },
+  ];
+
+  // Fetch network interfaces
+  const fetchInterfaces = async () => {
+    setIsLoading(true);
+    try {
+      const response = await networkApi.listInterfaces();
+      if (response.success && response.data) {
+        setInterfaces(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch network interfaces:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchInterfaces();
+  }, []);
+
+  const handleCreateBond = async () => {
+    if (!bondFormData.name || bondFormData.interfaces.length < 2) {
+      alert('Please provide bond name and select at least 2 interfaces');
+      return;
+    }
+
+    try {
+      const response = await syslibApi.network.createBond(bondFormData);
+      if (response.success) {
+        alert(`Bond interface created: ${bondFormData.name}`);
+        setDialogType('none');
+        setBondFormData({ name: 'bond0', mode: 'balance-rr', interfaces: [] });
+        fetchInterfaces();
+      }
+    } catch (error) {
+      console.error('Failed to create bond:', error);
+      alert('Failed to create bond interface');
+    }
+  };
+
+  const handleCreateVLAN = async () => {
+    if (!vlanFormData.parent || !vlanFormData.vlan_id) {
+      alert('Please select parent interface and provide VLAN ID');
+      return;
+    }
+
+    try {
+      const response = await syslibApi.network.createVLAN(vlanFormData);
+      if (response.success) {
+        alert(`VLAN interface created: ${vlanFormData.parent}.${vlanFormData.vlan_id}`);
+        setDialogType('none');
+        setVlanFormData({ parent: '', vlan_id: 100 });
+        fetchInterfaces();
+      }
+    } catch (error) {
+      console.error('Failed to create VLAN:', error);
+      alert('Failed to create VLAN interface');
+    }
+  };
+
+  const toggleBondInterface = (ifName: string) => {
+    setBondFormData((prev) => ({
+      ...prev,
+      interfaces: prev.interfaces.includes(ifName)
+        ? prev.interfaces.filter((i) => i !== ifName)
+        : [...prev.interfaces, ifName],
+    }));
+  };
+
+  const getInterfaceIcon = (iface: NetworkInterface) => {
+    if (iface.name.startsWith('wl')) {
+      return <Wifi className="w-5 h-5 text-blue-500" />;
+    } else if (iface.name.startsWith('bond')) {
+      return <Link2 className="w-5 h-5 text-purple-500" />;
+    } else if (iface.name.includes('.')) {
+      return <Layers className="w-5 h-5 text-orange-500" />;
+    } else {
+      return <Cable className="w-5 h-5 text-green-500" />;
+    }
+  };
+
+  const getInterfaceType = (iface: NetworkInterface): string => {
+    if (iface.name.startsWith('wl')) return 'Wireless';
+    if (iface.name.startsWith('bond')) return 'Bond';
+    if (iface.name.includes('.')) return 'VLAN';
+    if (iface.name.startsWith('lo')) return 'Loopback';
+    if (iface.name.startsWith('en')) return 'Ethernet';
+    if (iface.name.startsWith('eth')) return 'Ethernet';
+    return 'Unknown';
+  };
+
+  const formatSpeed = (speed: string): string => {
+    if (!speed || speed === '0' || speed === 'unknown') return 'N/A';
+    return speed;
+  };
+
+  return (
+    <div className="flex flex-col h-full bg-white dark:bg-macos-dark-100">
+      {/* Header */}
+      <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center gap-3">
+          <Network className="w-6 h-6 text-macos-blue" />
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+            Network Configuration
+          </h1>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={fetchInterfaces}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-macos-dark-200 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-macos-dark-300 transition-colors"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Refresh
+          </button>
+          <button
+            onClick={() => setDialogType('bond')}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+          >
+            <Link2 className="w-4 h-4" />
+            Create Bond
+          </button>
+          <button
+            onClick={() => setDialogType('vlan')}
+            className="flex items-center gap-2 px-4 py-2 bg-macos-blue text-white rounded-lg hover:bg-blue-600 transition-colors"
+          >
+            <Layers className="w-4 h-4" />
+            Create VLAN
+          </button>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto p-6">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-macos-blue" />
+          </div>
+        ) : interfaces.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-64 text-center">
+            <Network className="w-16 h-16 text-gray-300 dark:text-gray-600 mb-4" />
+            <p className="text-gray-500 dark:text-gray-400">No network interfaces found</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+            {interfaces.map((iface, index) => (
+              <motion.div
+                key={iface.name}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                className={`rounded-xl p-5 border-2 transition-all ${
+                  iface.isUp
+                    ? 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800'
+                    : 'bg-gradient-to-br from-gray-50 to-gray-100 dark:from-macos-dark-200 dark:to-macos-dark-300 border-gray-200 dark:border-gray-700'
+                }`}
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-white dark:bg-macos-dark-100 rounded-lg shadow-sm">
+                      {getInterfaceIcon(iface)}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-gray-900 dark:text-gray-100">
+                        {iface.name}
+                      </h3>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {getInterfaceType(iface)}
+                      </p>
+                    </div>
+                  </div>
+                  <div
+                    className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
+                      iface.isUp
+                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                    }`}
+                  >
+                    <Activity className="w-3 h-3" />
+                    {iface.isUp ? 'UP' : 'DOWN'}
+                  </div>
+                </div>
+
+                {/* Interface Details */}
+                <div className="space-y-2 text-sm">
+                  {/* MAC Address */}
+                  {iface.hardwareAddr && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 dark:text-gray-400">MAC:</span>
+                      <span className="font-mono text-xs text-gray-900 dark:text-gray-100">
+                        {iface.hardwareAddr}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* IP Addresses */}
+                  {iface.addresses && iface.addresses.length > 0 && (
+                    <div>
+                      <span className="text-gray-600 dark:text-gray-400 block mb-1">
+                        IP Addresses:
+                      </span>
+                      <div className="space-y-1">
+                        {iface.addresses.map((addr, idx) => (
+                          <div
+                            key={idx}
+                            className="font-mono text-xs bg-white dark:bg-macos-dark-100 px-2 py-1 rounded"
+                          >
+                            {addr}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Speed & MTU */}
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                    <div>
+                      <span className="text-gray-600 dark:text-gray-400 text-xs">Speed:</span>
+                      <div className="font-medium text-gray-900 dark:text-gray-100">
+                        {formatSpeed(iface.speed)}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-gray-600 dark:text-gray-400 text-xs">MTU:</span>
+                      <div className="font-medium text-gray-900 dark:text-gray-100">
+                        {iface.mtu}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Flags */}
+                  {iface.flags && iface.flags.length > 0 && (
+                    <div className="pt-2">
+                      <div className="flex flex-wrap gap-1">
+                        {iface.flags.slice(0, 4).map((flag, idx) => (
+                          <span
+                            key={idx}
+                            className="px-1.5 py-0.5 bg-gray-200 dark:bg-macos-dark-100 text-gray-700 dark:text-gray-300 text-xs rounded"
+                          >
+                            {flag}
+                          </span>
+                        ))}
+                        {iface.flags.length > 4 && (
+                          <span className="px-1.5 py-0.5 text-gray-500 dark:text-gray-400 text-xs">
+                            +{iface.flags.length - 4} more
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Create Bond Dialog */}
+      {dialogType === 'bond' && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-macos-dark-100 rounded-2xl p-6 max-w-2xl w-full m-4 max-h-[80vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                Create Bond Interface
+              </h3>
+              <button
+                onClick={() => setDialogType('none')}
+                className="p-1 hover:bg-gray-100 dark:hover:bg-macos-dark-200 rounded"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Bond Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Bond Name
+                </label>
+                <input
+                  type="text"
+                  value={bondFormData.name}
+                  onChange={(e) => setBondFormData({ ...bondFormData, name: e.target.value })}
+                  placeholder="bond0"
+                  className="w-full px-3 py-2 bg-gray-50 dark:bg-macos-dark-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-macos-blue focus:border-transparent"
+                />
+              </div>
+
+              {/* Bond Mode */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Bonding Mode
+                </label>
+                <div className="space-y-2">
+                  {bondModes.map((mode) => (
+                    <button
+                      key={mode.value}
+                      onClick={() => setBondFormData({ ...bondFormData, mode: mode.value })}
+                      className={`w-full p-3 rounded-lg border-2 transition-all text-left ${
+                        bondFormData.mode === mode.value
+                          ? 'border-macos-blue bg-macos-blue/10 dark:bg-macos-blue/20'
+                          : 'border-gray-300 dark:border-gray-600 hover:border-macos-blue/50'
+                      }`}
+                    >
+                      <div className="font-semibold text-gray-900 dark:text-gray-100">
+                        {mode.label}
+                      </div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                        {mode.description}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Interface Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Select Interfaces ({bondFormData.interfaces.length} selected)
+                </label>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {interfaces
+                    .filter((iface) => !iface.name.startsWith('lo') && !iface.name.startsWith('bond'))
+                    .map((iface) => (
+                      <div
+                        key={iface.name}
+                        className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-macos-dark-200 rounded-lg"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={bondFormData.interfaces.includes(iface.name)}
+                          onChange={() => toggleBondInterface(iface.name)}
+                          className="w-4 h-4 text-macos-blue rounded focus:ring-2 focus:ring-macos-blue"
+                        />
+                        <div className="flex items-center gap-2 flex-1">
+                          {getInterfaceIcon(iface)}
+                          <div>
+                            <div className="font-medium text-gray-900 dark:text-gray-100">
+                              {iface.name}
+                            </div>
+                            <div className="text-xs text-gray-600 dark:text-gray-400">
+                              {iface.hardwareAddr} • {getInterfaceType(iface)}
+                            </div>
+                          </div>
+                        </div>
+                        <span
+                          className={`text-xs px-2 py-1 rounded ${
+                            iface.isUp
+                              ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                              : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                          }`}
+                        >
+                          {iface.isUp ? 'UP' : 'DOWN'}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+
+              {/* Info */}
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                <div className="flex gap-2">
+                  <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                  <div className="text-sm text-gray-700 dark:text-gray-300">
+                    <p className="font-medium mb-1">Bond Interface Notes:</p>
+                    <ul className="list-disc list-inside space-y-1 text-xs">
+                      <li>Select at least 2 interfaces to create a bond</li>
+                      <li>All interfaces in a bond should have similar characteristics</li>
+                      <li>802.3ad requires switch support for LACP</li>
+                      <li>Active-backup provides the simplest failover</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                onClick={() => setDialogType('none')}
+                className="px-4 py-2 bg-gray-100 dark:bg-macos-dark-200 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-macos-dark-300 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateBond}
+                className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+              >
+                Create Bond
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Create VLAN Dialog */}
+      {dialogType === 'vlan' && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-macos-dark-100 rounded-2xl p-6 max-w-md w-full m-4"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                Create VLAN Interface
+              </h3>
+              <button
+                onClick={() => setDialogType('none')}
+                className="p-1 hover:bg-gray-100 dark:hover:bg-macos-dark-200 rounded"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Parent Interface */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Parent Interface
+                </label>
+                <select
+                  value={vlanFormData.parent}
+                  onChange={(e) => setVlanFormData({ ...vlanFormData, parent: e.target.value })}
+                  className="w-full px-3 py-2 bg-gray-50 dark:bg-macos-dark-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-macos-blue focus:border-transparent"
+                >
+                  <option value="">Select interface...</option>
+                  {interfaces
+                    .filter((iface) => !iface.name.startsWith('lo') && !iface.name.includes('.'))
+                    .map((iface) => (
+                      <option key={iface.name} value={iface.name}>
+                        {iface.name} ({getInterfaceType(iface)})
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              {/* VLAN ID */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  VLAN ID (1-4094)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="4094"
+                  value={vlanFormData.vlan_id}
+                  onChange={(e) =>
+                    setVlanFormData({ ...vlanFormData, vlan_id: parseInt(e.target.value) || 100 })
+                  }
+                  className="w-full px-3 py-2 bg-gray-50 dark:bg-macos-dark-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-macos-blue focus:border-transparent"
+                />
+              </div>
+
+              {/* Preview */}
+              {vlanFormData.parent && (
+                <div className="bg-gray-50 dark:bg-macos-dark-200 rounded-lg p-3">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    Interface will be created as:
+                  </span>
+                  <div className="font-mono font-bold text-macos-blue mt-1">
+                    {vlanFormData.parent}.{vlanFormData.vlan_id}
+                  </div>
+                </div>
+              )}
+
+              {/* Info */}
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                <div className="flex gap-2">
+                  <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                  <div className="text-sm text-gray-700 dark:text-gray-300">
+                    <p className="font-medium mb-1">VLAN Notes:</p>
+                    <ul className="list-disc list-inside space-y-1 text-xs">
+                      <li>VLANs enable network segmentation</li>
+                      <li>Switch must support 802.1Q tagging</li>
+                      <li>Valid VLAN IDs: 1-4094</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                onClick={() => setDialogType('none')}
+                className="px-4 py-2 bg-gray-100 dark:bg-macos-dark-200 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-macos-dark-300 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateVLAN}
+                className="px-4 py-2 bg-macos-blue text-white rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                Create VLAN
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </div>
+  );
+}
