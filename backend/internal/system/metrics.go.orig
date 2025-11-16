@@ -2,8 +2,6 @@
 package system
 
 import (
-	"os/exec"
-	"strings"
 	"context"
 	"fmt"
 	"runtime"
@@ -363,12 +361,41 @@ func (mc *MetricsCollector) collectZFSMetrics(metrics *SystemMetrics) {
 			FreeBytes:   pool.Free,
 		})
 	}
-// collectSMARTMetrics collects SMART disk health metrics
-}
-func (mc *MetricsCollector) collectSMARTMetrics(metrics *SystemMetrics) {
-	metrics.DiskSMART = make([]DiskSMARTMetric, 0)
 }
 
+// collectSMARTMetrics collects SMART disk health metrics
+func (mc *MetricsCollector) collectSMARTMetrics(metrics *SystemMetrics) {
+	sys := Get()
+	if sys == nil || sys.Storage == nil {
+		return
+	}
+
+	// Get list of physical disks
+	disks, err := sys.Storage.ListDisks()
+	if err != nil {
+		return
+	}
+
+	metrics.DiskSMART = make([]DiskSMARTMetric, 0)
+	for _, disk := range disks {
+		// Get SMART info for each disk
+		smart, err := sys.Storage.GetDiskSMART(disk)
+		if err != nil {
+			continue
+		}
+
+		healthy := 0.0
+		if smart.Healthy {
+			healthy = 1.0
+		}
+
+		metrics.DiskSMART = append(metrics.DiskSMART, DiskSMARTMetric{
+			Device:      disk,
+			Healthy:     healthy,
+			Temperature: float64(smart.Temperature),
+		})
+	}
+}
 
 // collectServiceMetrics collects system service status metrics
 func (mc *MetricsCollector) collectServiceMetrics(metrics *SystemMetrics) {
@@ -403,21 +430,44 @@ func (mc *MetricsCollector) collectServiceMetrics(metrics *SystemMetrics) {
 
 // collectShareConnections collects active share connection counts
 func (mc *MetricsCollector) collectShareConnections(metrics *SystemMetrics) {
+	sys := Get()
+	if sys == nil || sys.Sharing == nil {
+		return
+	}
+
+	// Count Samba connections
+	sambaConns := 0
+	if status, err := sys.Sharing.Samba.GetStatus(); err == nil && status.Active {
+		// Parse smbstatus output to count connections
+		// For now, default to 0 as we need smbstatus command parsing
+		sambaConns = 0
+	}
+
+	// Count NFS connections
+	nfsConns := 0
+	// NFS connections can be counted from /proc/net/rpc/nfsd
+	// For now, default to 0
+	nfsConns = 0
+
 	metrics.ShareConnections = ShareConnectionMetrics{
-		SambaConnections: 0,
-		NFSConnections:   0,
+		SambaConnections: sambaConns,
+		NFSConnections:   nfsConns,
 	}
 }
 
-
 // isServiceRunning checks if a systemd service is running
 func isServiceRunning(serviceName string) bool {
-	cmd := exec.Command("systemctl", "is-active", serviceName)
-	output, err := cmd.Output()
+	sys := Get()
+	if sys == nil {
+		return false
+	}
+
+	output, err := sys.RunCommand("systemctl", "is-active", serviceName)
 	if err != nil {
 		return false
 	}
-	return strings.TrimSpace(string(output)) == "active"
+
+	return output == "active"
 }
 
 // GetCurrent returns the current metrics
