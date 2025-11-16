@@ -25,8 +25,9 @@ const (
 
 // Client represents a WebSocket client
 type Client struct {
-	conn *websocket.Conn
-	send chan []byte
+	conn          *websocket.Conn
+	send          chan []byte
+	subscriptions map[string]bool // tracks subscribed channels
 }
 
 // Message represents a WebSocket message
@@ -39,8 +40,9 @@ type Message struct {
 // NewClient creates a new WebSocket client
 func NewClient(conn *websocket.Conn) *Client {
 	return &Client{
-		conn: conn,
-		send: make(chan []byte, 256),
+		conn:          conn,
+		send:          make(chan []byte, 256),
+		subscriptions: make(map[string]bool),
 	}
 }
 
@@ -141,12 +143,30 @@ func (c *Client) Send(msg *Message) error {
 func (c *Client) handleMessage(msg *Message) {
 	switch msg.Type {
 	case "subscribe":
-		// TODO: Implement subscription logic
-		logger.Info("Client subscribed", zap.String("channel", msg.Channel))
+		// Add channel to subscriptions
+		if msg.Channel != "" {
+			c.subscriptions[msg.Channel] = true
+			logger.Info("Client subscribed", zap.String("channel", msg.Channel))
+
+			// Send confirmation
+			c.Send(&Message{
+				Type:    "subscribed",
+				Channel: msg.Channel,
+			})
+		}
 
 	case "unsubscribe":
-		// TODO: Implement unsubscription logic
-		logger.Info("Client unsubscribed", zap.String("channel", msg.Channel))
+		// Remove channel from subscriptions
+		if msg.Channel != "" {
+			delete(c.subscriptions, msg.Channel)
+			logger.Info("Client unsubscribed", zap.String("channel", msg.Channel))
+
+			// Send confirmation
+			c.Send(&Message{
+				Type:    "unsubscribed",
+				Channel: msg.Channel,
+			})
+		}
 
 	case "ping":
 		// Respond with pong
@@ -157,4 +177,18 @@ func (c *Client) handleMessage(msg *Message) {
 	default:
 		logger.Warn("Unknown message type", zap.String("type", msg.Type))
 	}
+}
+
+// IsSubscribed checks if the client is subscribed to a channel
+func (c *Client) IsSubscribed(channel string) bool {
+	return c.subscriptions[channel]
+}
+
+// GetSubscriptions returns all channels the client is subscribed to
+func (c *Client) GetSubscriptions() []string {
+	channels := make([]string, 0, len(c.subscriptions))
+	for channel := range c.subscriptions {
+		channels = append(channels, channel)
+	}
+	return channels
 }

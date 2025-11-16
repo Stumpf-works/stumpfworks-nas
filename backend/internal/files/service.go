@@ -5,8 +5,11 @@ import (
 	"io"
 	"mime"
 	"os"
+	"os/user"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/errors"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
@@ -404,11 +407,34 @@ func (s *Service) getFileInfo(path string, entry os.DirEntry) (*FileInfo, error)
 	}
 
 	// Get owner/group (Unix-specific, requires syscall)
-	// TODO: Implement owner/group extraction using syscall
-	fileInfo.Owner = "system"
-	fileInfo.Group = "system"
+	if stat, ok := info.Sys().(*syscall.Stat_t); ok {
+		fileInfo.Owner = getUsername(int(stat.Uid))
+		fileInfo.Group = getGroupname(int(stat.Gid))
+	} else {
+		// Fallback if syscall not available
+		fileInfo.Owner = "unknown"
+		fileInfo.Group = "unknown"
+	}
 
 	return fileInfo, nil
+}
+
+// getUsername returns the username for a given UID
+func getUsername(uid int) string {
+	u, err := user.LookupId(strconv.Itoa(uid))
+	if err != nil {
+		return fmt.Sprintf("uid:%d", uid)
+	}
+	return u.Username
+}
+
+// getGroupname returns the group name for a given GID
+func getGroupname(gid int) string {
+	g, err := user.LookupGroupId(strconv.Itoa(gid))
+	if err != nil {
+		return fmt.Sprintf("gid:%d", gid)
+	}
+	return g.Name
 }
 
 // Helper: copyFile copies a single file

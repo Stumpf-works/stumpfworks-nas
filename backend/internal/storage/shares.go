@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 	"strings"
 
@@ -142,8 +143,15 @@ func CreateShare(req *CreateShareRequest) (*Share, error) {
 		}
 	}
 
-	// TODO: Validate that all groups in ValidGroups exist
-	// This would require a GetGroupByName function in the groups package
+	// Validate that all groups in ValidGroups exist (system groups)
+	for _, groupname := range req.ValidGroups {
+		if groupname == "" {
+			continue // Skip empty group names
+		}
+		if _, err := user.LookupGroup(groupname); err != nil {
+			return nil, fmt.Errorf("group '%s' does not exist - cannot add to valid groups list", groupname)
+		}
+	}
 
 	// Create database record
 	model := &models.Share{
@@ -212,8 +220,15 @@ func UpdateShare(id string, req *CreateShareRequest) (*Share, error) {
 		}
 	}
 
-	// TODO: Validate that all groups in ValidGroups exist
-	// This would require a GetGroupByName function in the groups package
+	// Validate that all groups in ValidGroups exist (system groups)
+	for _, groupname := range req.ValidGroups {
+		if groupname == "" {
+			continue // Skip empty group names
+		}
+		if _, err := user.LookupGroup(groupname); err != nil {
+			return nil, fmt.Errorf("group '%s' does not exist - cannot add to valid groups list", groupname)
+		}
+	}
 
 	// Update fields
 	model.Name = req.Name

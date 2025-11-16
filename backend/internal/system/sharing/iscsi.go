@@ -2,8 +2,10 @@
 package sharing
 
 import (
-	"github.com/Stumpf-works/stumpfworks-nas/internal/system/executor"
 	"fmt"
+	"strings"
+
+	"github.com/Stumpf-works/stumpfworks-nas/internal/system/executor"
 )
 
 // ISCSIManager manages iSCSI targets
@@ -74,16 +76,47 @@ func (i *ISCSIManager) Stop() error {
 
 // ListTargets lists all iSCSI targets
 func (i *ISCSIManager) ListTargets() ([]ISCSITarget, error) {
-	result, err := i.shell.Execute("targetcli", "ls")
+	// Use targetcli with ls /iscsi to list targets
+	result, err := i.shell.Execute("targetcli", "ls", "/iscsi")
 	if err != nil {
 		return nil, fmt.Errorf("failed to list targets: %w", err)
 	}
 
-	// TODO: Parse targetcli output
-	// This is a simplified implementation
-	_ = result
+	// Parse targetcli output
+	// Format: o- iqn.YYYY-MM.domain:target [TPG: 1]
+	targets := []ISCSITarget{}
+	lines := strings.Split(result.Stdout, "\n")
 
-	return []ISCSITarget{}, nil
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		// Look for IQN lines (they start with "o-" or "|-" and contain "iqn.")
+		if strings.Contains(line, "iqn.") {
+			// Extract IQN from the line
+			parts := strings.Fields(line)
+			for _, part := range parts {
+				if strings.HasPrefix(part, "iqn.") {
+					iqn := strings.TrimSpace(part)
+					targets = append(targets, ISCSITarget{
+						IQN:  iqn,
+						Name: extractTargetName(iqn),
+					})
+					break
+				}
+			}
+		}
+	}
+
+	return targets, nil
+}
+
+// extractTargetName extracts a friendly name from an IQN
+// Example: iqn.2023-01.com.example:target01 -> target01
+func extractTargetName(iqn string) string {
+	parts := strings.Split(iqn, ":")
+	if len(parts) > 1 {
+		return parts[len(parts)-1]
+	}
+	return iqn
 }
 
 // CreateTarget creates a new iSCSI target
