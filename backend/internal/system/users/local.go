@@ -2,32 +2,18 @@
 package users
 
 import (
+	"github.com/Stumpf-works/stumpfworks-nas/internal/system/executor"
 	"fmt"
 	"os/user"
 	"strconv"
 	"strings"
-	"time"
 )
 
-// Shell executor interface
-type ShellExecutor interface {
-	Execute(command string, args ...string) (*CommandResult, error)
-	ExecuteWithTimeout(timeout time.Duration, command string, args ...string) (*CommandResult, error)
-	CommandExists(command string) bool
-}
 
-// CommandResult from shell execution
-type CommandResult struct {
-	Stdout   string
-	Stderr   string
-	ExitCode int
-	Success  bool
-	Error    error
-}
 
 // LocalManager manages local Unix users and groups
 type LocalManager struct {
-	shell   ShellExecutor
+	shell      executor.ShellExecutor
 	enabled bool
 }
 
@@ -51,7 +37,7 @@ type LocalGroup struct {
 }
 
 // NewLocalManager creates a new local user manager
-func NewLocalManager(shell ShellExecutor) (*LocalManager, error) {
+func NewLocalManager(shell executor.ShellExecutor) (*LocalManager, error) {
 	return &LocalManager{
 		shell:   shell,
 		enabled: true,

@@ -2,6 +2,8 @@
 package handlers
 
 import (
+	"github.com/Stumpf-works/stumpfworks-nas/internal/system/sharing"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/system/network"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -19,7 +21,11 @@ import (
 // SystemLibraryHealth returns health status of all system library subsystems
 func SystemLibraryHealth(w http.ResponseWriter, r *http.Request) {
 	lib := system.Get()
-	health := lib.HealthCheck()
+	health, err := lib.HealthCheck()
+	if err != nil {
+		utils.RespondError(w, errors.InternalServerError("Failed to get health status", err))
+		return
+	}
 	utils.RespondSuccess(w, health)
 }
 
@@ -394,7 +400,7 @@ func CreateSambaShare(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	share := lib.Sharing.Samba.Share{
+	share := sharing.SambaShare{
 		Name:        req.Name,
 		Path:        req.Path,
 		Comment:     req.Comment,
@@ -518,7 +524,7 @@ func CreateNFSExport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	export := lib.Sharing.NFS.NFSExport{
+	export := sharing.NFSExport{
 		Path:    req.Path,
 		Clients: req.Clients,
 		Options: req.Options,
@@ -596,18 +602,18 @@ func CreateBondInterface(w http.ResponseWriter, r *http.Request) {
 	}
 
 	lib := system.Get()
-	if lib.Network == nil || lib.Network.Interface == nil {
+	if lib.Network == nil || lib.Network.Interfaces == nil {
 		utils.RespondError(w, errors.BadRequest("Network not available", nil))
 		return
 	}
 
-	config := lib.Network.Interface.BondConfig{
+	config := network.BondConfig{
 		Name:       req.Name,
 		Mode:       req.Mode,
-		Interfaces: req.Interfaces,
+		Slaves:     req.Interfaces,
 	}
 
-	if err := lib.Network.Interface.CreateBond(config); err != nil {
+	if err := lib.Network.Interfaces.CreateBond(config); err != nil {
 		logger.Error("Failed to create bond interface", zap.String("name", req.Name), zap.Error(err))
 		utils.RespondError(w, errors.InternalServerError("Failed to create bond", err))
 		return
@@ -632,12 +638,12 @@ func CreateVLANInterface(w http.ResponseWriter, r *http.Request) {
 	}
 
 	lib := system.Get()
-	if lib.Network == nil || lib.Network.Interface == nil {
+	if lib.Network == nil || lib.Network.Interfaces == nil {
 		utils.RespondError(w, errors.BadRequest("Network not available", nil))
 		return
 	}
 
-	if err := lib.Network.Interface.CreateVLAN(req.Parent, req.VLANID); err != nil {
+	if err := lib.Network.Interfaces.CreateVLAN(req.Parent, req.VLANID); err != nil {
 		logger.Error("Failed to create VLAN interface",
 			zap.String("parent", req.Parent),
 			zap.Int("vlan_id", req.VLANID),

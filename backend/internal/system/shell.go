@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Stumpf-works/stumpfworks-nas/internal/system/executor"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
 	"go.uber.org/zap"
 )
@@ -21,18 +22,8 @@ type ShellExecutor struct {
 	mu             sync.RWMutex
 }
 
-// CommandResult contains the result of a command execution
-type CommandResult struct {
-	Command    string        `json:"command"`
-	Args       []string      `json:"args"`
-	Stdout     string        `json:"stdout"`
-	Stderr     string        `json:"stderr"`
-	ExitCode   int           `json:"exit_code"`
-	Duration   time.Duration `json:"duration"`
-	Success    bool          `json:"success"`
-	Error      error         `json:"error,omitempty"`
-	DryRun     bool          `json:"dry_run"`
-}
+// Ensure ShellExecutor implements executor.ShellExecutor interface
+var _ executor.ShellExecutor = (*ShellExecutor)(nil)
 
 // CommandOptions holds options for command execution
 type CommandOptions struct {
@@ -68,18 +59,18 @@ func NewShellExecutor(defaultTimeout time.Duration, dryRun bool) (*ShellExecutor
 }
 
 // Execute executes a command with the given arguments
-func (s *ShellExecutor) Execute(command string, args ...string) (*CommandResult, error) {
+func (s *ShellExecutor) Execute(command string, args ...string) (*executor.CommandResult, error) {
 	return s.ExecuteWithOptions(command, nil, args...)
 }
 
 // ExecuteWithTimeout executes a command with a specific timeout
-func (s *ShellExecutor) ExecuteWithTimeout(timeout time.Duration, command string, args ...string) (*CommandResult, error) {
+func (s *ShellExecutor) ExecuteWithTimeout(timeout time.Duration, command string, args ...string) (*executor.CommandResult, error) {
 	opts := &CommandOptions{Timeout: timeout}
 	return s.ExecuteWithOptions(command, opts, args...)
 }
 
 // ExecuteWithOptions executes a command with advanced options
-func (s *ShellExecutor) ExecuteWithOptions(command string, opts *CommandOptions, args ...string) (*CommandResult, error) {
+func (s *ShellExecutor) ExecuteWithOptions(command string, opts *CommandOptions, args ...string) (*executor.CommandResult, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -94,7 +85,7 @@ func (s *ShellExecutor) ExecuteWithOptions(command string, opts *CommandOptions,
 
 	startTime := time.Now()
 
-	result := &CommandResult{
+	result := &executor.CommandResult{
 		Command:  command,
 		Args:     args,
 		DryRun:   s.dryRun,
@@ -202,12 +193,12 @@ func (s *ShellExecutor) ExecuteWithOptions(command string, opts *CommandOptions,
 }
 
 // ExecuteScript executes a shell script
-func (s *ShellExecutor) ExecuteScript(script string, opts *CommandOptions) (*CommandResult, error) {
+func (s *ShellExecutor) ExecuteScript(script string, opts *CommandOptions) (*executor.CommandResult, error) {
 	return s.ExecuteWithOptions("bash", opts, "-c", script)
 }
 
 // ExecutePipe executes multiple commands in a pipe
-func (s *ShellExecutor) ExecutePipe(commands ...string) (*CommandResult, error) {
+func (s *ShellExecutor) ExecutePipe(commands ...string) (*executor.CommandResult, error) {
 	if len(commands) == 0 {
 		return nil, fmt.Errorf("no commands provided")
 	}
@@ -264,7 +255,7 @@ func (s *ShellExecutor) GetCommandVersion(command string) (string, error) {
 }
 
 // RunAsRoot executes a command with sudo
-func (s *ShellExecutor) RunAsRoot(command string, args ...string) (*CommandResult, error) {
+func (s *ShellExecutor) RunAsRoot(command string, args ...string) (*executor.CommandResult, error) {
 	allArgs := append([]string{command}, args...)
 	return s.Execute("sudo", allArgs...)
 }

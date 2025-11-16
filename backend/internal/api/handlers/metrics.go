@@ -224,7 +224,7 @@ func SystemHealthHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	health, err := lib.Health()
+	health, err := lib.HealthCheck()
 	if err != nil {
 		logger.Error("Failed to get system health", zap.Error(err))
 		utils.RespondError(w, errors.InternalServerError("Failed to get system health", err))

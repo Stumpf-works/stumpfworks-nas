@@ -2,12 +2,13 @@
 package users
 
 import (
+	"github.com/Stumpf-works/stumpfworks-nas/internal/system/executor"
 	"fmt"
 )
 
 // LDAPManager manages LDAP integration
 type LDAPManager struct {
-	shell   ShellExecutor
+	shell      executor.ShellExecutor
 	enabled bool
 }
 
@@ -24,7 +25,7 @@ type LDAPConfig struct {
 }
 
 // NewLDAPManager creates a new LDAP manager
-func NewLDAPManager(shell ShellExecutor) (*LDAPManager, error) {
+func NewLDAPManager(shell executor.ShellExecutor) (*LDAPManager, error) {
 	// Check if LDAP tools are available
 	if !shell.CommandExists("ldapsearch") {
 		return nil, fmt.Errorf("LDAP client tools not installed (ldap-utils)")

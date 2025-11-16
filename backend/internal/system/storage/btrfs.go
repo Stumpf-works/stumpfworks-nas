@@ -2,6 +2,7 @@
 package storage
 
 import (
+	"github.com/Stumpf-works/stumpfworks-nas/internal/system/executor"
 	"fmt"
 	"strconv"
 	"strings"
@@ -9,7 +10,7 @@ import (
 
 // BTRFSManager manages BTRFS filesystems
 type BTRFSManager struct {
-	shell   ShellExecutor
+	shell      executor.ShellExecutor
 	enabled bool
 }
 
@@ -25,7 +26,7 @@ type BTRFSFilesystem struct {
 }
 
 // NewBTRFSManager creates a new BTRFS manager
-func NewBTRFSManager(shell ShellExecutor) (*BTRFSManager, error) {
+func NewBTRFSManager(shell executor.ShellExecutor) (*BTRFSManager, error) {
 	if !shell.CommandExists("btrfs") {
 		return nil, fmt.Errorf("btrfs-progs not installed")
 	}

@@ -2,12 +2,13 @@
 package sharing
 
 import (
+	"github.com/Stumpf-works/stumpfworks-nas/internal/system/executor"
 	"fmt"
 )
 
 // WebDAVManager manages WebDAV shares
 type WebDAVManager struct {
-	shell   ShellExecutor
+	shell      executor.ShellExecutor
 	enabled bool
 }
 
@@ -22,7 +23,7 @@ type WebDAVShare struct {
 }
 
 // NewWebDAVManager creates a new WebDAV manager
-func NewWebDAVManager(shell ShellExecutor) (*WebDAVManager, error) {
+func NewWebDAVManager(shell executor.ShellExecutor) (*WebDAVManager, error) {
 	// WebDAV typically runs via Apache or nginx
 	// This is a simplified implementation
 	if !shell.CommandExists("a2enmod") && !shell.CommandExists("nginx") {

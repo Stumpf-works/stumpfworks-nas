@@ -2,6 +2,7 @@
 package storage
 
 import (
+	"github.com/Stumpf-works/stumpfworks-nas/internal/system/executor"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -10,7 +11,7 @@ import (
 
 // SMARTManager manages disk S.M.A.R.T. monitoring
 type SMARTManager struct {
-	shell   ShellExecutor
+	shell      executor.ShellExecutor
 	enabled bool
 }
 
@@ -49,7 +50,7 @@ type SMARTAttribute struct {
 }
 
 // NewSMARTManager creates a new SMART manager
-func NewSMARTManager(shell ShellExecutor) (*SMARTManager, error) {
+func NewSMARTManager(shell executor.ShellExecutor) (*SMARTManager, error) {
 	// Check if smartctl is available
 	if !shell.CommandExists("smartctl") {
 		return nil, fmt.Errorf("smartmontools not installed (smartctl command not found)")

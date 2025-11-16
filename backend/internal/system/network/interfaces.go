@@ -5,28 +5,13 @@ import (
 	"fmt"
 	"net"
 	"strings"
-	"time"
+
+	"github.com/Stumpf-works/stumpfworks-nas/internal/system/executor"
 )
-
-// Shell executor interface
-type ShellExecutor interface {
-	Execute(command string, args ...string) (*CommandResult, error)
-	ExecuteWithTimeout(timeout time.Duration, command string, args ...string) (*CommandResult, error)
-	CommandExists(command string) bool
-}
-
-// CommandResult from shell execution
-type CommandResult struct {
-	Stdout   string
-	Stderr   string
-	ExitCode int
-	Success  bool
-	Error    error
-}
 
 // InterfaceManager manages network interfaces
 type InterfaceManager struct {
-	shell   ShellExecutor
+	shell   executor.ShellExecutor
 	enabled bool
 }
 
@@ -66,7 +51,7 @@ type BondConfig struct {
 }
 
 // NewInterfaceManager creates a new interface manager
-func NewInterfaceManager(shell ShellExecutor) (*InterfaceManager, error) {
+func NewInterfaceManager(shell executor.ShellExecutor) (*InterfaceManager, error) {
 	return &InterfaceManager{
 		shell:   shell,
 		enabled: true,

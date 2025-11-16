@@ -2,6 +2,7 @@
 package storage
 
 import (
+	"github.com/Stumpf-works/stumpfworks-nas/internal/system/executor"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -10,7 +11,7 @@ import (
 
 // RAIDManager manages software RAID (mdadm)
 type RAIDManager struct {
-	shell   ShellExecutor
+	shell      executor.ShellExecutor
 	enabled bool
 }
 
@@ -40,7 +41,7 @@ type RAIDDevice struct {
 }
 
 // NewRAIDManager creates a new RAID manager
-func NewRAIDManager(shell ShellExecutor) (*RAIDManager, error) {
+func NewRAIDManager(shell executor.ShellExecutor) (*RAIDManager, error) {
 	if !shell.CommandExists("mdadm") {
 		return nil, fmt.Errorf("mdadm not installed")
 	}
@@ -299,4 +300,20 @@ func (r *RAIDManager) GrowArray(device string, newDeviceCount int) error {
 	}
 
 	return nil
+}
+
+// GetArray returns information about a specific RAID array
+func (r *RAIDManager) GetArray(name string) (*RAIDArray, error) {
+	arrays, err := r.ListArrays()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, array := range arrays {
+		if array.Name == name {
+			return &array, nil
+		}
+	}
+
+	return nil, fmt.Errorf("array %s not found", name)
 }

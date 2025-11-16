@@ -47,31 +47,31 @@ func GetSystemInfo() (*SystemInfo, error) {
 	}, nil
 }
 
-// SystemMetrics represents real-time system metrics
-type SystemMetrics struct {
-	CPU    CPUMetrics    `json:"cpu"`
-	Memory MemoryMetrics `json:"memory"`
-	Disk   []DiskMetrics `json:"disk"`
-	Network NetworkMetrics `json:"network"`
+// RealtimeSystemMetrics represents real-time system metrics
+type RealtimeSystemMetrics struct {
+	CPU    RealtimeCPUMetrics    `json:"cpu"`
+	Memory RealtimeMemoryMetrics `json:"memory"`
+	Disk   []RealtimeDiskMetrics `json:"disk"`
+	Network RealtimeNetworkMetrics `json:"network"`
 	Timestamp int64 `json:"timestamp"`
 }
 
-// CPUMetrics represents CPU usage metrics
-type CPUMetrics struct {
+// RealtimeCPUMetrics represents CPU usage metrics
+type RealtimeCPUMetrics struct {
 	UsagePercent float64   `json:"usagePercent"`
 	PerCore      []float64 `json:"perCore,omitempty"`
 }
 
-// MemoryMetrics represents memory usage metrics
-type MemoryMetrics struct {
+// RealtimeMemoryMetrics represents memory usage metrics
+type RealtimeMemoryMetrics struct {
 	Total       uint64  `json:"total"`
 	Available   uint64  `json:"available"`
 	Used        uint64  `json:"used"`
 	UsedPercent float64 `json:"usedPercent"`
 }
 
-// DiskMetrics represents disk usage metrics
-type DiskMetrics struct {
+// RealtimeDiskMetrics represents disk usage metrics
+type RealtimeDiskMetrics struct {
 	Device      string  `json:"device"`
 	Mountpoint  string  `json:"mountpoint"`
 	Fstype      string  `json:"fstype"`
@@ -81,17 +81,17 @@ type DiskMetrics struct {
 	UsedPercent float64 `json:"usedPercent"`
 }
 
-// NetworkMetrics represents network usage metrics
-type NetworkMetrics struct {
+// RealtimeNetworkMetrics represents network usage metrics
+type RealtimeNetworkMetrics struct {
 	BytesSent   uint64 `json:"bytesSent"`
 	BytesRecv   uint64 `json:"bytesRecv"`
 	PacketsSent uint64 `json:"packetsSent"`
 	PacketsRecv uint64 `json:"packetsRecv"`
 }
 
-// GetSystemMetrics returns real-time system metrics
-func GetSystemMetrics() (*SystemMetrics, error) {
-	metrics := &SystemMetrics{
+// GetRealtimeSystemMetrics returns real-time system metrics
+func GetRealtimeSystemMetrics() (*RealtimeSystemMetrics, error) {
+	metrics := &RealtimeSystemMetrics{
 		Timestamp: time.Now().Unix(),
 	}
 
@@ -109,7 +109,7 @@ func GetSystemMetrics() (*SystemMetrics, error) {
 	// Memory metrics
 	memInfo, err := mem.VirtualMemory()
 	if err == nil {
-		metrics.Memory = MemoryMetrics{
+		metrics.Memory = RealtimeMemoryMetrics{
 			Total:       memInfo.Total,
 			Available:   memInfo.Available,
 			Used:        memInfo.Used,
@@ -123,7 +123,7 @@ func GetSystemMetrics() (*SystemMetrics, error) {
 		for _, partition := range partitions {
 			usage, err := disk.Usage(partition.Mountpoint)
 			if err == nil {
-				metrics.Disk = append(metrics.Disk, DiskMetrics{
+				metrics.Disk = append(metrics.Disk, RealtimeDiskMetrics{
 					Device:      partition.Device,
 					Mountpoint:  partition.Mountpoint,
 					Fstype:      partition.Fstype,
@@ -139,7 +139,7 @@ func GetSystemMetrics() (*SystemMetrics, error) {
 	// Network metrics
 	netIO, err := net.IOCounters(false)
 	if err == nil && len(netIO) > 0 {
-		metrics.Network = NetworkMetrics{
+		metrics.Network = RealtimeNetworkMetrics{
 			BytesSent:   netIO[0].BytesSent,
 			BytesRecv:   netIO[0].BytesRecv,
 			PacketsSent: netIO[0].PacketsSent,
