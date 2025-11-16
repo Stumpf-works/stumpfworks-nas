@@ -9,27 +9,83 @@ permissions:
   contents: write
 
 jobs:
-  create-release:
-    name: Create Release
+  build-and-release:
+    name: Build and Release
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          cd frontend && npm install
+
+      - name: Build release binaries
+        run: make release
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          name: Release ${{ github.ref_name }}
+          name: Stumpf.Works NAS ${{ github.ref_name }}
           body: |
             # Stumpf.Works NAS ${{ github.ref_name }}
-            
-            Production-ready NAS management system.
-            
-            ## Installation
-            
-            See README.md for installation instructions.
+
+            Production-ready NAS management system with web UI.
+
+            ## 📦 Downloads
+
+            ### Linux
+            - **AMD64 (x86_64)**: `stumpfworks-nas-linux-amd64`
+            - **ARM64 (aarch64)**: `stumpfworks-nas-linux-arm64`
+            - **ARMv7 (Raspberry Pi)**: `stumpfworks-nas-linux-armv7`
+
+            ### macOS
+            - **Intel (AMD64)**: `stumpfworks-nas-darwin-amd64`
+            - **Apple Silicon (ARM64)**: `stumpfworks-nas-darwin-arm64`
+
+            ## 🚀 Quick Start
+
+            ```bash
+            # Download for your platform
+            wget https://github.com/Stumpf-works/stumpfworks-nas/releases/download/${{ github.ref_name }}/stumpfworks-nas-linux-amd64
+
+            # Make executable
+            chmod +x stumpfworks-nas-linux-amd64
+
+            # Run
+            ./stumpfworks-nas-linux-amd64
+            ```
+
+            ## 📋 Installation
+
+            See [README.md](https://github.com/Stumpf-works/stumpfworks-nas/blob/main/README.md) for detailed installation instructions.
+
+            ## ✅ Checksums
+
+            Verify your download with `checksums.txt`
+
+            ## 📝 What's New
+
+            See [CHANGELOG.md](https://github.com/Stumpf-works/stumpfworks-nas/blob/main/CHANGELOG.md) for details.
           draft: false
           prerelease: false
+          files: |
+            dist/releases/stumpfworks-nas-linux-amd64
+            dist/releases/stumpfworks-nas-linux-arm64
+            dist/releases/stumpfworks-nas-linux-armv7
+            dist/releases/stumpfworks-nas-darwin-amd64
+            dist/releases/stumpfworks-nas-darwin-arm64
+            dist/releases/checksums.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
