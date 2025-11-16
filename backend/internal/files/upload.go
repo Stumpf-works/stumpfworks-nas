@@ -23,6 +23,8 @@ const (
 	ChunkSize = 10 * 1024 * 1024
 	// UploadSessionTimeout is how long to keep upload sessions alive
 	UploadSessionTimeout = 24 * time.Hour
+	// MinimumFreeSpace is the minimum free space required (1GB buffer)
+	MinimumFreeSpace = 1 * 1024 * 1024 * 1024
 )
 
 // UploadManager manages file uploads
@@ -259,10 +261,10 @@ func (s *Service) UploadSingleFile(ctx *SecurityContext, destinationDir string, 
 		return errors.Conflict("File already exists", nil)
 	}
 
-	// TODO: Check disk space
-	// if err := CheckDiskSpace(cleanDest, header.Size); err != nil {
-	// 	return err
-	// }
+	// Check disk space before uploading (file size + 1GB buffer)
+	if err := CheckDiskSpace(cleanDest, header.Size+MinimumFreeSpace); err != nil {
+		return err
+	}
 
 	// Create destination file
 	destFile, err := os.Create(destPath)
