@@ -1,12 +1,10 @@
 // Revision: 2025-11-16 | Author: Claude | Version: 1.1.1
 import { useState, useEffect } from 'react';
 import Card from '@/components/ui/Card';
-import Button from '@/components/ui/Button';
-import Input from '@/components/ui/Input';
 import { networkApi, type NetworkInterface, type DNSConfig, type FirewallStatus } from '@/api/network';
 import { getErrorMessage } from '@/api/client';
 
-export function NetworkSection({ user, systemInfo }: { user: any; systemInfo: any }) {
+export function NetworkSection() {
   const [activeTab, setActiveTab] = useState<'interfaces' | 'dns' | 'firewall'>('interfaces');
   const [interfaces, setInterfaces] = useState<NetworkInterface[]>([]);
   const [dnsConfig, setDnsConfig] = useState<DNSConfig | null>(null);

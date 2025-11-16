@@ -1,12 +1,11 @@
 // Revision: 2025-11-16 | Author: Claude | Version: 1.1.1
 import { useState, useEffect } from 'react';
 import Card from '@/components/ui/Card';
-import Button from '@/components/ui/Button';
 import { usersApi } from '@/api/users';
 import { groupsApi } from '@/api/groups';
 import { getErrorMessage } from '@/api/client';
 
-export function UsersGroupsSection({ user, systemInfo }: { user: any; systemInfo: any }) {
+export function UsersGroupsSection() {
   const [activeTab, setActiveTab] = useState<'users' | 'groups'>('users');
   const [users, setUsers] = useState<any[]>([]);
   const [groups, setGroups] = useState<any[]>([]);

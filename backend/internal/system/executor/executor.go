@@ -1,3 +1,4 @@
+// Revision: 2025-11-16 | Author: Claude | Version: 1.1.1
 // Package executor provides common command execution interfaces and types
 // used across all system management packages.
 package executor

@@ -4,7 +4,7 @@ import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 
-export function MonitoringSection({ user, systemInfo }: { user: any; systemInfo: any }) {
+export function MonitoringSection() {
   const [prometheusEnabled, setPrometheusEnabled] = useState(true);
   const [grafanaUrl, setGrafanaUrl] = useState('http://localhost:3000');
   const [datadogApiKey, setDatadogApiKey] = useState('');

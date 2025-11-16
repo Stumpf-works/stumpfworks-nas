@@ -5,7 +5,7 @@ import Button from '@/components/ui/Button';
 import { tasksApi } from '@/api/tasks';
 import { getErrorMessage } from '@/api/client';
 
-export function TasksSection({ user, systemInfo }: { user: any; systemInfo: any }) {
+export function TasksSection() {
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -18,10 +18,8 @@ export function TasksSection({ user, systemInfo }: { user: any; systemInfo: any 
     setLoading(true);
     setError(null);
     try {
-      const response = await tasksApi.list();
-      if (response.success && response.data) {
-        setTasks(response.data);
-      }
+      const response = await tasksApi.listTasks();
+      setTasks(response.tasks || []);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {

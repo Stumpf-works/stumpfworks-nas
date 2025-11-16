@@ -5,7 +5,7 @@ import Button from '@/components/ui/Button';
 import { systemApi, type UpdateCheckResult } from '@/api/system';
 import { getErrorMessage } from '@/api/client';
 
-export function UpdatesSection({ user, systemInfo }: { user: any; systemInfo: any }) {
+export function UpdatesSection() {
   const [updateCheckResult, setUpdateCheckResult] = useState<UpdateCheckResult | null>(null);
   const [checkingUpdates, setCheckingUpdates] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
