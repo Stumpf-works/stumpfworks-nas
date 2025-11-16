@@ -186,3 +186,311 @@ func (b *BTRFSManager) GetUsage(path string) (uint64, uint64, error) {
 
 	return totalSize, used, nil
 }
+
+// ===== Advanced BTRFS Features =====
+
+// BTRFSSubvolume represents a BTRFS subvolume
+type BTRFSSubvolume struct {
+	ID         uint64 `json:"id"`
+	ParentID   uint64 `json:"parent_id"`
+	TopLevel   uint64 `json:"top_level"`
+	Path       string `json:"path"`
+	UUID       string `json:"uuid"`
+	ParentUUID string `json:"parent_uuid,omitempty"`
+}
+
+// CreateSubvolume creates a new BTRFS subvolume
+func (b *BTRFSManager) CreateSubvolume(path string) error {
+	if !b.enabled {
+		return fmt.Errorf("BTRFS not available")
+	}
+
+	_, err := b.shell.Execute("btrfs", "subvolume", "create", path)
+	if err != nil {
+		return fmt.Errorf("failed to create subvolume: %w", err)
+	}
+
+	return nil
+}
+
+// DeleteSubvolume deletes a BTRFS subvolume
+func (b *BTRFSManager) DeleteSubvolume(path string) error {
+	if !b.enabled {
+		return fmt.Errorf("BTRFS not available")
+	}
+
+	_, err := b.shell.Execute("btrfs", "subvolume", "delete", path)
+	if err != nil {
+		return fmt.Errorf("failed to delete subvolume: %w", err)
+	}
+
+	return nil
+}
+
+// ListSubvolumes lists all subvolumes in a filesystem
+func (b *BTRFSManager) ListSubvolumes(path string) ([]BTRFSSubvolume, error) {
+	if !b.enabled {
+		return nil, fmt.Errorf("BTRFS not available")
+	}
+
+	result, err := b.shell.Execute("btrfs", "subvolume", "list", "-p", "-u", path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list subvolumes: %w", err)
+	}
+
+	var subvolumes []BTRFSSubvolume
+	lines := strings.Split(strings.TrimSpace(result.Stdout), "\n")
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+
+		fields := strings.Fields(line)
+		if len(fields) < 9 {
+			continue
+		}
+
+		subvol := BTRFSSubvolume{}
+
+		// Parse ID
+		if id, err := strconv.ParseUint(fields[1], 10, 64); err == nil {
+			subvol.ID = id
+		}
+
+		// Parse parent ID
+		if pid, err := strconv.ParseUint(fields[3], 10, 64); err == nil {
+			subvol.ParentID = pid
+		}
+
+		// Parse UUID
+		if len(fields) >= 7 {
+			subvol.UUID = fields[6]
+		}
+
+		// Parse path (last field)
+		subvol.Path = fields[len(fields)-1]
+
+		subvolumes = append(subvolumes, subvol)
+	}
+
+	return subvolumes, nil
+}
+
+// Send sends a BTRFS subvolume/snapshot to a stream
+func (b *BTRFSManager) Send(subvolumePath string, parentPath string) (string, error) {
+	if !b.enabled {
+		return "", fmt.Errorf("BTRFS not available")
+	}
+
+	args := []string{"send"}
+	if parentPath != "" {
+		args = append(args, "-p", parentPath)
+	}
+	args = append(args, subvolumePath)
+
+	result, err := b.shell.Execute("btrfs", args...)
+	if err != nil {
+		return "", fmt.Errorf("failed to send subvolume: %w", err)
+	}
+
+	return result.Stdout, nil
+}
+
+// Receive receives a BTRFS subvolume from a stream
+func (b *BTRFSManager) Receive(targetPath string, streamFile string) error {
+	if !b.enabled {
+		return fmt.Errorf("BTRFS not available")
+	}
+
+	// Note: In real implementation, this would read from stdin
+	_, err := b.shell.Execute("sh", "-c", fmt.Sprintf("cat %s | btrfs receive %s", streamFile, targetPath))
+	if err != nil {
+		return fmt.Errorf("failed to receive subvolume: %w", err)
+	}
+
+	return nil
+}
+
+// AddDevice adds a device to a BTRFS filesystem
+func (b *BTRFSManager) AddDevice(device string, mountPoint string) error {
+	if !b.enabled {
+		return fmt.Errorf("BTRFS not available")
+	}
+
+	_, err := b.shell.Execute("btrfs", "device", "add", device, mountPoint)
+	if err != nil {
+		return fmt.Errorf("failed to add device: %w", err)
+	}
+
+	return nil
+}
+
+// RemoveDevice removes a device from a BTRFS filesystem
+func (b *BTRFSManager) RemoveDevice(device string, mountPoint string) error {
+	if !b.enabled {
+		return fmt.Errorf("BTRFS not available")
+	}
+
+	_, err := b.shell.Execute("btrfs", "device", "remove", device, mountPoint)
+	if err != nil {
+		return fmt.Errorf("failed to remove device: %w", err)
+	}
+
+	return nil
+}
+
+// Balance starts a balance operation on a BTRFS filesystem
+func (b *BTRFSManager) Balance(mountPoint string, filters string) error {
+	if !b.enabled {
+		return fmt.Errorf("BTRFS not available")
+	}
+
+	args := []string{"balance", "start"}
+	if filters != "" {
+		args = append(args, filters)
+	}
+	args = append(args, mountPoint)
+
+	_, err := b.shell.Execute("btrfs", args...)
+	if err != nil {
+		return fmt.Errorf("failed to start balance: %w", err)
+	}
+
+	return nil
+}
+
+// BalanceStatus returns the status of a balance operation
+func (b *BTRFSManager) BalanceStatus(mountPoint string) (string, error) {
+	if !b.enabled {
+		return "", fmt.Errorf("BTRFS not available")
+	}
+
+	result, err := b.shell.Execute("btrfs", "balance", "status", mountPoint)
+	if err != nil {
+		return "", fmt.Errorf("failed to get balance status: %w", err)
+	}
+
+	return result.Stdout, nil
+}
+
+// PauseBalance pauses a running balance operation
+func (b *BTRFSManager) PauseBalance(mountPoint string) error {
+	if !b.enabled {
+		return fmt.Errorf("BTRFS not available")
+	}
+
+	_, err := b.shell.Execute("btrfs", "balance", "pause", mountPoint)
+	if err != nil {
+		return fmt.Errorf("failed to pause balance: %w", err)
+	}
+
+	return nil
+}
+
+// ResumeBalance resumes a paused balance operation
+func (b *BTRFSManager) ResumeBalance(mountPoint string) error {
+	if !b.enabled {
+		return fmt.Errorf("BTRFS not available")
+	}
+
+	_, err := b.shell.Execute("btrfs", "balance", "resume", mountPoint)
+	if err != nil {
+		return fmt.Errorf("failed to resume balance: %w", err)
+	}
+
+	return nil
+}
+
+// CancelBalance cancels a running balance operation
+func (b *BTRFSManager) CancelBalance(mountPoint string) error {
+	if !b.enabled {
+		return fmt.Errorf("BTRFS not available")
+	}
+
+	_, err := b.shell.Execute("btrfs", "balance", "cancel", mountPoint)
+	if err != nil {
+		return fmt.Errorf("failed to cancel balance: %w", err)
+	}
+
+	return nil
+}
+
+// Defragment defragments files or directories
+func (b *BTRFSManager) Defragment(path string, recursive bool, compress string) error {
+	if !b.enabled {
+		return fmt.Errorf("BTRFS not available")
+	}
+
+	args := []string{"filesystem", "defragment"}
+	if recursive {
+		args = append(args, "-r")
+	}
+	if compress != "" {
+		args = append(args, "-c"+compress)
+	}
+	args = append(args, path)
+
+	_, err := b.shell.Execute("btrfs", args...)
+	if err != nil {
+		return fmt.Errorf("failed to defragment: %w", err)
+	}
+
+	return nil
+}
+
+// SetCompression sets compression for a file or directory
+func (b *BTRFSManager) SetCompression(path string, compression string) error {
+	if !b.enabled {
+		return fmt.Errorf("BTRFS not available")
+	}
+
+	// Use chattr to set compression
+	compressOpt := ""
+	switch compression {
+	case "zlib":
+		compressOpt = "c"
+	case "lzo":
+		compressOpt = "c"
+	case "zstd":
+		compressOpt = "c"
+	case "none":
+		compressOpt = "c" // Remove compression flag
+	default:
+		return fmt.Errorf("unsupported compression: %s", compression)
+	}
+
+	_, err := b.shell.Execute("chattr", "+"+compressOpt, path)
+	if err != nil {
+		return fmt.Errorf("failed to set compression: %w", err)
+	}
+
+	return nil
+}
+
+// Resize resizes a BTRFS filesystem
+func (b *BTRFSManager) Resize(mountPoint string, size string) error {
+	if !b.enabled {
+		return fmt.Errorf("BTRFS not available")
+	}
+
+	_, err := b.shell.Execute("btrfs", "filesystem", "resize", size, mountPoint)
+	if err != nil {
+		return fmt.Errorf("failed to resize filesystem: %w", err)
+	}
+
+	return nil
+}
+
+// GetDeviceStats returns device statistics
+func (b *BTRFSManager) GetDeviceStats(mountPoint string) (string, error) {
+	if !b.enabled {
+		return "", fmt.Errorf("BTRFS not available")
+	}
+
+	result, err := b.shell.Execute("btrfs", "device", "stats", mountPoint)
+	if err != nil {
+		return "", fmt.Errorf("failed to get device stats: %w", err)
+	}
+
+	return result.Stdout, nil
+}
