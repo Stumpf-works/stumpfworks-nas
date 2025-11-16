@@ -11,9 +11,9 @@ import { AuditLogs } from './AuditLogs/AuditLogs';
 import { Security } from './Security/Security';
 import { Alerts } from './Alerts/Alerts';
 import { Tasks } from './Tasks/Tasks';
+import { AppStore } from './AppStore/AppStore';
+import { Terminal } from './Terminal/Terminal';
 import type { App } from '@/types';
-
-// Placeholder components for apps not yet implemented
 
 export const registeredApps: App[] = [
   {
@@ -103,6 +103,22 @@ export const registeredApps: App[] = [
     component: PluginManager,
     defaultSize: { width: 1200, height: 800 },
     minSize: { width: 900, height: 600 },
+  },
+  {
+    id: 'app-store',
+    name: 'App Store',
+    icon: '🛒',
+    component: AppStore,
+    defaultSize: { width: 1400, height: 900 },
+    minSize: { width: 1000, height: 700 },
+  },
+  {
+    id: 'terminal',
+    name: 'Terminal',
+    icon: '💻',
+    component: Terminal,
+    defaultSize: { width: 1000, height: 700 },
+    minSize: { width: 800, height: 500 },
   },
   {
     id: 'backups',

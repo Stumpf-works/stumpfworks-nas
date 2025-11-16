@@ -16,11 +16,26 @@ import (
 	"go.uber.org/zap"
 )
 
+// ===== Helper Functions =====
+
+// getSystemLib returns the system library and checks if it's initialized
+func getSystemLib(w http.ResponseWriter) *system.SystemLibrary {
+	lib := system.Get()
+	if lib == nil {
+		utils.RespondError(w, errors.InternalServerError("System library not initialized", nil))
+		return nil
+	}
+	return lib
+}
+
 // ===== System Library Health =====
 
 // SystemLibraryHealth returns health status of all system library subsystems
 func SystemLibraryHealth(w http.ResponseWriter, r *http.Request) {
-	lib := system.Get()
+	lib := getSystemLib(w)
+	if lib == nil {
+		return
+	}
 	health, err := lib.HealthCheck()
 	if err != nil {
 		utils.RespondError(w, errors.InternalServerError("Failed to get health status", err))
@@ -33,7 +48,10 @@ func SystemLibraryHealth(w http.ResponseWriter, r *http.Request) {
 
 // ListZFSPools lists all ZFS pools
 func ListZFSPools(w http.ResponseWriter, r *http.Request) {
-	lib := system.Get()
+	lib := getSystemLib(w)
+	if lib == nil {
+		return
+	}
 	if lib.Storage == nil || lib.Storage.ZFS == nil {
 		utils.RespondError(w, errors.BadRequest("ZFS not available", nil))
 		return
@@ -52,7 +70,10 @@ func ListZFSPools(w http.ResponseWriter, r *http.Request) {
 // GetZFSPool gets details of a specific ZFS pool
 func GetZFSPool(w http.ResponseWriter, r *http.Request) {
 	poolName := chi.URLParam(r, "name")
-	lib := system.Get()
+	lib := getSystemLib(w)
+	if lib == nil {
+		return
+	}
 
 	if lib.Storage == nil || lib.Storage.ZFS == nil {
 		utils.RespondError(w, errors.BadRequest("ZFS not available", nil))
@@ -83,7 +104,10 @@ func CreateZFSPool(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lib := system.Get()
+	lib := getSystemLib(w)
+	if lib == nil {
+		return
+	}
 	if lib.Storage == nil || lib.Storage.ZFS == nil {
 		utils.RespondError(w, errors.BadRequest("ZFS not available", nil))
 		return
@@ -104,7 +128,10 @@ func CreateZFSPool(w http.ResponseWriter, r *http.Request) {
 // DestroyZFSPool destroys a ZFS pool
 func DestroyZFSPool(w http.ResponseWriter, r *http.Request) {
 	poolName := chi.URLParam(r, "name")
-	lib := system.Get()
+	lib := getSystemLib(w)
+	if lib == nil {
+		return
+	}
 
 	if lib.Storage == nil || lib.Storage.ZFS == nil {
 		utils.RespondError(w, errors.BadRequest("ZFS not available", nil))
@@ -127,7 +154,10 @@ func DestroyZFSPool(w http.ResponseWriter, r *http.Request) {
 // ScrubZFSPool starts a scrub operation on a ZFS pool
 func ScrubZFSPool(w http.ResponseWriter, r *http.Request) {
 	poolName := chi.URLParam(r, "name")
-	lib := system.Get()
+	lib := getSystemLib(w)
+	if lib == nil {
+		return
+	}
 
 	if lib.Storage == nil || lib.Storage.ZFS == nil {
 		utils.RespondError(w, errors.BadRequest("ZFS not available", nil))
@@ -148,7 +178,10 @@ func ScrubZFSPool(w http.ResponseWriter, r *http.Request) {
 // ListZFSDatasets lists all datasets in a pool
 func ListZFSDatasets(w http.ResponseWriter, r *http.Request) {
 	poolName := chi.URLParam(r, "pool")
-	lib := system.Get()
+	lib := getSystemLib(w)
+	if lib == nil {
+		return
+	}
 
 	if lib.Storage == nil || lib.Storage.ZFS == nil {
 		utils.RespondError(w, errors.BadRequest("ZFS not available", nil))
@@ -177,7 +210,10 @@ func CreateZFSSnapshot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lib := system.Get()
+	lib := getSystemLib(w)
+	if lib == nil {
+		return
+	}
 	if lib.Storage == nil || lib.Storage.ZFS == nil {
 		utils.RespondError(w, errors.BadRequest("ZFS not available", nil))
 		return
@@ -197,7 +233,10 @@ func CreateZFSSnapshot(w http.ResponseWriter, r *http.Request) {
 // ListZFSSnapshots lists all snapshots for a dataset
 func ListZFSSnapshots(w http.ResponseWriter, r *http.Request) {
 	datasetName := chi.URLParam(r, "dataset")
-	lib := system.Get()
+	lib := getSystemLib(w)
+	if lib == nil {
+		return
+	}
 
 	if lib.Storage == nil || lib.Storage.ZFS == nil {
 		utils.RespondError(w, errors.BadRequest("ZFS not available", nil))
@@ -218,7 +257,10 @@ func ListZFSSnapshots(w http.ResponseWriter, r *http.Request) {
 
 // ListRAIDArrays lists all mdadm RAID arrays
 func ListRAIDArrays(w http.ResponseWriter, r *http.Request) {
-	lib := system.Get()
+	lib := getSystemLib(w)
+	if lib == nil {
+		return
+	}
 	if lib.Storage == nil || lib.Storage.RAID == nil {
 		utils.RespondError(w, errors.BadRequest("RAID not available", nil))
 		return
@@ -237,7 +279,10 @@ func ListRAIDArrays(w http.ResponseWriter, r *http.Request) {
 // GetRAIDArray gets details of a specific RAID array
 func GetRAIDArray(w http.ResponseWriter, r *http.Request) {
 	arrayName := chi.URLParam(r, "name")
-	lib := system.Get()
+	lib := getSystemLib(w)
+	if lib == nil {
+		return
+	}
 
 	if lib.Storage == nil || lib.Storage.RAID == nil {
 		utils.RespondError(w, errors.BadRequest("RAID not available", nil))
@@ -268,7 +313,10 @@ func CreateRAIDArray(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lib := system.Get()
+	lib := getSystemLib(w)
+	if lib == nil {
+		return
+	}
 	if lib.Storage == nil || lib.Storage.RAID == nil {
 		utils.RespondError(w, errors.BadRequest("RAID not available", nil))
 		return
@@ -291,7 +339,10 @@ func CreateRAIDArray(w http.ResponseWriter, r *http.Request) {
 // GetSMARTInfo gets SMART information for a disk
 func GetSMARTInfo(w http.ResponseWriter, r *http.Request) {
 	device := chi.URLParam(r, "device")
-	lib := system.Get()
+	lib := getSystemLib(w)
+	if lib == nil {
+		return
+	}
 
 	if lib.Storage == nil || lib.Storage.SMART == nil {
 		utils.RespondError(w, errors.BadRequest("SMART not available", nil))
@@ -317,7 +368,10 @@ func RunSMARTTest(w http.ResponseWriter, r *http.Request) {
 		testType = "short"
 	}
 
-	lib := system.Get()
+	lib := getSystemLib(w)
+	if lib == nil {
+		return
+	}
 	if lib.Storage == nil || lib.Storage.SMART == nil {
 		utils.RespondError(w, errors.BadRequest("SMART not available", nil))
 		return
@@ -340,6 +394,10 @@ func RunSMARTTest(w http.ResponseWriter, r *http.Request) {
 // ListSambaShares lists all Samba shares
 func ListSambaShares(w http.ResponseWriter, r *http.Request) {
 	lib := system.Get()
+	if lib == nil {
+		utils.RespondError(w, errors.InternalServerError("System library not initialized", nil))
+		return
+	}
 	if lib.Sharing == nil || lib.Sharing.Samba == nil {
 		utils.RespondError(w, errors.BadRequest("Samba not available", nil))
 		return
@@ -358,7 +416,10 @@ func ListSambaShares(w http.ResponseWriter, r *http.Request) {
 // GetSambaShare gets a specific Samba share
 func GetSambaShare(w http.ResponseWriter, r *http.Request) {
 	shareName := chi.URLParam(r, "name")
-	lib := system.Get()
+	lib := getSystemLib(w)
+	if lib == nil {
+		return
+	}
 
 	if lib.Sharing == nil || lib.Sharing.Samba == nil {
 		utils.RespondError(w, errors.BadRequest("Samba not available", nil))
@@ -394,7 +455,10 @@ func CreateSambaShare(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lib := system.Get()
+	lib := getSystemLib(w)
+	if lib == nil {
+		return
+	}
 	if lib.Sharing == nil || lib.Sharing.Samba == nil {
 		utils.RespondError(w, errors.BadRequest("Samba not available", nil))
 		return
@@ -427,7 +491,10 @@ func CreateSambaShare(w http.ResponseWriter, r *http.Request) {
 // DeleteSambaShare deletes a Samba share
 func DeleteSambaShare(w http.ResponseWriter, r *http.Request) {
 	shareName := chi.URLParam(r, "name")
-	lib := system.Get()
+	lib := getSystemLib(w)
+	if lib == nil {
+		return
+	}
 
 	if lib.Sharing == nil || lib.Sharing.Samba == nil {
 		utils.RespondError(w, errors.BadRequest("Samba not available", nil))
@@ -447,7 +514,10 @@ func DeleteSambaShare(w http.ResponseWriter, r *http.Request) {
 
 // GetSambaStatus gets Samba service status
 func GetSambaStatus(w http.ResponseWriter, r *http.Request) {
-	lib := system.Get()
+	lib := getSystemLib(w)
+	if lib == nil {
+		return
+	}
 	if lib.Sharing == nil || lib.Sharing.Samba == nil {
 		utils.RespondError(w, errors.BadRequest("Samba not available", nil))
 		return
@@ -468,7 +538,10 @@ func GetSambaStatus(w http.ResponseWriter, r *http.Request) {
 
 // RestartSamba restarts the Samba service
 func RestartSamba(w http.ResponseWriter, r *http.Request) {
-	lib := system.Get()
+	lib := getSystemLib(w)
+	if lib == nil {
+		return
+	}
 	if lib.Sharing == nil || lib.Sharing.Samba == nil {
 		utils.RespondError(w, errors.BadRequest("Samba not available", nil))
 		return
@@ -489,7 +562,10 @@ func RestartSamba(w http.ResponseWriter, r *http.Request) {
 
 // ListNFSExports lists all NFS exports
 func ListNFSExports(w http.ResponseWriter, r *http.Request) {
-	lib := system.Get()
+	lib := getSystemLib(w)
+	if lib == nil {
+		return
+	}
 	if lib.Sharing == nil || lib.Sharing.NFS == nil {
 		utils.RespondError(w, errors.BadRequest("NFS not available", nil))
 		return
@@ -518,7 +594,10 @@ func CreateNFSExport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lib := system.Get()
+	lib := getSystemLib(w)
+	if lib == nil {
+		return
+	}
 	if lib.Sharing == nil || lib.Sharing.NFS == nil {
 		utils.RespondError(w, errors.BadRequest("NFS not available", nil))
 		return
@@ -550,7 +629,10 @@ func DeleteNFSExport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lib := system.Get()
+	lib := getSystemLib(w)
+	if lib == nil {
+		return
+	}
 	if lib.Sharing == nil || lib.Sharing.NFS == nil {
 		utils.RespondError(w, errors.BadRequest("NFS not available", nil))
 		return
@@ -569,7 +651,10 @@ func DeleteNFSExport(w http.ResponseWriter, r *http.Request) {
 
 // RestartNFS restarts the NFS service
 func RestartNFS(w http.ResponseWriter, r *http.Request) {
-	lib := system.Get()
+	lib := getSystemLib(w)
+	if lib == nil {
+		return
+	}
 	if lib.Sharing == nil || lib.Sharing.NFS == nil {
 		utils.RespondError(w, errors.BadRequest("NFS not available", nil))
 		return
@@ -601,7 +686,10 @@ func CreateBondInterface(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lib := system.Get()
+	lib := getSystemLib(w)
+	if lib == nil {
+		return
+	}
 	if lib.Network == nil || lib.Network.Interfaces == nil {
 		utils.RespondError(w, errors.BadRequest("Network not available", nil))
 		return
@@ -637,7 +725,10 @@ func CreateVLANInterface(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lib := system.Get()
+	lib := getSystemLib(w)
+	if lib == nil {
+		return
+	}
 	if lib.Network == nil || lib.Network.Interfaces == nil {
 		utils.RespondError(w, errors.BadRequest("Network not available", nil))
 		return
