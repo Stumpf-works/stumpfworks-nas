@@ -2,31 +2,17 @@
 package sharing
 
 import (
+	"github.com/Stumpf-works/stumpfworks-nas/internal/system/executor"
 	"fmt"
 	"os"
 	"strings"
-	"time"
 )
 
-// Shell executor interface
-type ShellExecutor interface {
-	Execute(command string, args ...string) (*CommandResult, error)
-	ExecuteWithTimeout(timeout time.Duration, command string, args ...string) (*CommandResult, error)
-	CommandExists(command string) bool
-}
 
-// CommandResult from shell execution
-type CommandResult struct {
-	Stdout   string
-	Stderr   string
-	ExitCode int
-	Success  bool
-	Error    error
-}
 
 // SambaManager manages Samba/SMB shares
 type SambaManager struct {
-	shell      ShellExecutor
+	shell      executor.ShellExecutor
 	enabled    bool
 	configPath string
 }
@@ -56,7 +42,7 @@ type SambaUser struct {
 }
 
 // NewSambaManager creates a new Samba manager
-func NewSambaManager(shell ShellExecutor) (*SambaManager, error) {
+func NewSambaManager(shell executor.ShellExecutor) (*SambaManager, error) {
 	if !shell.CommandExists("smbd") {
 		return nil, fmt.Errorf("samba not installed")
 	}

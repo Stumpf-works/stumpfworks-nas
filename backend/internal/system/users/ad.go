@@ -2,13 +2,14 @@
 package users
 
 import (
+	"github.com/Stumpf-works/stumpfworks-nas/internal/system/executor"
 	"fmt"
 	"strings"
 )
 
 // ADManager manages Active Directory integration
 type ADManager struct {
-	shell   ShellExecutor
+	shell      executor.ShellExecutor
 	enabled bool
 }
 
@@ -32,7 +33,7 @@ type ADUser struct {
 }
 
 // NewADManager creates a new Active Directory manager
-func NewADManager(shell ShellExecutor) (*ADManager, error) {
+func NewADManager(shell executor.ShellExecutor) (*ADManager, error) {
 	// Check if required tools are available (Samba + winbind/sssd)
 	if !shell.CommandExists("net") {
 		return nil, fmt.Errorf("Samba tools not installed")

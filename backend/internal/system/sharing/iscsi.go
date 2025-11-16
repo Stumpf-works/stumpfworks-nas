@@ -2,12 +2,13 @@
 package sharing
 
 import (
+	"github.com/Stumpf-works/stumpfworks-nas/internal/system/executor"
 	"fmt"
 )
 
 // ISCSIManager manages iSCSI targets
 type ISCSIManager struct {
-	shell   ShellExecutor
+	shell      executor.ShellExecutor
 	enabled bool
 }
 
@@ -24,7 +25,7 @@ type ISCSITarget struct {
 }
 
 // NewISCSIManager creates a new iSCSI manager
-func NewISCSIManager(shell ShellExecutor) (*ISCSIManager, error) {
+func NewISCSIManager(shell executor.ShellExecutor) (*ISCSIManager, error) {
 	// Check for targetcli (LIO - modern Linux iSCSI target)
 	if !shell.CommandExists("targetcli") {
 		return nil, fmt.Errorf("targetcli not installed (install targetcli-fb)")

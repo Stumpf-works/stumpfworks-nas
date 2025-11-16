@@ -2,6 +2,7 @@
 package network
 
 import (
+	"github.com/Stumpf-works/stumpfworks-nas/internal/system/executor"
 	"fmt"
 	"os"
 	"strings"
@@ -9,7 +10,7 @@ import (
 
 // DNSManager manages DNS configuration
 type DNSManager struct {
-	shell   ShellExecutor
+	shell   executor.ShellExecutor
 	enabled bool
 }
 
@@ -21,7 +22,7 @@ type DNSConfig struct {
 }
 
 // NewDNSManager creates a new DNS manager
-func NewDNSManager(shell ShellExecutor) (*DNSManager, error) {
+func NewDNSManager(shell executor.ShellExecutor) (*DNSManager, error) {
 	return &DNSManager{
 		shell:   shell,
 		enabled: true,

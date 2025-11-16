@@ -2,13 +2,14 @@
 package sharing
 
 import (
+	"github.com/Stumpf-works/stumpfworks-nas/internal/system/executor"
 	"fmt"
 	"strings"
 )
 
 // FTPManager manages FTP/SFTP server
 type FTPManager struct {
-	shell   ShellExecutor
+	shell      executor.ShellExecutor
 	enabled bool
 	backend string // "vsftpd", "proftpd", or "pure-ftpd"
 }
@@ -32,7 +33,7 @@ type FTPConfig struct {
 }
 
 // NewFTPManager creates a new FTP manager
-func NewFTPManager(shell ShellExecutor) (*FTPManager, error) {
+func NewFTPManager(shell executor.ShellExecutor) (*FTPManager, error) {
 	fm := &FTPManager{
 		shell: shell,
 	}

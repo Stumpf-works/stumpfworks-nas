@@ -2,6 +2,7 @@
 package sharing
 
 import (
+	"github.com/Stumpf-works/stumpfworks-nas/internal/system/executor"
 	"fmt"
 	"os"
 	"strings"
@@ -9,7 +10,7 @@ import (
 
 // NFSManager manages NFS exports
 type NFSManager struct {
-	shell      ShellExecutor
+	shell      executor.ShellExecutor
 	enabled    bool
 	exportsPath string
 }
@@ -26,7 +27,7 @@ type NFSExport struct {
 }
 
 // NewNFSManager creates a new NFS manager
-func NewNFSManager(shell ShellExecutor) (*NFSManager, error) {
+func NewNFSManager(shell executor.ShellExecutor) (*NFSManager, error) {
 	if !shell.CommandExists("exportfs") {
 		return nil, fmt.Errorf("nfs-kernel-server not installed")
 	}

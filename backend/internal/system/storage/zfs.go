@@ -2,31 +2,19 @@
 package storage
 
 import (
+	"time"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/system/executor"
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 )
 
 // Shell executor interface (to avoid circular import)
-type ShellExecutor interface {
-	Execute(command string, args ...string) (*CommandResult, error)
-	ExecuteWithTimeout(timeout time.Duration, command string, args ...string) (*CommandResult, error)
-	CommandExists(command string) bool
-}
 
-// CommandResult from shell execution
-type CommandResult struct {
-	Stdout   string
-	Stderr   string
-	ExitCode int
-	Success  bool
-	Error    error
-}
 
 // ZFSManager manages ZFS pools and datasets
 type ZFSManager struct {
-	shell   ShellExecutor
+	shell      executor.ShellExecutor
 	enabled bool
 }
 
@@ -69,7 +57,7 @@ type ZFSSnapshot struct {
 }
 
 // NewZFSManager creates a new ZFS manager
-func NewZFSManager(shell ShellExecutor) (*ZFSManager, error) {
+func NewZFSManager(shell executor.ShellExecutor) (*ZFSManager, error) {
 	// Check if ZFS is available
 	if !shell.CommandExists("zpool") || !shell.CommandExists("zfs") {
 		return nil, fmt.Errorf("ZFS tools not installed")

@@ -2,6 +2,7 @@
 package storage
 
 import (
+	"github.com/Stumpf-works/stumpfworks-nas/internal/system/executor"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -10,7 +11,7 @@ import (
 
 // RAIDManager manages software RAID (mdadm)
 type RAIDManager struct {
-	shell   ShellExecutor
+	shell      executor.ShellExecutor
 	enabled bool
 }
 
@@ -40,7 +41,7 @@ type RAIDDevice struct {
 }
 
 // NewRAIDManager creates a new RAID manager
-func NewRAIDManager(shell ShellExecutor) (*RAIDManager, error) {
+func NewRAIDManager(shell executor.ShellExecutor) (*RAIDManager, error) {
 	if !shell.CommandExists("mdadm") {
 		return nil, fmt.Errorf("mdadm not installed")
 	}

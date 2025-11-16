@@ -2,6 +2,7 @@
 package storage
 
 import (
+	"github.com/Stumpf-works/stumpfworks-nas/internal/system/executor"
 	"fmt"
 	"strconv"
 	"strings"
@@ -9,7 +10,7 @@ import (
 
 // LVMManager manages LVM (Logical Volume Manager)
 type LVMManager struct {
-	shell   ShellExecutor
+	shell      executor.ShellExecutor
 	enabled bool
 }
 
@@ -35,7 +36,7 @@ type LogicalVolume struct {
 }
 
 // NewLVMManager creates a new LVM manager
-func NewLVMManager(shell ShellExecutor) (*LVMManager, error) {
+func NewLVMManager(shell executor.ShellExecutor) (*LVMManager, error) {
 	if !shell.CommandExists("vgs") || !shell.CommandExists("lvs") {
 		return nil, fmt.Errorf("LVM tools not installed")
 	}

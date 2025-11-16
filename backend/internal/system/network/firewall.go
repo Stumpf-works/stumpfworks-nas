@@ -2,13 +2,14 @@
 package network
 
 import (
+	"github.com/Stumpf-works/stumpfworks-nas/internal/system/executor"
 	"fmt"
 	"strings"
 )
 
 // FirewallManager manages firewall rules (iptables/nftables)
 type FirewallManager struct {
-	shell   ShellExecutor
+	shell   executor.ShellExecutor
 	enabled bool
 	backend string // "iptables" or "nftables"
 }
@@ -26,7 +27,7 @@ type FirewallRule struct {
 }
 
 // NewFirewallManager creates a new firewall manager
-func NewFirewallManager(shell ShellExecutor) (*FirewallManager, error) {
+func NewFirewallManager(shell executor.ShellExecutor) (*FirewallManager, error) {
 	fm := &FirewallManager{
 		shell: shell,
 	}
