@@ -8,9 +8,12 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/Stumpf-works/stumpfworks-nas/embedfs"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/api/handlers"
 	mw "github.com/Stumpf-works/stumpfworks-nas/internal/api/middleware"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/config"
+	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
+	"go.uber.org/zap"
 )
 
 // NewRouter creates and configures the HTTP router
@@ -489,6 +492,18 @@ func NewRouter(cfg *config.Config) http.Handler {
 
 	// WebSocket endpoint
 	r.Get("/ws", handlers.WebSocketHandler)
+
+	// Serve embedded frontend static files (must be last to act as catch-all)
+	// This handles all routes not matched above and serves the React SPA
+	spaHandler, err := embedfs.NewSPAHandler()
+	if err != nil {
+		logger.Warn("Failed to initialize SPA handler, frontend will not be served",
+			zap.Error(err))
+	} else {
+		// Catch-all route for SPA (must be last)
+		r.Get("/*", spaHandler.ServeHTTP)
+		logger.Info("Embedded frontend static file server initialized")
+	}
 
 	return r
 }

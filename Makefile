@@ -40,11 +40,16 @@ dev-frontend:
 
 # Build for production
 build:
-	@echo "Building backend..."
-	cd backend && go build -o ../dist/stumpfworks-server cmd/stumpfworks-server/main.go
 	@echo "Building frontend..."
 	cd frontend && npm run build
-	@echo "✓ Build complete. Artifacts in ./dist/"
+	@echo "Copying frontend files for embedding..."
+	mkdir -p backend/embedfs
+	rm -rf backend/embedfs/dist
+	cp -r frontend/dist backend/embedfs/
+	@echo "Building backend with embedded frontend..."
+	mkdir -p dist
+	cd backend && go build -ldflags="-s -w" -o ../dist/stumpfworks-server cmd/stumpfworks-server/main.go
+	@echo "✓ Build complete. Binary in ./dist/stumpfworks-server (includes embedded frontend)"
 
 # Run tests
 test:
@@ -98,6 +103,12 @@ docker-down:
 
 # Build release binaries for multiple platforms
 release:
+	@echo "Building frontend for release..."
+	cd frontend && npm run build
+	@echo "Copying frontend files for embedding..."
+	mkdir -p backend/embedfs
+	rm -rf backend/embedfs/dist
+	cp -r frontend/dist backend/embedfs/
 	@echo "Building release binaries for multiple platforms..."
 	@mkdir -p dist/releases
 
