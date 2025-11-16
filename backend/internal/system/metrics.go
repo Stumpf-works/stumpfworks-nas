@@ -11,6 +11,7 @@ import (
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/disk"
 	"github.com/shirou/gopsutil/v3/host"
+	"github.com/shirou/gopsutil/v3/load"
 	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/shirou/gopsutil/v3/net"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
@@ -188,7 +189,7 @@ func (mc *MetricsCollector) collectCPU(metrics *SystemMetrics) error {
 	}
 
 	// Load average
-	loadAvg, err := host.LoadAvg()
+	loadAvg, err := load.Avg()
 	if err == nil {
 		metrics.LoadAverage1 = loadAvg.Load1
 		metrics.LoadAverage5 = loadAvg.Load5

@@ -21,7 +21,7 @@ func GetSystemInfo(w http.ResponseWriter, r *http.Request) {
 
 // GetSystemMetrics returns real-time system metrics
 func GetSystemMetrics(w http.ResponseWriter, r *http.Request) {
-	metrics, err := system.GetSystemMetrics()
+	metrics, err := system.GetRealtimeSystemMetrics()
 	if err != nil {
 		utils.RespondError(w, errors.InternalServerError("Failed to get system metrics", err))
 		return
