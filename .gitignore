@@ -34,6 +34,7 @@ backend/*.dll
 backend/*.so
 backend/*.dylib
 backend/stumpfworks-server
+backend/stumpfworks-nas
 backend/vendor/
 backend/go.work
 backend/go.work.sum
@@ -69,6 +70,10 @@ tmp/
 temp/
 *.tmp
 
+# Development session files
+NEXT_SESSION_PROMPT.md
+SESSION_SUMMARY.md
+
 # Docker
 .docker/
 
@@ -88,3 +93,8 @@ iso/*.iso
 # Plugin artifacts
 plugins/dist/
 plugins/*.tar.gz
+
+# Example plugin binaries
+examples/plugins/*/hello-world
+examples/plugins/*/my-plugin
+examples/plugins/*/*.exe
