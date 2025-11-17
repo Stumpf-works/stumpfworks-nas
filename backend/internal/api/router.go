@@ -40,7 +40,6 @@ func NewRouter(cfg *config.Config) http.Handler {
 
 	// Health check (no auth required)
 	r.Get("/health", handlers.HealthCheck)
-	r.Get("/", handlers.IndexHandler)
 
 	// Prometheus metrics endpoint (no auth required for monitoring systems)
 	r.Get("/metrics", handlers.PrometheusMetricsHandler)
