@@ -1,4 +1,4 @@
-.PHONY: help install dev build release test clean docker-build docker-up docker-down lint format
+.PHONY: help install dev build release test clean docker-build docker-up docker-down lint format upgrade
 
 # Default target
 help:
@@ -9,6 +9,7 @@ help:
 	@echo "  make dev           - Run development servers (backend + frontend)"
 	@echo "  make build         - Build for production"
 	@echo "  make release       - Build release binaries for all platforms"
+	@echo "  make upgrade       - Upgrade existing installation (auto-detects location)"
 	@echo "  make test          - Run all tests"
 	@echo "  make lint          - Run linters"
 	@echo "  make format        - Format code"
@@ -158,6 +159,122 @@ release:
 
 	@echo "✓ Release build complete. Binaries in ./dist/releases/"
 	@ls -lh dist/releases/
+
+# Upgrade existing installation
+upgrade:
+	@echo "╔════════════════════════════════════════════════════════════════╗"
+	@echo "║  Stumpf.Works NAS - Intelligent Upgrade System                ║"
+	@echo "╚════════════════════════════════════════════════════════════════╝"
+	@echo ""
+	@echo "🔍 Detecting installation..."
+	@# Detect architecture
+	@ARCH=$$(uname -m); \
+	case $$ARCH in \
+		x86_64) BINARY_NAME="stumpfworks-nas-linux-amd64" ;; \
+		aarch64) BINARY_NAME="stumpfworks-nas-linux-arm64" ;; \
+		armv7l) BINARY_NAME="stumpfworks-nas-linux-armv7" ;; \
+		*) echo "❌ Unsupported architecture: $$ARCH"; exit 1 ;; \
+	esac; \
+	echo "   Architecture: $$ARCH ($$BINARY_NAME)"; \
+	\
+	INSTALL_PATH=""; \
+	SERVICE_NAME=""; \
+	SYSTEMD_SERVICE=""; \
+	\
+	if [ -f /usr/local/bin/stumpfworks-nas ]; then \
+		INSTALL_PATH="/usr/local/bin/stumpfworks-nas"; \
+		echo "   Found binary: /usr/local/bin/stumpfworks-nas"; \
+	elif [ -f /usr/bin/stumpfworks-nas ]; then \
+		INSTALL_PATH="/usr/bin/stumpfworks-nas"; \
+		echo "   Found binary: /usr/bin/stumpfworks-nas"; \
+	elif [ -f /opt/stumpfworks-nas/stumpfworks-nas ]; then \
+		INSTALL_PATH="/opt/stumpfworks-nas/stumpfworks-nas"; \
+		echo "   Found binary: /opt/stumpfworks-nas/stumpfworks-nas"; \
+	else \
+		echo "❌ No existing installation found!"; \
+		echo "   Searched: /usr/local/bin, /usr/bin, /opt/stumpfworks-nas"; \
+		echo "   Run 'make install-system' for first-time installation"; \
+		exit 1; \
+	fi; \
+	\
+	if systemctl list-units --full --all | grep -q "stumpfworks-nas.service"; then \
+		SYSTEMD_SERVICE="stumpfworks-nas.service"; \
+		echo "   Found systemd service: stumpfworks-nas.service"; \
+	elif systemctl list-units --full --all | grep -q "stumpfworks.service"; then \
+		SYSTEMD_SERVICE="stumpfworks.service"; \
+		echo "   Found systemd service: stumpfworks.service"; \
+	fi; \
+	\
+	echo ""; \
+	echo "📦 Building new version..."; \
+	$(MAKE) build GOOS=linux GOARCH=$$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/;s/armv7l/arm/') 2>&1 | grep -E "(Building|✓|Copying)" || true; \
+	\
+	if [ ! -f "dist/stumpfworks-server" ]; then \
+		echo "❌ Build failed!"; \
+		exit 1; \
+	fi; \
+	\
+	echo ""; \
+	echo "💾 Creating backup..."; \
+	BACKUP_PATH="$$INSTALL_PATH.backup.$$(date +%Y%m%d-%H%M%S)"; \
+	cp "$$INSTALL_PATH" "$$BACKUP_PATH" 2>/dev/null || sudo cp "$$INSTALL_PATH" "$$BACKUP_PATH"; \
+	echo "   Backup saved: $$BACKUP_PATH"; \
+	\
+	if [ -n "$$SYSTEMD_SERVICE" ]; then \
+		echo ""; \
+		echo "⏸️  Stopping service..."; \
+		sudo systemctl stop "$$SYSTEMD_SERVICE" 2>/dev/null || true; \
+		sleep 2; \
+		if systemctl is-active --quiet "$$SYSTEMD_SERVICE"; then \
+			echo "   ⚠️  Service still running, waiting..."; \
+			sleep 3; \
+		fi; \
+		echo "   ✓ Service stopped"; \
+	fi; \
+	\
+	echo ""; \
+	echo "📥 Installing new version..."; \
+	cp dist/stumpfworks-server "$$INSTALL_PATH" 2>/dev/null || sudo cp dist/stumpfworks-server "$$INSTALL_PATH"; \
+	chmod +x "$$INSTALL_PATH" 2>/dev/null || sudo chmod +x "$$INSTALL_PATH"; \
+	echo "   ✓ Binary updated"; \
+	\
+	NEW_VERSION=$$(dist/stumpfworks-server --version 2>/dev/null | head -1 || echo "v1.3.0"); \
+	echo "   New version: $$NEW_VERSION"; \
+	\
+	if [ -n "$$SYSTEMD_SERVICE" ]; then \
+		echo ""; \
+		echo "▶️  Starting service..."; \
+		sudo systemctl start "$$SYSTEMD_SERVICE"; \
+		sleep 2; \
+		if systemctl is-active --quiet "$$SYSTEMD_SERVICE"; then \
+			echo "   ✓ Service started successfully"; \
+			STATUS=$$(systemctl status "$$SYSTEMD_SERVICE" --no-pager -l | head -3 | tail -1); \
+			echo "   $$STATUS"; \
+		else \
+			echo "   ❌ Service failed to start!"; \
+			echo "   Rolling back..."; \
+			sudo cp "$$BACKUP_PATH" "$$INSTALL_PATH"; \
+			sudo systemctl start "$$SYSTEMD_SERVICE"; \
+			echo "   ✓ Rollback complete"; \
+			exit 1; \
+		fi; \
+	fi; \
+	\
+	echo ""; \
+	echo "╔════════════════════════════════════════════════════════════════╗"; \
+	echo "║  ✅ Upgrade Complete!                                          ║"; \
+	echo "╚════════════════════════════════════════════════════════════════╝"; \
+	echo ""; \
+	echo "📍 Installation: $$INSTALL_PATH"; \
+	echo "💾 Backup: $$BACKUP_PATH"; \
+	if [ -n "$$SYSTEMD_SERVICE" ]; then \
+		echo "🔄 Service: $$SYSTEMD_SERVICE (running)"; \
+	fi; \
+	echo ""; \
+	echo "🌐 Access your NAS:"; \
+	echo "   http://localhost:8080"; \
+	echo "   http://$$(hostname -I | awk '{print $$1}'):8080"; \
+	echo "";
 
 # ISO builder (future)
 iso:
