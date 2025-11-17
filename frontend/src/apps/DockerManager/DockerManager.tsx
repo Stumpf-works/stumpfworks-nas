@@ -22,7 +22,7 @@ export function DockerManager() {
 
   const checkDockerAvailability = async () => {
     try {
-      const response = await dockerApi.getInfo();
+      const response = await dockerApi.listContainers();
       if (response.success) {
         setDockerAvailable(true);
       } else {
