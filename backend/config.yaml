@@ -11,9 +11,9 @@ server:
   readTimeout: "15s"
   writeTimeout: "15s"
   idleTimeout: "60s"
-  allowedOrigins:
-    - "http://localhost:3000"
-    - "http://localhost:5173"
+  # allowedOrigins: Auto-detected in development mode (all private network IPs)
+  # For production, configure specific origins like: ["https://nas.yourdomain.com"]
+  allowedOrigins: []
   trustedProxies:
     - "127.0.0.1"
     - "::1"

@@ -3,6 +3,7 @@ package api
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/Stumpf-works/stumpfworks-nas/embedfs"
@@ -28,26 +29,69 @@ func NewRouter(cfg *config.Config) http.Handler {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
 
-	// CORS middleware - origins from config
-	allowedOrigins := cfg.Server.AllowedOrigins
-	if len(allowedOrigins) == 0 {
-		// Fallback to localhost if not configured (development only)
-		if cfg.IsDevelopment() {
-			allowedOrigins = []string{"http://localhost:3000", "http://localhost:5173"}
-			logger.Warn("No CORS origins configured, using development defaults")
-		} else {
+	// CORS middleware - auto-detect origins in development
+	var corsHandler *cors.Cors
+
+	if cfg.IsDevelopment() {
+		// Development mode: Allow all origins for local network access
+		// This enables access from any device on the local network
+		corsHandler = cors.New(cors.Options{
+			AllowOriginFunc: func(origin string) bool {
+				// Always allow requests with no origin (same-origin or tools like curl)
+				if origin == "" {
+					return true
+				}
+
+				// Allow localhost in any form
+				if strings.Contains(origin, "localhost") || strings.Contains(origin, "127.0.0.1") {
+					return true
+				}
+
+				// Allow private network ranges (RFC 1918)
+				// 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16
+				if strings.Contains(origin, "192.168.") ||
+					strings.Contains(origin, "10.") ||
+					strings.Contains(origin, "172.16.") || strings.Contains(origin, "172.17.") ||
+					strings.Contains(origin, "172.18.") || strings.Contains(origin, "172.19.") ||
+					strings.Contains(origin, "172.20.") || strings.Contains(origin, "172.21.") ||
+					strings.Contains(origin, "172.22.") || strings.Contains(origin, "172.23.") ||
+					strings.Contains(origin, "172.24.") || strings.Contains(origin, "172.25.") ||
+					strings.Contains(origin, "172.26.") || strings.Contains(origin, "172.27.") ||
+					strings.Contains(origin, "172.28.") || strings.Contains(origin, "172.29.") ||
+					strings.Contains(origin, "172.30.") || strings.Contains(origin, "172.31.") {
+					return true
+				}
+
+				logger.Warn("CORS: Blocked origin in development mode", zap.String("origin", origin))
+				return false
+			},
+			AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+			AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+			ExposedHeaders:   []string{"Link"},
+			AllowCredentials: true,
+			MaxAge:           300,
+		})
+		logger.Info("CORS: Development mode - allowing all private network origins")
+	} else {
+		// Production mode: Use configured origins only
+		allowedOrigins := cfg.Server.AllowedOrigins
+		if len(allowedOrigins) == 0 {
 			logger.Error("No CORS origins configured in production mode!")
+			allowedOrigins = []string{} // Empty = block all
 		}
+
+		corsHandler = cors.New(cors.Options{
+			AllowedOrigins:   allowedOrigins,
+			AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+			AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+			ExposedHeaders:   []string{"Link"},
+			AllowCredentials: true,
+			MaxAge:           300,
+		})
+		logger.Info("CORS: Production mode - using configured origins", zap.Strings("origins", allowedOrigins))
 	}
 
-	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   allowedOrigins,
-		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
-		ExposedHeaders:   []string{"Link"},
-		AllowCredentials: true,
-		MaxAge:           300,
-	}))
+	r.Use(corsHandler.Handler)
 
 	// Health check (no auth required)
 	r.Get("/health", handlers.HealthCheck)
