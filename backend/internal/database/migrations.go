@@ -2,6 +2,11 @@
 package database
 
 import (
+	"crypto/rand"
+	"encoding/base64"
+	"fmt"
+	"os"
+
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database/models"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
 	"go.uber.org/zap"
@@ -51,6 +56,12 @@ func createDefaultAdmin() error {
 	}
 
 	if count == 0 {
+		// Generate secure random password
+		password, err := generateSecurePassword(16)
+		if err != nil {
+			return fmt.Errorf("failed to generate admin password: %w", err)
+		}
+
 		admin := &models.User{
 			Username: "admin",
 			Email:    "admin@stumpfworks.local",
@@ -59,7 +70,7 @@ func createDefaultAdmin() error {
 			IsActive: true,
 		}
 
-		if err := admin.SetPassword("admin"); err != nil {
+		if err := admin.SetPassword(password); err != nil {
 			return err
 		}
 
@@ -67,10 +78,40 @@ func createDefaultAdmin() error {
 			return err
 		}
 
-		logger.Info("Default admin user created",
-			zap.String("username", admin.Username),
-			zap.String("password", "admin (PLEASE CHANGE THIS!)"))
+		// Print to STDOUT (not logs!) so it's visible but not persisted
+		fmt.Fprintln(os.Stdout, "\n"+separator(80))
+		fmt.Fprintln(os.Stdout, "🔐 DEFAULT ADMIN USER CREATED")
+		fmt.Fprintln(os.Stdout, separator(80))
+		fmt.Fprintf(os.Stdout, "   Username: %s\n", admin.Username)
+		fmt.Fprintf(os.Stdout, "   Password: %s\n", password)
+		fmt.Fprintln(os.Stdout, separator(80))
+		fmt.Fprintln(os.Stdout, "⚠️  IMPORTANT:")
+		fmt.Fprintln(os.Stdout, "   - Save this password NOW! It will not be shown again.")
+		fmt.Fprintln(os.Stdout, "   - Change this password immediately after first login!")
+		fmt.Fprintln(os.Stdout, "   - This password is NOT stored in logs for security.")
+		fmt.Fprintln(os.Stdout, separator(80)+"\n")
+
+		logger.Info("Default admin user created with random password (displayed on console)")
 	}
 
 	return nil
+}
+
+// generateSecurePassword generates a cryptographically secure random password
+func generateSecurePassword(length int) (string, error) {
+	bytes := make([]byte, length)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	// Use base64 encoding for readable password
+	return base64.URLEncoding.EncodeToString(bytes)[:length], nil
+}
+
+// separator creates a visual separator line
+func separator(width int) string {
+	s := ""
+	for i := 0; i < width; i++ {
+		s += "="
+	}
+	return s
 }

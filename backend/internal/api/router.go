@@ -5,14 +5,14 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-	"github.com/go-chi/cors"
 	"github.com/Stumpf-works/stumpfworks-nas/embedfs"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/api/handlers"
 	mw "github.com/Stumpf-works/stumpfworks-nas/internal/api/middleware"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/config"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 	"go.uber.org/zap"
 )
 
@@ -28,9 +28,20 @@ func NewRouter(cfg *config.Config) http.Handler {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
 
-	// CORS middleware
+	// CORS middleware - origins from config
+	allowedOrigins := cfg.Server.AllowedOrigins
+	if len(allowedOrigins) == 0 {
+		// Fallback to localhost if not configured (development only)
+		if cfg.IsDevelopment() {
+			allowedOrigins = []string{"http://localhost:3000", "http://localhost:5173"}
+			logger.Warn("No CORS origins configured, using development defaults")
+		} else {
+			logger.Error("No CORS origins configured in production mode!")
+		}
+	}
+
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:3000", "http://localhost:5173"}, // Vite dev server
+		AllowedOrigins:   allowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders:   []string{"Link"},
