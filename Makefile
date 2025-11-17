@@ -1,4 +1,4 @@
-.PHONY: help install dev build release test clean docker-build docker-up docker-down lint format upgrade
+.PHONY: help install dev build release test clean docker-build docker-up docker-down lint format upgrade install-system uninstall
 
 # Default target
 help:
@@ -9,7 +9,12 @@ help:
 	@echo "  make dev           - Run development servers (backend + frontend)"
 	@echo "  make build         - Build for production"
 	@echo "  make release       - Build release binaries for all platforms"
-	@echo "  make upgrade       - Upgrade existing installation (auto-detects location)"
+	@echo ""
+	@echo "System Installation:"
+	@echo "  make install-system - Install to system (creates systemd service)"
+	@echo "  make upgrade        - Upgrade existing installation (auto-detects location)"
+	@echo "  make uninstall      - Remove system installation"
+	@echo ""
 	@echo "  make test          - Run all tests"
 	@echo "  make lint          - Run linters"
 	@echo "  make format        - Format code"
@@ -275,6 +280,192 @@ upgrade:
 	echo "   http://localhost:8080"; \
 	echo "   http://$$(hostname -I | awk '{print $$1}'):8080"; \
 	echo "";
+
+# Install to system (first-time installation)
+install-system:
+	@echo "╔════════════════════════════════════════════════════════════════╗"
+	@echo "║  Stumpf.Works NAS - System Installation                       ║"
+	@echo "╚════════════════════════════════════════════════════════════════╝"
+	@echo ""
+	@# Check if already installed
+	@if [ -f /usr/local/bin/stumpfworks-nas ] || [ -f /usr/bin/stumpfworks-nas ] || [ -f /opt/stumpfworks-nas/stumpfworks-nas ]; then \
+		echo "⚠️  Installation detected!"; \
+		echo ""; \
+		echo "Found existing installation. Use 'make upgrade' instead."; \
+		echo "Or run 'make uninstall' first to remove the old installation."; \
+		exit 1; \
+	fi
+	@echo "📦 Building Stumpf.Works NAS..."
+	@$(MAKE) build 2>&1 | grep -E "(Building|✓|Copying)" || true
+	@if [ ! -f "dist/stumpfworks-server" ]; then \
+		echo "❌ Build failed!"; \
+		exit 1; \
+	fi
+	@echo ""
+	@echo "📥 Installing to system..."
+	@# Create installation directory
+	@sudo mkdir -p /opt/stumpfworks-nas
+	@sudo mkdir -p /etc/stumpfworks-nas
+	@sudo mkdir -p /var/lib/stumpfworks-nas
+	@sudo mkdir -p /var/log/stumpfworks-nas
+	@# Install binary
+	@sudo cp dist/stumpfworks-server /usr/local/bin/stumpfworks-nas
+	@sudo chmod +x /usr/local/bin/stumpfworks-nas
+	@echo "   ✓ Binary installed to /usr/local/bin/stumpfworks-nas"
+	@# Create default config if it doesn't exist
+	@if [ ! -f /etc/stumpfworks-nas/config.yaml ]; then \
+		echo "   Creating default configuration..."; \
+		sudo bash -c 'cat > /etc/stumpfworks-nas/config.yaml << EOF\n\
+# Stumpf.Works NAS Configuration\n\
+server:\n\
+  host: 0.0.0.0\n\
+  port: 8080\n\
+  environment: production\n\
+  allowedOrigins: []\n\
+\n\
+database:\n\
+  path: /var/lib/stumpfworks-nas/stumpfworks.db\n\
+\n\
+storage:\n\
+  basePath: /mnt/storage\n\
+  shares:\n\
+    - name: "Public"\n\
+      path: "/mnt/storage/public"\n\
+      readOnly: false\n\
+\n\
+auth:\n\
+  jwtSecret: "$$(openssl rand -base64 32)"\n\
+  sessionTimeout: 24h\n\
+\n\
+logging:\n\
+  level: info\n\
+  file: /var/log/stumpfworks-nas/stumpfworks.log\n\
+EOF'; \
+		echo "   ✓ Configuration created at /etc/stumpfworks-nas/config.yaml"; \
+	else \
+		echo "   ⚠️  Existing config found, keeping it"; \
+	fi
+	@# Create systemd service
+	@echo "   Creating systemd service..."
+	@sudo bash -c 'cat > /etc/systemd/system/stumpfworks-nas.service << EOF\n\
+[Unit]\n\
+Description=Stumpf.Works NAS Server\n\
+After=network.target\n\
+\n\
+[Service]\n\
+Type=simple\n\
+User=root\n\
+Group=root\n\
+WorkingDirectory=/opt/stumpfworks-nas\n\
+ExecStart=/usr/local/bin/stumpfworks-nas --config /etc/stumpfworks-nas/config.yaml\n\
+Restart=always\n\
+RestartSec=10\n\
+StandardOutput=journal\n\
+StandardError=journal\n\
+SyslogIdentifier=stumpfworks-nas\n\
+\n\
+# Security settings\n\
+NoNewPrivileges=false\n\
+PrivateTmp=true\n\
+\n\
+# Resource limits\n\
+LimitNOFILE=65536\n\
+\n\
+[Install]\n\
+WantedBy=multi-user.target\n\
+EOF'
+	@echo "   ✓ Systemd service created"
+	@# Reload systemd
+	@sudo systemctl daemon-reload
+	@echo "   ✓ Systemd daemon reloaded"
+	@# Enable and start service
+	@echo ""
+	@echo "🚀 Starting service..."
+	@sudo systemctl enable stumpfworks-nas.service
+	@sudo systemctl start stumpfworks-nas.service
+	@sleep 2
+	@if systemctl is-active --quiet stumpfworks-nas.service; then \
+		echo "   ✓ Service started successfully"; \
+	else \
+		echo "   ❌ Service failed to start!"; \
+		echo "   Check logs with: sudo journalctl -u stumpfworks-nas.service"; \
+		exit 1; \
+	fi
+	@echo ""
+	@echo "╔════════════════════════════════════════════════════════════════╗"
+	@echo "║  ✅ Installation Complete!                                     ║"
+	@echo "╚════════════════════════════════════════════════════════════════╝"
+	@echo ""
+	@echo "📍 Installed to: /usr/local/bin/stumpfworks-nas"
+	@echo "⚙️  Configuration: /etc/stumpfworks-nas/config.yaml"
+	@echo "💾 Database: /var/lib/stumpfworks-nas/stumpfworks.db"
+	@echo "📄 Logs: /var/log/stumpfworks-nas/stumpfworks.log"
+	@echo "🔄 Service: stumpfworks-nas.service (enabled & running)"
+	@echo ""
+	@echo "🌐 Access your NAS:"
+	@echo "   http://localhost:8080"
+	@echo "   http://$$(hostname -I | awk '{print $$1}'):8080"
+	@echo ""
+	@echo "📋 Useful commands:"
+	@echo "   sudo systemctl status stumpfworks-nas    - Check status"
+	@echo "   sudo systemctl restart stumpfworks-nas   - Restart service"
+	@echo "   sudo journalctl -u stumpfworks-nas -f    - View logs"
+	@echo "   make upgrade                              - Upgrade to new version"
+	@echo "   make uninstall                            - Remove installation"
+	@echo ""
+	@echo "⚠️  IMPORTANT: Change the default admin password after first login!"
+	@echo ""
+
+# Uninstall from system
+uninstall:
+	@echo "╔════════════════════════════════════════════════════════════════╗"
+	@echo "║  Stumpf.Works NAS - Uninstallation                            ║"
+	@echo "╚════════════════════════════════════════════════════════════════╝"
+	@echo ""
+	@echo "⚠️  This will remove Stumpf.Works NAS from your system."
+	@echo "⚠️  Your data and configuration will be preserved."
+	@echo ""
+	@read -p "Are you sure? (yes/no): " confirm; \
+	if [ "$$confirm" != "yes" ]; then \
+		echo "Aborted."; \
+		exit 0; \
+	fi
+	@echo ""
+	@echo "🛑 Stopping service..."
+	@sudo systemctl stop stumpfworks-nas.service 2>/dev/null || true
+	@sudo systemctl disable stumpfworks-nas.service 2>/dev/null || true
+	@echo "   ✓ Service stopped"
+	@echo ""
+	@echo "🗑️  Removing files..."
+	@sudo rm -f /usr/local/bin/stumpfworks-nas
+	@sudo rm -f /usr/bin/stumpfworks-nas
+	@sudo rm -f /etc/systemd/system/stumpfworks-nas.service
+	@sudo systemctl daemon-reload
+	@echo "   ✓ Binary removed"
+	@echo "   ✓ Systemd service removed"
+	@echo ""
+	@echo "📁 Preserved files (remove manually if needed):"
+	@if [ -d /etc/stumpfworks-nas ]; then \
+		echo "   /etc/stumpfworks-nas/ (configuration)"; \
+	fi
+	@if [ -d /var/lib/stumpfworks-nas ]; then \
+		echo "   /var/lib/stumpfworks-nas/ (database)"; \
+	fi
+	@if [ -d /var/log/stumpfworks-nas ]; then \
+		echo "   /var/log/stumpfworks-nas/ (logs)"; \
+	fi
+	@if [ -d /opt/stumpfworks-nas ]; then \
+		echo "   /opt/stumpfworks-nas/ (data)"; \
+	fi
+	@echo ""
+	@echo "✅ Uninstallation complete!"
+	@echo ""
+	@echo "To completely remove all data:"
+	@echo "  sudo rm -rf /etc/stumpfworks-nas"
+	@echo "  sudo rm -rf /var/lib/stumpfworks-nas"
+	@echo "  sudo rm -rf /var/log/stumpfworks-nas"
+	@echo "  sudo rm -rf /opt/stumpfworks-nas"
+	@echo ""
 
 # ISO builder (future)
 iso:
