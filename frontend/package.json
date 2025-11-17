@@ -1,6 +1,6 @@
 {
   "name": "@stumpfworks/nas-frontend",
-  "version": "1.0.0",
+  "version": "1.3.0",
   "description": "macOS-inspired web interface for Stumpf.Works NAS",
   "private": true,
   "type": "module",
