@@ -32,6 +32,7 @@ func RunMigrations() error {
 		&models.TwoFactorAttempt{},
 		&models.SystemMetric{},
 		&models.HealthScore{},
+		&models.MonitoringConfig{},
 		// Add more models here as they are created
 	); err != nil {
 		return err

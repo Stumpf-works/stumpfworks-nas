@@ -371,6 +371,73 @@ func (mc *MetricsCollector) collectZFSMetrics(metrics *SystemMetrics) {
 }
 func (mc *MetricsCollector) collectSMARTMetrics(metrics *SystemMetrics) {
 	metrics.DiskSMART = make([]DiskSMARTMetric, 0)
+
+	// Get list of block devices
+	partitions, err := disk.Partitions(true)
+	if err != nil {
+		return
+	}
+
+	// Track unique devices to avoid duplicates
+	devicesSeen := make(map[string]bool)
+
+	for _, partition := range partitions {
+		// Extract base device name (e.g., /dev/sda from /dev/sda1)
+		device := strings.TrimRight(partition.Device, "0123456789")
+		if device == "" || devicesSeen[device] {
+			continue
+		}
+		devicesSeen[device] = true
+
+		// Skip non-physical devices
+		if strings.Contains(device, "loop") || strings.Contains(device, "ram") {
+			continue
+		}
+
+		// Try to get SMART data using smartctl
+		cmd := exec.Command("smartctl", "-A", "-j", device)
+		output, err := cmd.Output()
+		if err != nil {
+			// SMART might not be available for this device, skip
+			continue
+		}
+
+		// Simple parsing - look for health status
+		healthy := 1.0
+		temp := 0.0
+
+		// Check if output contains "PASSED" (simple fallback if JSON parsing fails)
+		if strings.Contains(string(output), "PASSED") || strings.Contains(string(output), "OK") {
+			healthy = 1.0
+		} else if strings.Contains(string(output), "FAIL") {
+			healthy = 0.0
+		}
+
+		// Try to extract temperature (look for temperature value in output)
+		tempRegex := strings.Contains(string(output), "Temperature")
+		if tempRegex {
+			// Simple extraction - could be enhanced
+			lines := strings.Split(string(output), "\n")
+			for _, line := range lines {
+				if strings.Contains(line, "Temperature") && strings.Contains(line, "Celsius") {
+					// Extract number
+					fields := strings.Fields(line)
+					for i, field := range fields {
+						if field == "Temperature" && i+1 < len(fields) {
+							fmt.Sscanf(fields[i+1], "%f", &temp)
+							break
+						}
+					}
+				}
+			}
+		}
+
+		metrics.DiskSMART = append(metrics.DiskSMART, DiskSMARTMetric{
+			Device:      device,
+			Healthy:     healthy,
+			Temperature: temp,
+		})
+	}
 }
 
 
@@ -407,9 +474,43 @@ func (mc *MetricsCollector) collectServiceMetrics(metrics *SystemMetrics) {
 
 // collectShareConnections collects active share connection counts
 func (mc *MetricsCollector) collectShareConnections(metrics *SystemMetrics) {
+	sambaCount := 0
+	nfsCount := 0
+
+	// Count Samba connections using smbstatus
+	cmd := exec.Command("smbstatus", "-b")
+	output, err := cmd.Output()
+	if err == nil {
+		// Count non-empty lines that are not headers
+		lines := strings.Split(string(output), "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			// Skip empty lines and header lines
+			if line != "" && !strings.HasPrefix(line, "Samba") &&
+			   !strings.HasPrefix(line, "PID") && !strings.HasPrefix(line, "-") {
+				sambaCount++
+			}
+		}
+	}
+
+	// Count NFS connections by checking established connections on port 2049
+	cmd = exec.Command("sh", "-c", "ss -tn state established '( dport = :2049 or sport = :2049 )' | wc -l")
+	output, err = cmd.Output()
+	if err == nil {
+		// Parse count (subtract 1 for header line)
+		count := 0
+		fmt.Sscanf(string(output), "%d", &count)
+		if count > 0 {
+			nfsCount = count - 1 // Subtract header
+		}
+		if nfsCount < 0 {
+			nfsCount = 0
+		}
+	}
+
 	metrics.ShareConnections = ShareConnectionMetrics{
-		SambaConnections: 0,
-		NFSConnections:   0,
+		SambaConnections: sambaCount,
+		NFSConnections:   nfsCount,
 	}
 }
 
