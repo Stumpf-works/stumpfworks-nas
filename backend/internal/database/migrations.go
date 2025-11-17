@@ -1,4 +1,4 @@
-// Revision: 2025-11-16 | Author: Claude | Version: 1.1.1
+// Revision: 2025-11-17 | Author: Claude | Version: 1.1.2
 package database
 
 import (
@@ -9,7 +9,6 @@ import (
 
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database/models"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
-	"go.uber.org/zap"
 )
 
 // RunMigrations runs all database migrations
