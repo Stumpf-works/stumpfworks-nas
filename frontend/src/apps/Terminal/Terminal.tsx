@@ -196,11 +196,11 @@ export function Terminal() {
   return (
     <div className="flex flex-col h-full bg-gray-900 text-green-400 font-mono">
       {/* Header */}
-      <div className="p-4 border-b border-gray-700 bg-gray-800 flex justify-between items-center">
-        <div className="flex items-center gap-3">
-          <span className="text-2xl">💻</span>
+      <div className="p-3 md:p-4 border-b border-gray-700 bg-gray-800 flex justify-between items-center">
+        <div className="flex items-center gap-2 md:gap-3">
+          <span className="text-xl md:text-2xl">💻</span>
           <div>
-            <h1 className="text-lg font-bold text-gray-100">Terminal</h1>
+            <h1 className="text-base md:text-lg font-bold text-gray-100">Terminal</h1>
             <p className="text-xs text-gray-400">
               {isConnected ? (
                 <span className="text-green-400">● Connected</span>
@@ -213,10 +213,11 @@ export function Terminal() {
         <div className="flex gap-2">
           <button
             onClick={handleClear}
-            className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded text-sm transition-colors"
+            className="px-2 md:px-3 py-1 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded text-xs md:text-sm transition-colors"
             title="Clear terminal (Ctrl+L)"
           >
-            Clear
+            <span className="hidden sm:inline">Clear</span>
+            <span className="sm:hidden">🗑️</span>
           </button>
         </div>
       </div>
@@ -224,7 +225,7 @@ export function Terminal() {
       {/* Terminal Output */}
       <div
         ref={terminalRef}
-        className="flex-1 overflow-y-auto p-4 space-y-1 text-sm"
+        className="flex-1 overflow-y-auto p-3 md:p-4 space-y-1 text-xs md:text-sm"
         onClick={() => inputRef.current?.focus()}
       >
         {output.map((line, index) => (
@@ -256,11 +257,12 @@ export function Terminal() {
       </div>
 
       {/* Footer Hints */}
-      <div className="px-4 py-2 border-t border-gray-700 bg-gray-800 text-xs text-gray-500 flex justify-between">
-        <div className="space-x-4">
-          <span>Ctrl+C: Interrupt</span>
-          <span>Ctrl+L: Clear</span>
-          <span>↑↓: History</span>
+      <div className="px-3 md:px-4 py-2 border-t border-gray-700 bg-gray-800 text-xs text-gray-500 flex flex-col sm:flex-row justify-between gap-2">
+        <div className="flex flex-wrap gap-2 sm:gap-4">
+          <span className="hidden sm:inline">Ctrl+C: Interrupt</span>
+          <span className="hidden sm:inline">Ctrl+L: Clear</span>
+          <span className="hidden sm:inline">↑↓: History</span>
+          <span className="sm:hidden">^C: Interrupt | ^L: Clear | ↑↓: History</span>
         </div>
         <div>
           {commandHistory.length} command{commandHistory.length !== 1 ? 's' : ''} in history
