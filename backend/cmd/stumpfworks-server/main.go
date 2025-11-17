@@ -93,6 +93,13 @@ func main() {
 	}
 	logger.Info("System library initialized")
 
+	// Start System Library background tasks (metrics collection, etc.)
+	if err := system.MustGet().Start(); err != nil {
+		logger.Warn("Failed to start system library background tasks",
+			zap.Error(err),
+			zap.String("message", "Metrics collection may be limited"))
+	}
+
 	// Initialize Samba user manager (non-fatal if Samba not installed)
 	if err := initializeSambaUserManager(); err != nil {
 		logger.Warn("Samba user manager initialization failed",

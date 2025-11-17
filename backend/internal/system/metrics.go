@@ -123,16 +123,20 @@ func NewMetricsCollector(interval time.Duration) (*MetricsCollector, error) {
 		maxHistory: 100, // Keep last 100 readings
 	}
 
-	// Collect initial metrics
-	if err := mc.collect(); err != nil {
-		return nil, fmt.Errorf("failed to collect initial metrics: %w", err)
-	}
+	// DON'T collect initial metrics here to avoid deadlock during system library initialization
+	// Initial collection will happen when Start() is called after initialization completes
 
 	return mc, nil
 }
 
 // Start starts the metrics collection in background
 func (mc *MetricsCollector) Start(ctx context.Context) error {
+	// Collect initial metrics now that system library is fully initialized
+	if err := mc.collect(); err != nil {
+		logger.Warn("Failed to collect initial metrics", zap.Error(err))
+		// Don't fail - metrics will be collected on next interval
+	}
+
 	go mc.run(ctx)
 	logger.Info("Metrics collector started", zap.Duration("interval", mc.interval))
 	return nil
