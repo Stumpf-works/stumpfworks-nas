@@ -133,48 +133,48 @@ export function AuditLogs() {
   const totalPages = Math.ceil(totalLogs / pageSize);
 
   return (
-    <div className="p-6 h-full overflow-auto bg-gray-50 dark:bg-macos-dark-50">
+    <div className="p-4 md:p-6 h-full overflow-auto bg-gray-50 dark:bg-macos-dark-50">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+      <div className="mb-4 md:mb-6">
+        <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100">
           Security Audit Logs
         </h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">
+        <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 mt-1">
           View and analyze system security events
         </p>
       </div>
 
       {/* Stats Cards */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
           <Card>
-            <div className="p-4">
-              <p className="text-sm text-gray-600 dark:text-gray-400">Total Logs</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            <div className="p-3 md:p-4">
+              <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">Total Logs</p>
+              <p className="text-lg md:text-2xl font-bold text-gray-900 dark:text-gray-100">
                 {stats.total.toLocaleString()}
               </p>
             </div>
           </Card>
           <Card>
-            <div className="p-4">
-              <p className="text-sm text-gray-600 dark:text-gray-400">Last 24 Hours</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            <div className="p-3 md:p-4">
+              <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">Last 24 Hours</p>
+              <p className="text-lg md:text-2xl font-bold text-gray-900 dark:text-gray-100">
                 {stats.last_24h.toLocaleString()}
               </p>
             </div>
           </Card>
           <Card>
-            <div className="p-4">
-              <p className="text-sm text-gray-600 dark:text-gray-400">Critical Events</p>
-              <p className="text-2xl font-bold text-red-600 dark:text-red-400">
+            <div className="p-3 md:p-4">
+              <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">Critical Events</p>
+              <p className="text-lg md:text-2xl font-bold text-red-600 dark:text-red-400">
                 {stats.by_severity?.find((s) => s.severity === 'critical')?.count || 0}
               </p>
             </div>
           </Card>
           <Card>
-            <div className="p-4">
-              <p className="text-sm text-gray-600 dark:text-gray-400">Warnings</p>
-              <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+            <div className="p-3 md:p-4">
+              <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">Warnings</p>
+              <p className="text-lg md:text-2xl font-bold text-yellow-600 dark:text-yellow-400">
                 {stats.by_severity?.find((s) => s.severity === 'warning')?.count || 0}
               </p>
             </div>
@@ -183,14 +183,14 @@ export function AuditLogs() {
       )}
 
       {/* Filters */}
-      <Card className="mb-6">
-        <div className="p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+      <Card className="mb-4 md:mb-6">
+        <div className="p-4 md:p-6">
+          <h2 className="text-base md:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
             Filters
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Username
               </label>
               <Input
@@ -200,7 +200,7 @@ export function AuditLogs() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Action
               </label>
               <Input
@@ -210,13 +210,13 @@ export function AuditLogs() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Status
               </label>
               <select
                 value={filters.status || ''}
                 onChange={(e) => handleFilterChange('status', e.target.value)}
-                className="w-full px-3 py-2 bg-white dark:bg-macos-dark-200 border border-gray-300 dark:border-macos-dark-300 rounded-md text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-macos-blue"
+                className="w-full px-3 py-2 text-xs md:text-sm bg-white dark:bg-macos-dark-200 border border-gray-300 dark:border-macos-dark-300 rounded-md text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-macos-blue"
               >
                 <option value="">All Statuses</option>
                 <option value="success">Success</option>
@@ -225,13 +225,13 @@ export function AuditLogs() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Severity
               </label>
               <select
                 value={filters.severity || ''}
                 onChange={(e) => handleFilterChange('severity', e.target.value)}
-                className="w-full px-3 py-2 bg-white dark:bg-macos-dark-200 border border-gray-300 dark:border-macos-dark-300 rounded-md text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-macos-blue"
+                className="w-full px-3 py-2 text-xs md:text-sm bg-white dark:bg-macos-dark-200 border border-gray-300 dark:border-macos-dark-300 rounded-md text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-macos-blue"
               >
                 <option value="">All Severities</option>
                 <option value="info">Info</option>
@@ -240,7 +240,7 @@ export function AuditLogs() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Start Date
               </label>
               <Input
@@ -250,7 +250,7 @@ export function AuditLogs() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 End Date
               </label>
               <Input
@@ -273,8 +273,8 @@ export function AuditLogs() {
 
       {/* Error Message */}
       {error && (
-        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-          <p className="text-red-800 dark:text-red-200">{error}</p>
+        <div className="mb-4 md:mb-6 p-3 md:p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+          <p className="text-sm md:text-base text-red-800 dark:text-red-200">{error}</p>
         </div>
       )}
 
@@ -284,25 +284,25 @@ export function AuditLogs() {
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-macos-dark-200 border-b border-gray-200 dark:border-macos-dark-300">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Timestamp
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   User
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Action
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Resource
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Severity
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   IP Address
                 </th>
               </tr>
@@ -310,13 +310,13 @@ export function AuditLogs() {
             <tbody className="bg-white dark:bg-macos-dark-100 divide-y divide-gray-200 dark:divide-macos-dark-300">
               {isLoading ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                  <td colSpan={7} className="px-4 md:px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
                     Loading audit logs...
                   </td>
                 </tr>
               ) : logs.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                  <td colSpan={7} className="px-4 md:px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
                     No audit logs found
                   </td>
                 </tr>
@@ -327,19 +327,19 @@ export function AuditLogs() {
                     onClick={() => setSelectedLog(log)}
                     className="hover:bg-gray-50 dark:hover:bg-macos-dark-200 cursor-pointer transition-colors"
                   >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                    <td className="px-4 md:px-6 py-4 whitespace-nowrap text-xs md:text-sm text-gray-900 dark:text-gray-100">
                       {formatDate(log.createdAt)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                    <td className="px-4 md:px-6 py-4 whitespace-nowrap text-xs md:text-sm text-gray-900 dark:text-gray-100">
                       {log.username}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                    <td className="px-4 md:px-6 py-4 whitespace-nowrap text-xs md:text-sm text-gray-900 dark:text-gray-100">
                       {log.action}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">
+                    <td className="px-4 md:px-6 py-4 whitespace-nowrap text-xs md:text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">
                       {log.resource || '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 md:px-6 py-4 whitespace-nowrap">
                       <span
                         className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(
                           log.status
@@ -348,7 +348,7 @@ export function AuditLogs() {
                         {log.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 md:px-6 py-4 whitespace-nowrap">
                       <span
                         className={`px-2 py-1 text-xs font-medium rounded-full ${getSeverityColor(
                           log.severity
@@ -357,7 +357,7 @@ export function AuditLogs() {
                         {log.severity}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    <td className="px-4 md:px-6 py-4 whitespace-nowrap text-xs md:text-sm text-gray-500 dark:text-gray-400">
                       {log.ipAddress || '-'}
                     </td>
                   </tr>
@@ -369,8 +369,8 @@ export function AuditLogs() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="px-6 py-4 border-t border-gray-200 dark:border-macos-dark-300 flex items-center justify-between">
-            <div className="text-sm text-gray-600 dark:text-gray-400">
+          <div className="px-4 md:px-6 py-4 border-t border-gray-200 dark:border-macos-dark-300 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
               Showing {(currentPage - 1) * pageSize + 1} to{' '}
               {Math.min(currentPage * pageSize, totalLogs)} of {totalLogs} logs
             </div>
@@ -384,7 +384,7 @@ export function AuditLogs() {
                 Previous
               </Button>
               <div className="flex items-center gap-2 px-3">
-                <span className="text-sm text-gray-600 dark:text-gray-400">
+                <span className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
                   Page {currentPage} of {totalPages}
                 </span>
               </div>
@@ -418,9 +418,9 @@ export function AuditLogs() {
               onClick={(e) => e.stopPropagation()}
               className="bg-white dark:bg-macos-dark-100 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-auto"
             >
-              <div className="p-6">
+              <div className="p-4 md:p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                  <h2 className="text-lg md:text-xl font-bold text-gray-900 dark:text-gray-100">
                     Audit Log Details
                   </h2>
                   <button
@@ -428,7 +428,7 @@ export function AuditLogs() {
                     className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                   >
                     <svg
-                      className="w-6 h-6"
+                      className="w-5 h-5 md:w-6 md:h-6"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -443,54 +443,54 @@ export function AuditLogs() {
                   </button>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-3 md:space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">
+                    <label className="block text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400">
                       ID
                     </label>
-                    <p className="mt-1 text-gray-900 dark:text-gray-100">{selectedLog.id}</p>
+                    <p className="mt-1 text-sm md:text-base text-gray-900 dark:text-gray-100">{selectedLog.id}</p>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">
+                    <label className="block text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400">
                       Timestamp
                     </label>
-                    <p className="mt-1 text-gray-900 dark:text-gray-100">
+                    <p className="mt-1 text-sm md:text-base text-gray-900 dark:text-gray-100">
                       {formatDate(selectedLog.createdAt)}
                     </p>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">
+                    <label className="block text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400">
                       User
                     </label>
-                    <p className="mt-1 text-gray-900 dark:text-gray-100">
+                    <p className="mt-1 text-sm md:text-base text-gray-900 dark:text-gray-100">
                       {selectedLog.username}
                       {selectedLog.userId && ` (ID: ${selectedLog.userId})`}
                     </p>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">
+                    <label className="block text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400">
                       Action
                     </label>
-                    <p className="mt-1 text-gray-900 dark:text-gray-100">{selectedLog.action}</p>
+                    <p className="mt-1 text-sm md:text-base text-gray-900 dark:text-gray-100">{selectedLog.action}</p>
                   </div>
 
                   {selectedLog.resource && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">
+                      <label className="block text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400">
                         Resource
                       </label>
-                      <p className="mt-1 text-gray-900 dark:text-gray-100 break-all">
+                      <p className="mt-1 text-sm md:text-base text-gray-900 dark:text-gray-100 break-all">
                         {selectedLog.resource}
                       </p>
                     </div>
                   )}
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-3 md:gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">
+                      <label className="block text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400">
                         Status
                       </label>
                       <span
@@ -502,7 +502,7 @@ export function AuditLogs() {
                       </span>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">
+                      <label className="block text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400">
                         Severity
                       </label>
                       <span
@@ -517,10 +517,10 @@ export function AuditLogs() {
 
                   {selectedLog.ipAddress && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">
+                      <label className="block text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400">
                         IP Address
                       </label>
-                      <p className="mt-1 text-gray-900 dark:text-gray-100">
+                      <p className="mt-1 text-sm md:text-base text-gray-900 dark:text-gray-100">
                         {selectedLog.ipAddress}
                       </p>
                     </div>
@@ -528,10 +528,10 @@ export function AuditLogs() {
 
                   {selectedLog.userAgent && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">
+                      <label className="block text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400">
                         User Agent
                       </label>
-                      <p className="mt-1 text-gray-900 dark:text-gray-100 text-sm break-all">
+                      <p className="mt-1 text-xs md:text-sm text-gray-900 dark:text-gray-100 break-all">
                         {selectedLog.userAgent}
                       </p>
                     </div>
@@ -539,26 +539,26 @@ export function AuditLogs() {
 
                   {selectedLog.message && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">
+                      <label className="block text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400">
                         Message
                       </label>
-                      <p className="mt-1 text-gray-900 dark:text-gray-100">{selectedLog.message}</p>
+                      <p className="mt-1 text-sm md:text-base text-gray-900 dark:text-gray-100">{selectedLog.message}</p>
                     </div>
                   )}
 
                   {selectedLog.details && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">
+                      <label className="block text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400">
                         Details
                       </label>
-                      <pre className="mt-1 text-sm text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-macos-dark-200 p-3 rounded overflow-auto max-h-48">
+                      <pre className="mt-1 text-xs md:text-sm text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-macos-dark-200 p-3 rounded overflow-auto max-h-48">
                         {JSON.stringify(JSON.parse(selectedLog.details), null, 2)}
                       </pre>
                     </div>
                   )}
                 </div>
 
-                <div className="mt-6 flex justify-end">
+                <div className="mt-4 md:mt-6 flex justify-end">
                   <Button variant="secondary" onClick={() => setSelectedLog(null)}>
                     Close
                   </Button>

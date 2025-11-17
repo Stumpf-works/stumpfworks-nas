@@ -9,13 +9,26 @@ server:
   readTimeout: "15s"
   writeTimeout: "15s"
   idleTimeout: "60s"
+  # CORS allowed origins - MUST be configured for production!
+  # Examples: ["https://nas.example.com", "https://nas.local"]
+  allowedOrigins:
+    - "http://localhost:3000"  # React dev server
+    - "http://localhost:5173"  # Vite dev server
+  # Trusted proxy IPs (for X-Forwarded-For headers)
+  trustedProxies:
+    - "127.0.0.1"
+    - "::1"
 
 database:
   driver: "sqlite"
   path: "./data/stumpfworks.db"
 
 auth:
-  jwtSecret: "${STUMPFWORKS_AUTH_JWTSECRET}" # Set via environment variable in production
+  # JWT Secret - CRITICAL SECURITY SETTING
+  # PRODUCTION: Must be 32+ characters, use environment variable or generate with:
+  #   openssl rand -base64 48
+  # Example: "VGhpc0lzQVZlcnlTZWN1cmVSYW5kb21TZWNyZXRGb3JKV1RUb2tlbnMxMjM0NTY="
+  jwtSecret: "${STUMPFWORKS_AUTH_JWTSECRET}" # Set via environment variable in production!
   jwtExpirationHours: 24
   jwtRefreshHours: 168 # 7 days
   bcryptCost: 12

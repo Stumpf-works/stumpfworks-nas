@@ -1,15 +1,39 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { dockerApi } from '@/api/docker';
+import { getErrorMessage } from '@/api/client';
 import ContainerManager from './components/ContainerManager';
 import ImageManager from './components/ImageManager';
 import VolumeManager from './components/VolumeManager';
 import NetworkManager from './components/NetworkManager';
 import StackManager from './components/StackManager';
+import Card from '@/components/ui/Card';
 
 type Tab = 'containers' | 'images' | 'volumes' | 'networks' | 'stacks';
 
 export function DockerManager() {
   const [activeTab, setActiveTab] = useState<Tab>('containers');
+  const [dockerAvailable, setDockerAvailable] = useState<boolean | null>(null);
+  const [dockerError, setDockerError] = useState<string>('');
+
+  useEffect(() => {
+    checkDockerAvailability();
+  }, []);
+
+  const checkDockerAvailability = async () => {
+    try {
+      const response = await dockerApi.getInfo();
+      if (response.success) {
+        setDockerAvailable(true);
+      } else {
+        setDockerAvailable(false);
+        setDockerError(response.error?.message || 'Docker is not available');
+      }
+    } catch (err) {
+      setDockerAvailable(false);
+      setDockerError(getErrorMessage(err));
+    }
+  };
 
   const tabs = [
     { id: 'containers' as Tab, name: 'Containers', icon: '📦' },
@@ -19,32 +43,95 @@ export function DockerManager() {
     { id: 'stacks' as Tab, name: 'Stacks', icon: '📚' },
   ];
 
+  // Show loading state
+  if (dockerAvailable === null) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full bg-gray-50 dark:bg-macos-dark-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-macos-blue"></div>
+        <p className="mt-4 text-gray-600 dark:text-gray-400">Checking Docker availability...</p>
+      </div>
+    );
+  }
+
+  // Show Docker not available message
+  if (dockerAvailable === false) {
+    return (
+      <div className="flex flex-col h-full bg-gray-50 dark:bg-macos-dark-50 p-4 md:p-6">
+        <div className="max-w-2xl mx-auto mt-12 w-full">
+          <Card>
+            <div className="p-6 md:p-8 text-center">
+              <div className="text-4xl md:text-6xl mb-4">🐋</div>
+              <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+                Docker Not Available
+              </h2>
+              <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 mb-6">
+                Docker is not running or not installed on this system.
+              </p>
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
+                <p className="text-xs md:text-sm text-yellow-800 dark:text-yellow-200 text-left break-words">
+                  <strong>Error:</strong> {dockerError}
+                </p>
+              </div>
+              <div className="text-left space-y-3">
+                <p className="text-sm md:text-base text-gray-700 dark:text-gray-300 font-semibold">
+                  To use Docker features:
+                </p>
+                <ol className="list-decimal list-inside text-xs md:text-sm text-gray-600 dark:text-gray-400 space-y-2">
+                  <li>Install Docker on your NAS system</li>
+                  <li>
+                    Start the Docker daemon:{' '}
+                    <code className="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-xs">
+                      sudo systemctl start docker
+                    </code>
+                  </li>
+                  <li>
+                    Enable Docker on boot:{' '}
+                    <code className="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-xs">
+                      sudo systemctl enable docker
+                    </code>
+                  </li>
+                  <li>Refresh this page</li>
+                </ol>
+              </div>
+              <button
+                onClick={checkDockerAvailability}
+                className="mt-6 px-4 py-2 bg-macos-blue text-white rounded-lg hover:bg-blue-600 transition-colors text-sm md:text-base"
+              >
+                Check Again
+              </button>
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full bg-gray-50 dark:bg-macos-dark-50">
       {/* Header */}
-      <div className="p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-macos-dark-100">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+      <div className="p-4 md:p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-macos-dark-100">
+        <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100">
           Docker Manager
         </h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">
+        <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 mt-1">
           Manage Docker containers, images, volumes, networks, and compose stacks
         </p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex items-center px-6 bg-white dark:bg-macos-dark-100 border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+      {/* Tabs - Responsive */}
+      <div className="flex items-center px-2 md:px-6 bg-white dark:bg-macos-dark-100 border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-4 py-3 font-medium text-sm whitespace-nowrap transition-colors relative ${
+            className={`flex items-center gap-1 md:gap-2 px-2 md:px-4 py-3 font-medium text-xs md:text-sm whitespace-nowrap transition-colors relative ${
               activeTab === tab.id
                 ? 'text-macos-blue dark:text-macos-blue'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
             }`}
           >
-            <span className="text-lg">{tab.icon}</span>
-            {tab.name}
+            <span className="text-base md:text-lg">{tab.icon}</span>
+            <span className="hidden sm:inline">{tab.name}</span>
             {activeTab === tab.id && (
               <motion.div
                 layoutId="dockerActiveTab"

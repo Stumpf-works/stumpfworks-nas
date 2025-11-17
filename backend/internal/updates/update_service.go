@@ -19,7 +19,7 @@ const (
 	GitHubAPIURL      = "https://api.github.com/repos/%s/releases/latest"
 	GitHubReleaseURL  = "https://github.com/%s/releases/tag/%s"
 	DefaultRepository = "Stumpf-works/stumpfworks-nas"
-	CurrentVersion    = "v1.1.0"
+	CurrentVersion    = "v1.3.0"
 )
 
 // UpdateService handles update checking and management
