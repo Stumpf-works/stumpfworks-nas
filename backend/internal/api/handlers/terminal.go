@@ -269,7 +269,8 @@ func (ts *TerminalSession) Handle() {
 
 // TerminalWebSocketHandler handles WebSocket connections for terminal access
 func TerminalWebSocketHandler(w http.ResponseWriter, r *http.Request) {
-	// Upgrade connection
+	// Upgrade connection with origin checking
+	upgrader := createUpgrader()
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		logger.Error("Failed to upgrade terminal WebSocket connection", zap.Error(err))
