@@ -36,7 +36,7 @@ func NewRouter(cfg *config.Config) http.Handler {
 		// Development mode: Allow all origins for local network access
 		// This enables access from any device on the local network
 		corsHandler = cors.New(cors.Options{
-			AllowOriginFunc: func(origin string) bool {
+			AllowOriginFunc: func(r *http.Request, origin string) bool {
 				// Always allow requests with no origin (same-origin or tools like curl)
 				if origin == "" {
 					return true
