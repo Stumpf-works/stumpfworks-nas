@@ -334,7 +334,7 @@ func (mc *MetricsCollector) collectGoRuntime(metrics *SystemMetrics) {
 func (mc *MetricsCollector) collectZFSMetrics(metrics *SystemMetrics) {
 	// Get ZFS manager from global system instance
 	sys := Get()
-	if sys == nil || sys.Storage == nil {
+	if sys == nil || sys.Storage == nil || sys.Storage.ZFS == nil {
 		return
 	}
 
