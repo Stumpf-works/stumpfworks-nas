@@ -4,14 +4,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
-import { usersApi, User } from '@/api/users';
-import { groupsApi, Group } from '@/api/groups';
+import { usersApi } from '@/api/users';
+import { groupsApi, UserGroup } from '@/api/groups';
+import { User } from '@/api/auth';
 import { getErrorMessage } from '@/api/client';
 
 export function UsersGroupsSection() {
   const [activeTab, setActiveTab] = useState<'users' | 'groups'>('users');
   const [users, setUsers] = useState<User[]>([]);
-  const [groups, setGroups] = useState<Group[]>([]);
+  const [groups, setGroups] = useState<UserGroup[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -34,7 +35,7 @@ export function UsersGroupsSection() {
   const [groupDialog, setGroupDialog] = useState<{
     open: boolean;
     mode: 'create' | 'edit';
-    group?: Group;
+    group?: UserGroup;
   }>({ open: false, mode: 'create' });
 
   const [groupForm, setGroupForm] = useState({
@@ -45,7 +46,7 @@ export function UsersGroupsSection() {
   // Group Members Dialog State
   const [membersDialog, setMembersDialog] = useState<{
     open: boolean;
-    group?: Group;
+    group?: UserGroup;
     members: any[];
   }>({ open: false, members: [] });
 
@@ -170,7 +171,7 @@ export function UsersGroupsSection() {
     setGroupDialog({ open: true, mode: 'create' });
   };
 
-  const handleEditGroup = (group: Group) => {
+  const handleEditGroup = (group: UserGroup) => {
     setGroupForm({
       name: group.name,
       description: group.description || '',
@@ -207,7 +208,7 @@ export function UsersGroupsSection() {
     }
   };
 
-  const handleDeleteGroup = async (group: Group) => {
+  const handleDeleteGroup = async (group: UserGroup) => {
     if (!confirm(`Are you sure you want to delete group "${group.name}"?`)) {
       return;
     }
@@ -226,7 +227,7 @@ export function UsersGroupsSection() {
   };
 
   // Group Members Management
-  const handleManageMembers = async (group: Group) => {
+  const handleManageMembers = async (group: UserGroup) => {
     try {
       const response = await groupsApi.getMembers(group.id);
       if (response.success && response.data) {
@@ -243,7 +244,7 @@ export function UsersGroupsSection() {
     if (!membersDialog.group || !selectedUserId) return;
 
     try {
-      const response = await groupsApi.addMember(membersDialog.group.id, selectedUserId);
+      const response = await groupsApi.addMember(membersDialog.group.id, parseInt(selectedUserId));
       if (response.success) {
         setSuccess('Member added successfully');
         handleManageMembers(membersDialog.group);
@@ -256,7 +257,7 @@ export function UsersGroupsSection() {
     }
   };
 
-  const handleRemoveMember = async (userId: string) => {
+  const handleRemoveMember = async (userId: number) => {
     if (!membersDialog.group) return;
 
     if (!confirm('Are you sure you want to remove this member?')) {

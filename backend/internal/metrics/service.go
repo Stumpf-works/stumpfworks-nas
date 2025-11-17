@@ -4,6 +4,7 @@ package metrics
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/disk"
+	"github.com/shirou/gopsutil/v3/host"
 	"github.com/shirou/gopsutil/v3/load"
 	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/shirou/gopsutil/v3/net"
@@ -146,8 +148,21 @@ func (s *Service) collectMetrics() {
 	}
 
 	// CPU temperature (may not be available on all systems)
-	// Note: This is simplified; real implementation may need platform-specific code
-	metric.CPUTemperature = 0 // Placeholder
+	if temps, err := host.SensorsTemperatures(); err == nil && len(temps) > 0 {
+		// Find the highest CPU temperature
+		maxTemp := 0.0
+		for _, temp := range temps {
+			// Look for CPU-related sensors (coretemp, k10temp, etc.)
+			if strings.Contains(strings.ToLower(temp.SensorKey), "core") ||
+				strings.Contains(strings.ToLower(temp.SensorKey), "cpu") ||
+				strings.Contains(strings.ToLower(temp.SensorKey), "package") {
+				if temp.Temperature > maxTemp {
+					maxTemp = temp.Temperature
+				}
+			}
+		}
+		metric.CPUTemperature = maxTemp
+	}
 
 	// Collect memory metrics
 	if vmem, err := mem.VirtualMemory(); err == nil {
@@ -332,8 +347,42 @@ func (s *Service) calculateHealthScore(metric *models.SystemMetric) {
 	}
 	score.DiskScore = diskScore
 
-	// Network score (based on packet errors, for now just set to 100)
-	score.NetworkScore = 100
+	// Network score (based on packet errors and utilization)
+	networkScore := 100
+
+	// Get current network stats to check for errors
+	if netIO, err := net.IOCounters(true); err == nil {
+		totalPackets := uint64(0)
+		totalErrors := uint64(0)
+
+		for _, io := range netIO {
+			// Skip loopback
+			if io.Name == "lo" {
+				continue
+			}
+			totalPackets += io.PacketsSent + io.PacketsRecv
+			totalErrors += io.Errin + io.Errout + io.Dropin + io.Dropout
+		}
+
+		// Calculate error rate
+		if totalPackets > 0 {
+			errorRate := float64(totalErrors) / float64(totalPackets) * 100
+
+			// Penalize based on error rate
+			if errorRate > 5.0 {
+				networkScore = 10 // Very high error rate
+			} else if errorRate > 2.0 {
+				networkScore = 40 // High error rate
+			} else if errorRate > 0.5 {
+				networkScore = 70 // Moderate error rate
+			} else if errorRate > 0.1 {
+				networkScore = 90 // Low error rate
+			}
+			// else: networkScore = 100 (very low/no errors)
+		}
+	}
+
+	score.NetworkScore = networkScore
 
 	// Overall score (weighted average)
 	score.Score = (cpuScore*30 + memoryScore*30 + diskScore*30 + score.NetworkScore*10) / 100

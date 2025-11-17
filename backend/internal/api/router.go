@@ -486,6 +486,14 @@ func NewRouter(cfg *config.Config) http.Handler {
 				r.Get("/logs", alertHandler.GetAlertLogs)
 			})
 
+			// Monitoring configuration routes
+			r.Route("/monitoring", func(r chi.Router) {
+				// Monitoring config management (admin only)
+				r.Use(mw.AdminOnly)
+				r.Get("/config", handlers.GetMonitoringConfig)
+				r.Put("/config", handlers.UpdateMonitoringConfig)
+			})
+
 			// Scheduler/Task routes
 			r.Route("/tasks", func(r chi.Router) {
 				schedulerHandler := handlers.NewSchedulerHandler()

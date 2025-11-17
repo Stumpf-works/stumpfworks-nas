@@ -28,7 +28,7 @@ export function SharesSection() {
     comment: '',
     readOnly: false,
     browseable: true,
-    guestOk: false,
+    guestOK: false,
   });
 
   // NFS Dialog State
@@ -95,7 +95,7 @@ export function SharesSection() {
       comment: '',
       readOnly: false,
       browseable: true,
-      guestOk: false,
+      guestOK: false,
     });
     setSambaDialog({ open: true, mode: 'create' });
   };
@@ -107,7 +107,7 @@ export function SharesSection() {
       comment: share.comment || '',
       readOnly: share.readOnly || false,
       browseable: share.browseable !== false,
-      guestOk: share.guestOk || false,
+      guestOK: share.guestOK || false,
     });
     setSambaDialog({ open: true, mode: 'edit', share });
   };
@@ -117,24 +117,13 @@ export function SharesSection() {
     setSuccess(null);
 
     try {
-      if (sambaDialog.mode === 'create') {
-        const response = await syslibApi.samba.createShare(sambaForm);
-        if (response.success) {
-          setSuccess('Samba share created successfully');
-          setSambaDialog({ open: false, mode: 'create' });
-          loadSambaShares();
-        } else {
-          setError(response.error?.message || 'Failed to create share');
-        }
-      } else if (sambaDialog.share) {
-        const response = await syslibApi.samba.updateShare(sambaDialog.share.name, sambaForm);
-        if (response.success) {
-          setSuccess('Samba share updated successfully');
-          setSambaDialog({ open: false, mode: 'edit' });
-          loadSambaShares();
-        } else {
-          setError(response.error?.message || 'Failed to update share');
-        }
+      const response = await syslibApi.samba.createShare(sambaForm);
+      if (response.success) {
+        setSuccess('Samba share created successfully');
+        setSambaDialog({ open: false, mode: 'create' });
+        loadSambaShares();
+      } else {
+        setError(response.error?.message || 'Failed to create share');
       }
     } catch (err) {
       setError(getErrorMessage(err));
@@ -186,7 +175,7 @@ export function SharesSection() {
     setNfsForm({
       path: nfsExport.path,
       clients: nfsExport.clients.join(' '),
-      options: nfsExport.options || 'rw,sync,no_subtree_check',
+      options: (nfsExport.options || []).join(',') || 'rw,sync,no_subtree_check',
     });
     setNfsDialog({ open: true, mode: 'edit', export: nfsExport, index });
   };
@@ -198,7 +187,7 @@ export function SharesSection() {
     const payload = {
       path: nfsForm.path,
       clients: nfsForm.clients.split(/[\s,]+/).filter((c) => c),
-      options: nfsForm.options,
+      options: nfsForm.options.split(',').map((o) => o.trim()).filter((o) => o),
     };
 
     try {
@@ -350,7 +339,7 @@ export function SharesSection() {
                                 Read-Only
                               </span>
                             )}
-                            {share.guestOk && (
+                            {share.guestOK && (
                               <span className="px-2 py-1 text-xs bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200 rounded">
                                 Guest Access
                               </span>
@@ -558,8 +547,8 @@ export function SharesSection() {
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="checkbox"
-                        checked={sambaForm.guestOk}
-                        onChange={(e) => setSambaForm({ ...sambaForm, guestOk: e.target.checked })}
+                        checked={sambaForm.guestOK}
+                        onChange={(e) => setSambaForm({ ...sambaForm, guestOK: e.target.checked })}
                         className="w-4 h-4 text-macos-blue bg-white dark:bg-macos-dark-100 border-gray-300 dark:border-macos-dark-300 rounded focus:ring-macos-blue"
                       />
                       <span className="text-xs md:text-sm text-gray-900 dark:text-gray-100">
