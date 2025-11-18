@@ -1,0 +1,67 @@
+============================================================================
+  StumpfWorks NAS Apps Repository - Windows Quick Start
+============================================================================
+
+SCHNELLSTE METHODE (3 Schritte):
+
+1. Template vom NAS holen
+   --------------------------------------------------
+   # Via Git Clone:
+   git clone https://github.com/Stumpf-works/stumpfworks-nas.git
+   cd stumpfworks-nas\apps-repository-template
+
+   # Oder vom Server:
+   scp -r user@nas:/home/user/stumpfworks-nas/apps-repository-template C:\Temp\
+   cd C:\Temp\apps-repository-template
+
+2. Setup ausführen
+   --------------------------------------------------
+   setup-windows.bat
+
+   # Oder PowerShell:
+   .\setup-windows.ps1
+
+3. Zu GitHub pushen
+   --------------------------------------------------
+   # Erst auf GitHub: Neues Repo erstellen "stumpfworks-nas-apps"
+
+   cd ..\stumpfworks-nas-apps
+   git remote add origin https://github.com/Stumpf-works/stumpfworks-nas-apps.git
+   git push -u origin main
+
+FERTIG! 🎉
+
+============================================================================
+
+VORAUSSETZUNGEN:
+- Git: https://git-scm.com/download/win
+- Python (optional): https://www.python.org/downloads/
+
+DETAILLIERTE ANLEITUNG:
+Siehe: WINDOWS_SETUP.md
+
+PROBLEME?
+- Git nicht gefunden → Git installieren und Terminal neu starten
+- Python nicht gefunden → Python installieren mit "Add to PATH"
+- PowerShell blockiert → Set-ExecutionPolicy RemoteSigned
+
+============================================================================
+
+SCHNELL-BEFEHLE:
+
+# Repository lokal haben?
+cd C:\Path\To\stumpfworks-nas\apps-repository-template
+setup-windows.bat
+
+# Nur Template?
+cd C:\Temp\apps-repository-template
+setup-windows.bat
+
+# Manuelle Kopie?
+xcopy /E /I C:\Source\apps-repository-template C:\Target\stumpfworks-nas-apps
+cd C:\Target\stumpfworks-nas-apps
+git init
+git add .
+git commit -m "Initial commit"
+
+============================================================================
