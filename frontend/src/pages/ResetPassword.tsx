@@ -5,7 +5,7 @@ import { authApi } from '@/api/auth';
 import { getErrorMessage } from '@/api/client';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
-import { FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
+import { CheckCircle, AlertCircle } from 'lucide-react';
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -94,7 +94,7 @@ export default function ResetPassword() {
                 transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
                 className="mx-auto mb-6 w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center"
               >
-                <FiCheckCircle className="w-12 h-12 text-green-600 dark:text-green-400" />
+                <CheckCircle className="w-12 h-12 text-green-600 dark:text-green-400" />
               </motion.div>
 
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
@@ -140,7 +140,7 @@ export default function ResetPassword() {
               animate={{ opacity: 1, y: 0 }}
               className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-3"
             >
-              <FiAlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+              <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
               <p className="text-sm text-red-800 dark:text-red-300">{error}</p>
             </motion.div>
           )}
