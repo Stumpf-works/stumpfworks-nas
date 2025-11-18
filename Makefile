@@ -315,65 +315,67 @@ install-system:
 	@# Create default config if it doesn't exist
 	@if [ ! -f /etc/stumpfworks-nas/config.yaml ]; then \
 		echo "   Creating default configuration..."; \
-		sudo bash -c 'cat > /etc/stumpfworks-nas/config.yaml << EOF\n\
-# Stumpf.Works NAS Configuration\n\
-server:\n\
-  host: 0.0.0.0\n\
-  port: 8080\n\
-  environment: production\n\
-  allowedOrigins: []\n\
-\n\
-database:\n\
-  path: /var/lib/stumpfworks-nas/stumpfworks.db\n\
-\n\
-storage:\n\
-  basePath: /mnt/storage\n\
-  shares:\n\
-    - name: "Public"\n\
-      path: "/mnt/storage/public"\n\
-      readOnly: false\n\
-\n\
-auth:\n\
-  jwtSecret: "$$(openssl rand -base64 32)"\n\
-  sessionTimeout: 24h\n\
-\n\
-logging:\n\
-  level: info\n\
-  file: /var/log/stumpfworks-nas/stumpfworks.log\n\
-EOF'; \
+		sudo bash -c 'cat > /etc/stumpfworks-nas/config.yaml << "EOF"
+# Stumpf.Works NAS Configuration
+server:
+  host: 0.0.0.0
+  port: 8080
+  environment: production
+  allowedOrigins: []
+
+database:
+  path: /var/lib/stumpfworks-nas/stumpfworks.db
+
+storage:
+  basePath: /mnt/storage
+  shares:
+    - name: "Public"
+      path: "/mnt/storage/public"
+      readOnly: false
+
+auth:
+  jwtSecret: "$$(openssl rand -base64 32)"
+  sessionTimeout: 24h
+
+logging:
+  level: info
+  file: /var/log/stumpfworks-nas/stumpfworks.log
+EOF
+'; \
 		echo "   ✓ Configuration created at /etc/stumpfworks-nas/config.yaml"; \
 	else \
 		echo "   ⚠️  Existing config found, keeping it"; \
 	fi
 	@# Create systemd service
 	@echo "   Creating systemd service..."
-	@sudo bash -c 'cat > /etc/systemd/system/stumpfworks-nas.service << EOF\n\
-[Unit]\n\
-Description=Stumpf.Works NAS Server\n\
-After=network.target\n\
-\n\
-[Service]\n\
-Type=simple\n\
-User=root\n\
-Group=root\n\
-WorkingDirectory=/opt/stumpfworks-nas\n\
-ExecStart=/usr/local/bin/stumpfworks-nas --config /etc/stumpfworks-nas/config.yaml\n\
-Restart=always\n\
-RestartSec=10\n\
-StandardOutput=journal\n\
-StandardError=journal\n\
-SyslogIdentifier=stumpfworks-nas\n\
-\n\
-# Security settings\n\
-NoNewPrivileges=false\n\
-PrivateTmp=true\n\
-\n\
-# Resource limits\n\
-LimitNOFILE=65536\n\
-\n\
-[Install]\n\
-WantedBy=multi-user.target\n\
-EOF'
+	@sudo bash -c 'cat > /etc/systemd/system/stumpfworks-nas.service << "EOF"
+[Unit]
+Description=Stumpf.Works NAS Server
+After=network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/opt/stumpfworks-nas
+ExecStart=/usr/local/bin/stumpfworks-nas --config /etc/stumpfworks-nas/config.yaml
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=stumpfworks-nas
+
+# Security settings
+NoNewPrivileges=false
+PrivateTmp=true
+
+# Resource limits
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
+EOF
+'
 	@echo "   ✓ Systemd service created"
 	@# Reload systemd
 	@sudo systemctl daemon-reload
