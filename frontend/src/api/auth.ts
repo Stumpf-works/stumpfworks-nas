@@ -24,6 +24,16 @@ export interface LoginResponse {
   userId?: number;
 }
 
+export interface ResetPasswordRequest {
+  token: string;
+  newPassword: string;
+}
+
+export interface ResetPasswordResponse {
+  success: boolean;
+  message: string;
+}
+
 export const authApi = {
   login: async (credentials: LoginRequest) => {
     const response = await client.post<ApiResponse<LoginResponse>>('/auth/login', credentials);
@@ -44,6 +54,11 @@ export const authApi = {
     const response = await client.post<ApiResponse<{ accessToken: string }>>('/auth/refresh', {
       refreshToken,
     });
+    return response.data;
+  },
+
+  resetPassword: async (request: ResetPasswordRequest) => {
+    const response = await client.post<ApiResponse<ResetPasswordResponse>>('/auth/reset-password', request);
     return response.data;
   },
 };

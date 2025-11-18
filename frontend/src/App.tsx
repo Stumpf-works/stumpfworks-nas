@@ -1,11 +1,33 @@
 import { useEffect, useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store';
 import { authApi } from '@/api/auth';
 import Login from '@/pages/Login';
+import ResetPassword from '@/pages/ResetPassword';
 import Desktop from '@/layout/Desktop';
 
-export default function App() {
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const location = useLocation();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  return <>{children}</>;
+}
+
+function PublicRoute({ children }: { children: React.ReactNode }) {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
+  if (isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+export default function App() {
   const setAuth = useAuthStore((state) => state.setAuth);
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const [isChecking, setIsChecking] = useState(true);
@@ -44,9 +66,27 @@ export default function App() {
     );
   }
 
-  if (!isAuthenticated) {
-    return <Login onSuccess={() => {}} />;
-  }
-
-  return <Desktop />;
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route
+          path="/login"
+          element={
+            <PublicRoute>
+              <Login onSuccess={() => {}} />
+            </PublicRoute>
+          }
+        />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route
+          path="/*"
+          element={
+            <ProtectedRoute>
+              <Desktop />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </BrowserRouter>
+  );
 }

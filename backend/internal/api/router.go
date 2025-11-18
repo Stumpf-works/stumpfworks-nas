@@ -106,6 +106,7 @@ func NewRouter(cfg *config.Config) http.Handler {
 			r.Use(mw.IPBlockMiddleware)
 			r.Post("/auth/login", handlers.Login)
 			r.Post("/auth/login/2fa", handlers.LoginWith2FA)
+			r.Post("/auth/reset-password", handlers.ResetPasswordWithToken)
 			// r.Post("/auth/register", handlers.Register) // Will implement later
 		})
 

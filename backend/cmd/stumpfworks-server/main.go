@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"net/http"
 	"os"
@@ -19,6 +20,7 @@ import (
 	"github.com/Stumpf-works/stumpfworks-nas/internal/backup"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/config"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/database/models"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/dependencies"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/docker"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/metrics"
@@ -41,11 +43,25 @@ const (
 )
 
 func main() {
+	// Define CLI flags
+	generateResetToken := flag.String("generate-reset-token", "", "Generate password reset token for specified username")
+	configFlag := flag.String("config", "", "Path to configuration file")
+	flag.Parse()
+
+	// Handle CLI commands
+	if *generateResetToken != "" {
+		handleGenerateResetToken(*generateResetToken, *configFlag)
+		return
+	}
+
 	fmt.Printf("%s v%s\n", AppName, AppVersion)
 	fmt.Println("Starting server...")
 
 	// Load configuration
-	configPath := os.Getenv("STUMPFWORKS_CONFIG")
+	configPath := *configFlag
+	if configPath == "" {
+		configPath = os.Getenv("STUMPFWORKS_CONFIG")
+	}
 	if configPath == "" {
 		configPath = "./config.yaml"
 	}
@@ -262,6 +278,27 @@ func main() {
 		IdleTimeout:  cfg.Server.IdleTimeout,
 	}
 
+	// Start password reset token cleanup job
+	go func() {
+		ticker := time.NewTicker(1 * time.Hour) // Cleanup every hour
+		defer ticker.Stop()
+
+		// Initial cleanup on startup
+		if err := models.CleanupExpiredTokens(database.DB, 24*time.Hour); err != nil {
+			logger.Error("Failed to cleanup expired password reset tokens", zap.Error(err))
+		} else {
+			logger.Info("Password reset token cleanup completed")
+		}
+
+		for range ticker.C {
+			if err := models.CleanupExpiredTokens(database.DB, 24*time.Hour); err != nil {
+				logger.Error("Failed to cleanup expired password reset tokens", zap.Error(err))
+			} else {
+				logger.Debug("Password reset token cleanup completed")
+			}
+		}
+	}()
+
 	// Start server in a goroutine
 	go func() {
 		logger.Info("HTTP server starting",
@@ -477,4 +514,100 @@ func performSystemHealthCheck(cfg *config.Config) {
 		}
 		os.Exit(1)
 	}
+}
+
+// handleGenerateResetToken handles the -generate-reset-token CLI command
+func handleGenerateResetToken(username string, configPath string) {
+	separator := func(width int) string {
+		s := ""
+		for i := 0; i < width; i++ {
+			s += "="
+		}
+		return s
+	}
+
+	fmt.Fprintln(os.Stdout, separator(80))
+	fmt.Fprintln(os.Stdout, "🔐 PASSWORD RESET TOKEN GENERATOR")
+	fmt.Fprintln(os.Stdout, separator(80))
+
+	// Load configuration
+	if configPath == "" {
+		configPath = os.Getenv("STUMPFWORKS_CONFIG")
+	}
+	if configPath == "" {
+		configPath = "./config.yaml"
+	}
+
+	cfg, err := config.Load(configPath)
+	if err != nil {
+		cfg, _ = config.Load("")
+	}
+
+	// Initialize minimal logger (no file logging for CLI)
+	if err := logger.InitLogger("info", false); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to initialize logger: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Initialize database
+	if err := database.Initialize(cfg); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to initialize database: %v\n", err)
+		os.Exit(1)
+	}
+	defer database.Close()
+
+	// Find user
+	var user models.User
+	if err := database.DB.Where("username = ?", username).First(&user).Error; err != nil {
+		fmt.Fprintf(os.Stderr, "❌ Error: User '%s' not found\n", username)
+		os.Exit(1)
+	}
+
+	// Check if user is admin
+	if !user.IsAdmin() {
+		fmt.Fprintf(os.Stderr, "❌ Error: Password reset tokens can only be generated for admin users\n")
+		fmt.Fprintf(os.Stderr, "   User '%s' has role '%s', not 'admin'\n", username, user.Role)
+		fmt.Fprintln(os.Stderr, separator(80))
+		fmt.Fprintln(os.Stderr, "⚠️  SECURITY NOTE:")
+		fmt.Fprintln(os.Stderr, "   For non-admin users, use the 'Forgot Password' feature in the web interface.")
+		fmt.Fprintln(os.Stderr, "   Physical server access should only reset admin passwords.")
+		fmt.Fprintln(os.Stderr, separator(80))
+		os.Exit(1)
+	}
+
+	// Generate reset token (valid for 15 minutes)
+	resetToken, err := models.CreatePasswordResetToken(database.DB, user.ID, 15*time.Minute)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "❌ Failed to generate reset token: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Get server URL from config
+	serverURL := fmt.Sprintf("http://%s:%d", cfg.Server.Host, cfg.Server.Port)
+	if cfg.Server.Host == "0.0.0.0" || cfg.Server.Host == "" {
+		serverURL = fmt.Sprintf("http://localhost:%d", cfg.Server.Port)
+	}
+
+	resetURL := fmt.Sprintf("%s/reset-password?token=%s", serverURL, resetToken.Token)
+
+	fmt.Fprintln(os.Stdout, "✅ Reset token generated successfully!")
+	fmt.Fprintln(os.Stdout, separator(80))
+	fmt.Fprintf(os.Stdout, "   User:       %s (%s)\n", user.Username, user.Email)
+	fmt.Fprintf(os.Stdout, "   Token:      %s\n", resetToken.Token)
+	fmt.Fprintf(os.Stdout, "   Valid for:  15 minutes\n")
+	fmt.Fprintf(os.Stdout, "   Expires at: %s\n", resetToken.ExpiresAt.Format("2006-01-02 15:04:05"))
+	fmt.Fprintln(os.Stdout, separator(80))
+	fmt.Fprintln(os.Stdout, "🌐 PASSWORD RESET URL:")
+	fmt.Fprintln(os.Stdout, "")
+	fmt.Fprintf(os.Stdout, "   %s\n", resetURL)
+	fmt.Fprintln(os.Stdout, "")
+	fmt.Fprintln(os.Stdout, separator(80))
+	fmt.Fprintln(os.Stdout, "⚠️  SECURITY NOTES:")
+	fmt.Fprintln(os.Stdout, "   - This token can only be used ONCE")
+	fmt.Fprintln(os.Stdout, "   - Token expires in 15 minutes")
+	fmt.Fprintln(os.Stdout, "   - Open the URL above in your browser to set a new password")
+	fmt.Fprintln(os.Stdout, "   - Do not share this URL with anyone")
+	fmt.Fprintln(os.Stdout, separator(80))
+
+	os.Exit(0)
 }
