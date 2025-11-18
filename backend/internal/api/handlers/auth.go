@@ -8,6 +8,7 @@ import (
 
 	"github.com/Stumpf-works/stumpfworks-nas/internal/api/middleware"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/auth"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/database"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database/models"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/twofa"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/users"
@@ -298,24 +299,24 @@ func ResetPasswordWithToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Find and validate token
-	resetToken, err := models.FindValidToken(auth.GetDB(), req.Token)
+	resetToken, err := models.FindValidToken(database.DB, req.Token)
 	if err != nil {
 		logger.Warn("Invalid password reset token attempt",
 			zap.String("token", req.Token[:8]+"..."), // Only log first 8 chars
 			zap.String("ip", getClientIP(r)))
-		utils.RespondError(w, errors.Unauthorized("Invalid or expired reset token"))
+		utils.RespondError(w, errors.Unauthorized("Invalid or expired reset token", nil))
 		return
 	}
 
 	// Verify token is still valid
 	if !resetToken.IsValid() {
-		utils.RespondError(w, errors.Unauthorized("Token has expired or already been used"))
+		utils.RespondError(w, errors.Unauthorized("Token has expired or already been used", nil))
 		return
 	}
 
 	// Get user
 	var user models.User
-	if err := auth.GetDB().First(&user, resetToken.UserID).Error; err != nil {
+	if err := database.DB.First(&user, resetToken.UserID).Error; err != nil {
 		logger.Error("Failed to find user for password reset",
 			zap.Error(err),
 			zap.Uint("userId", resetToken.UserID))
@@ -332,7 +333,7 @@ func ResetPasswordWithToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := auth.GetDB().Save(&user).Error; err != nil {
+	if err := database.DB.Save(&user).Error; err != nil {
 		logger.Error("Failed to save new password",
 			zap.Error(err),
 			zap.String("username", user.Username))
@@ -341,7 +342,7 @@ func ResetPasswordWithToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Mark token as used
-	if err := resetToken.MarkAsUsed(auth.GetDB()); err != nil {
+	if err := resetToken.MarkAsUsed(database.DB); err != nil {
 		logger.Error("Failed to mark reset token as used",
 			zap.Error(err),
 			zap.Uint("tokenId", resetToken.ID))
