@@ -1,0 +1,146 @@
+{
+  "id": "com.stumpfworks.asterisk-voip",
+  "name": "Asterisk VoIP PBX",
+  "version": "1.0.0-beta",
+  "author": "StumpfWorks Team",
+  "description": "Complete VoIP telephone system with Asterisk PBX - Build your own phone system with extensions, voicemail, IVR, call recording, and more",
+  "icon": "📞",
+  "category": "communication",
+  "entryPoint": "asterisk-manager",
+  "requires": {
+    "docker": true,
+    "ports": [
+      5060,
+      5061,
+      8088,
+      8089,
+      10000,
+      10001,
+      10002,
+      10003,
+      10004,
+      10005,
+      10006,
+      10007,
+      10008,
+      10009
+    ],
+    "portRanges": [
+      {
+        "start": 10000,
+        "end": 10099,
+        "protocol": "udp",
+        "description": "RTP Media Ports"
+      }
+    ],
+    "storage": "5GB",
+    "minNasVersion": "0.1.0",
+    "capabilities": [
+      "NET_ADMIN"
+    ]
+  },
+  "config": {
+    "ami": {
+      "host": "localhost",
+      "port": 5038,
+      "username": "admin",
+      "secret": "CHANGE_ME_ON_FIRST_RUN"
+    },
+    "sip": {
+      "port": 5060,
+      "tlsPort": 5061,
+      "transport": "udp,tcp,tls"
+    },
+    "rtp": {
+      "start": 10000,
+      "end": 10099
+    },
+    "features": {
+      "voicemail": true,
+      "callRecording": true,
+      "ivr": true,
+      "conferencing": true,
+      "webRTC": true,
+      "fax": false
+    },
+    "codecs": {
+      "audio": ["ulaw", "alaw", "gsm", "opus"],
+      "video": []
+    },
+    "locale": {
+      "timezone": "Europe/Berlin",
+      "language": "de"
+    }
+  },
+  "services": [
+    {
+      "name": "asterisk",
+      "description": "Asterisk PBX Core",
+      "healthCheck": {
+        "type": "tcp",
+        "port": 5038,
+        "interval": 30
+      }
+    },
+    {
+      "name": "asterisk-manager",
+      "description": "Management API and Web Interface",
+      "healthCheck": {
+        "type": "http",
+        "endpoint": "/health",
+        "port": 8090,
+        "interval": 30
+      }
+    }
+  ],
+  "ui": {
+    "enabled": true,
+    "type": "integrated",
+    "routes": [
+      {
+        "path": "/plugins/asterisk-voip/dashboard",
+        "component": "Dashboard",
+        "title": "PBX Dashboard"
+      },
+      {
+        "path": "/plugins/asterisk-voip/extensions",
+        "component": "Extensions",
+        "title": "Extensions"
+      },
+      {
+        "path": "/plugins/asterisk-voip/trunks",
+        "component": "Trunks",
+        "title": "SIP Trunks"
+      },
+      {
+        "path": "/plugins/asterisk-voip/voicemail",
+        "component": "Voicemail",
+        "title": "Voicemail"
+      },
+      {
+        "path": "/plugins/asterisk-voip/recordings",
+        "component": "Recordings",
+        "title": "Call Recordings"
+      }
+    ]
+  },
+  "permissions": [
+    "users.read",
+    "users.write",
+    "network.read",
+    "network.write",
+    "storage.read",
+    "storage.write"
+  ],
+  "documentation": {
+    "readme": "README.md",
+    "implementationPlan": "IMPLEMENTATION_PLAN.md",
+    "quickStart": "docs/QUICK_START.md",
+    "api": "docs/API.md"
+  },
+  "links": {
+    "homepage": "https://github.com/stumpf-works/stumpfworks-nas/tree/main/plugins/asterisk-voip",
+    "issues": "https://github.com/stumpf-works/stumpfworks-nas/issues",
+    "docs": "https://docs.stumpfworks.com/plugins/asterisk-voip"
+  }
+}

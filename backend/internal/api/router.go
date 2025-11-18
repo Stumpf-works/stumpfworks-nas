@@ -544,6 +544,25 @@ func NewRouter(cfg *config.Config) http.Handler {
 				r.Get("/running", pluginHandler.ListRunningPlugins)
 			})
 
+			// Plugin Store routes (registry-based installation)
+			r.Route("/store", func(r chi.Router) {
+				// Public endpoints (browsing)
+				r.Get("/plugins", handlers.ListAvailablePlugins)
+				r.Get("/plugins/{id}", handlers.GetPluginFromRegistry)
+				r.Get("/plugins/search", handlers.SearchPlugins)
+
+				// Admin-only endpoints (installation)
+				r.Group(func(r chi.Router) {
+					r.Use(mw.AdminOnly)
+
+					r.Post("/plugins/{id}/install", handlers.InstallPlugin)
+					r.Delete("/plugins/{id}/uninstall", handlers.UninstallPlugin)
+					r.Post("/plugins/{id}/update", handlers.UpdatePlugin)
+					r.Post("/sync", handlers.SyncRegistry)
+					r.Get("/installed", handlers.ListInstalledPlugins)
+				})
+			})
+
 			// Terminal WebSocket endpoint
 			r.Route("/terminal", func(r chi.Router) {
 				r.Use(mw.AdminOnly) // Terminal access requires admin privileges
