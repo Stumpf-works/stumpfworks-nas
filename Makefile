@@ -26,6 +26,7 @@ help:
 # Install dependencies
 install:
 	@echo "Installing backend dependencies..."
+	cd backend && go mod tidy
 	cd backend && go mod download
 	@echo "Installing frontend dependencies..."
 	cd frontend && npm install
@@ -58,6 +59,7 @@ build:
 	rm -rf backend/embedfs/dist
 	cp -r frontend/dist backend/embedfs/
 	@echo "Checking backend dependencies..."
+	@cd backend && go mod tidy
 	@cd backend && go mod download
 	@echo "Building backend with embedded frontend..."
 	mkdir -p dist
@@ -122,6 +124,9 @@ release:
 	mkdir -p backend/embedfs
 	rm -rf backend/embedfs/dist
 	cp -r frontend/dist backend/embedfs/
+	@echo "Checking backend dependencies..."
+	@cd backend && go mod tidy
+	@cd backend && go mod download
 	@echo "Building release binaries for multiple platforms..."
 	@mkdir -p dist/releases
 
