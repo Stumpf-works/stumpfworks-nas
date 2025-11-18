@@ -46,12 +46,19 @@ dev-frontend:
 
 # Build for production
 build:
+	@echo "Checking frontend dependencies..."
+	@if [ ! -d "frontend/node_modules" ]; then \
+		echo "Installing frontend dependencies..."; \
+		cd frontend && npm install; \
+	fi
 	@echo "Building frontend..."
 	cd frontend && npm run build
 	@echo "Copying frontend files for embedding..."
 	mkdir -p backend/embedfs
 	rm -rf backend/embedfs/dist
 	cp -r frontend/dist backend/embedfs/
+	@echo "Checking backend dependencies..."
+	@cd backend && go mod download
 	@echo "Building backend with embedded frontend..."
 	mkdir -p dist
 	cd backend && go build -ldflags="-s -w" -o ../dist/stumpfworks-server cmd/stumpfworks-server/main.go
