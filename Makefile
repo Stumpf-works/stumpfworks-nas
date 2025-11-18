@@ -328,7 +328,7 @@ install-system:
 	@if [ ! -f /etc/stumpfworks-nas/config.yaml ]; then \
 		echo "   Creating default configuration..."; \
 		JWT_SECRET=$$(openssl rand -base64 32); \
-		sudo bash -c "cat > /etc/stumpfworks-nas/config.yaml" <<-'CONFIGEOF' ; \
+		cat <<-'CONFIGEOF' | sed "s|JWTSECRETPLACEHOLDER|$$JWT_SECRET|g" | sudo tee /etc/stumpfworks-nas/config.yaml > /dev/null; \
 		# Stumpf.Works NAS Configuration
 		server:
 		  host: 0.0.0.0
@@ -354,14 +354,13 @@ install-system:
 		  level: info
 		  file: /var/log/stumpfworks-nas/stumpfworks.log
 		CONFIGEOF
-		sudo sed -i "s|JWTSECRETPLACEHOLDER|$$JWT_SECRET|g" /etc/stumpfworks-nas/config.yaml; \
 		echo "   ✓ Configuration created at /etc/stumpfworks-nas/config.yaml"; \
 	else \
 		echo "   ⚠️  Existing config found, keeping it"; \
 	fi
 	@# Create systemd service
 	@echo "   Creating systemd service..."
-	@sudo bash -c "cat > /etc/systemd/system/stumpfworks-nas.service" <<-'SERVICEEOF'
+	@cat <<-'SERVICEEOF' | sudo tee /etc/systemd/system/stumpfworks-nas.service > /dev/null
 		[Unit]
 		Description=Stumpf.Works NAS Server
 		After=network.target
