@@ -1,0 +1,129 @@
+version: '3.8'
+
+services:
+  asterisk:
+    image: andrius/asterisk:20-current
+    container_name: stumpfworks-asterisk
+    hostname: asterisk-pbx
+    restart: unless-stopped
+
+    # Network configuration
+    network_mode: host
+    # Alternative: bridge mode with port mapping
+    # ports:
+    #   - "5060:5060/udp"      # SIP
+    #   - "5060:5060/tcp"      # SIP
+    #   - "5061:5061/tcp"      # SIP TLS
+    #   - "5038:5038/tcp"      # AMI (Asterisk Manager Interface)
+    #   - "8088:8088/tcp"      # HTTP/WebSocket
+    #   - "8089:8089/tcp"      # HTTPS/WebSocket
+    #   - "10000-10099:10000-10099/udp"  # RTP
+
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Berlin
+
+    volumes:
+      # Asterisk configuration
+      - ./asterisk-config/sip.conf:/etc/asterisk/sip.conf:rw
+      - ./asterisk-config/extensions.conf:/etc/asterisk/extensions.conf:rw
+      - ./asterisk-config/voicemail.conf:/etc/asterisk/voicemail.conf:rw
+      - ./asterisk-config/manager.conf:/etc/asterisk/manager.conf:rw
+      - ./asterisk-config/http.conf:/etc/asterisk/http.conf:rw
+      - ./asterisk-config/rtp.conf:/etc/asterisk/rtp.conf:rw
+      - ./asterisk-config/modules.conf:/etc/asterisk/modules.conf:rw
+
+      # Sound files and recordings
+      - asterisk-sounds:/var/lib/asterisk/sounds:rw
+      - asterisk-recordings:/var/spool/asterisk/monitor:rw
+
+      # Voicemail storage
+      - asterisk-voicemail:/var/spool/asterisk/voicemail:rw
+
+      # Logs
+      - asterisk-logs:/var/log/asterisk:rw
+
+      # Database (for AstDB)
+      - asterisk-db:/var/lib/asterisk:rw
+
+    # Capabilities needed for network operations
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+
+    healthcheck:
+      test: ["CMD-SHELL", "asterisk -rx 'core show version' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  asterisk-manager:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: stumpfworks-asterisk-manager
+    restart: unless-stopped
+
+    ports:
+      - "8090:8090"  # Management API
+
+    environment:
+      - PLUGIN_ID=${PLUGIN_ID:-com.stumpfworks.asterisk-voip}
+      - PLUGIN_DIR=${PLUGIN_DIR:-/var/lib/stumpfworks/plugins/asterisk-voip}
+      - NAS_API_URL=${NAS_API_URL:-http://localhost:8080/api/v1}
+      - NAS_API_TOKEN=${NAS_API_TOKEN}
+
+      # Asterisk AMI connection
+      - AMI_HOST=asterisk
+      - AMI_PORT=5038
+      - AMI_USERNAME=admin
+      - AMI_SECRET=${AMI_SECRET:-stumpfworks2024}
+
+      # Database
+      - DB_PATH=/data/asterisk-manager.db
+
+      # Logging
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_FORMAT=json
+
+    volumes:
+      # Persistent data
+      - manager-data:/data:rw
+
+      # Access to Asterisk configs for management
+      - ./asterisk-config:/etc/asterisk:rw
+
+      # Access to recordings and voicemail
+      - asterisk-recordings:/recordings:ro
+      - asterisk-voicemail:/voicemail:ro
+
+    depends_on:
+      asterisk:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8090/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  asterisk-sounds:
+    driver: local
+  asterisk-recordings:
+    driver: local
+  asterisk-voicemail:
+    driver: local
+  asterisk-logs:
+    driver: local
+  asterisk-db:
+    driver: local
+  manager-data:
+    driver: local
+
+networks:
+  default:
+    name: stumpfworks-asterisk-network
+    driver: bridge
