@@ -576,6 +576,92 @@ sudo systemctl restart stumpfworks-nas
 
 ---
 
+## Password Recovery
+
+### Admin Password Reset
+
+If you forget your admin password or lock yourself out, you can reset it using the built-in password reset utility.
+
+**Requirements:**
+- Physical or SSH access to the server
+- Server must be stopped before running the reset command
+
+#### Reset Procedure
+
+1. **Stop the NAS server** (if running):
+   ```bash
+   sudo systemctl stop stumpfworks-nas
+   ```
+
+2. **Run the password reset command**:
+   ```bash
+   # Using installed binary
+   sudo /usr/local/bin/stumpfworks-nas -reset-admin-password admin
+
+   # Or using built binary in project directory
+   sudo ./dist/stumpfworks-server -reset-admin-password admin
+   ```
+
+3. **The utility will:**
+   - Generate a new secure 16-character password
+   - Display the password **ONCE** in the console
+   - Update the database with the new password
+   - Log the reset operation
+
+4. **Save the new password immediately!** Example output:
+   ```
+   ================================================================================
+   🔐 PASSWORD RESET UTILITY
+   ================================================================================
+   ✅ Password reset successful for admin user: admin
+   ================================================================================
+      Username: admin
+      Email:    admin@stumpfworks.local
+      New Password: Xm4kP9qL2nR8tYv3
+   ================================================================================
+   ⚠️  IMPORTANT SECURITY NOTES:
+      - This password will NOT be shown again!
+      - Save this password in a secure location NOW
+      - Change this password after logging in
+      - This password is NOT stored in any logs
+   ================================================================================
+   ```
+
+5. **Start the server again**:
+   ```bash
+   sudo systemctl start stumpfworks-nas
+   ```
+
+6. **Login with the new password** and immediately change it to something memorable in the web UI:
+   - Go to Settings → Users
+   - Click Edit on your admin user
+   - Set a new password
+
+#### Security Features
+
+- ✅ **Only works for admin users** - Regular users cannot use this utility
+- ✅ **Requires server access** - Physical or SSH access required (not accessible via web)
+- ✅ **Cryptographically secure** - Uses crypto/rand for password generation
+- ✅ **Not logged** - Password is only shown in console, never in log files
+- ✅ **Audit trail** - Reset operation is logged (but not the password)
+
+#### Troubleshooting
+
+**Error: "User 'admin' not found in database"**
+- Check the username spelling - it's case-sensitive
+- List users in database: `sqlite3 /var/lib/stumpfworks/nas.db "SELECT username, role FROM users;"`
+
+**Error: "User is not an administrator"**
+- This utility only works for admin users
+- Contact another admin to reset your password via web UI
+
+**Error: "Failed to initialize database"**
+- Check database path in `/etc/stumpfworks/config.yaml`
+- Ensure database file has correct permissions
+- Verify server is stopped before running reset
+
+---
+
 ## Uninstallation
 
 ```bash

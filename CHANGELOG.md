@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 🔐 Security & Administration
+
+#### Added
+
+**Admin Password Reset Utility**
+- CLI command `--reset-admin-password <username>` for emergency password recovery
+- Cryptographically secure password generation (16 characters, crypto/rand)
+- One-time password display in console (never logged)
+- Requires physical/SSH server access (cannot be accessed via web)
+- Admin-only restriction (regular users cannot use this utility)
+- Audit logging of reset operations (password itself is never logged)
+- Comprehensive error handling and user guidance
+- Detailed documentation in INSTALL.md with troubleshooting guide
+
+**Security Features:**
+- Only works when server is stopped (prevents online attacks)
+- Password shown once in console, never persisted anywhere
+- Database-only operation (no external dependencies)
+- Validates user exists and has admin role before reset
+- Clear visual output with security warnings
+
 ### 🚀 Advanced Features & Plugin System
 
 #### Added

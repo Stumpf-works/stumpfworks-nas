@@ -3,6 +3,9 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
+	"flag"
 	"fmt"
 	"net/http"
 	"os"
@@ -19,6 +22,7 @@ import (
 	"github.com/Stumpf-works/stumpfworks-nas/internal/backup"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/config"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/database/models"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/dependencies"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/docker"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/metrics"
@@ -41,8 +45,11 @@ const (
 )
 
 func main() {
+	// Parse command line flags
+	resetAdminPassword := flag.String("reset-admin-password", "", "Reset password for admin user (provide username)")
+	flag.Parse()
+
 	fmt.Printf("%s v%s\n", AppName, AppVersion)
-	fmt.Println("Starting server...")
 
 	// Load configuration
 	configPath := os.Getenv("STUMPFWORKS_CONFIG")
@@ -62,6 +69,14 @@ func main() {
 		os.Exit(1)
 	}
 	defer logger.Sync()
+
+	// Handle password reset command
+	if *resetAdminPassword != "" {
+		handlePasswordReset(cfg, *resetAdminPassword)
+		return
+	}
+
+	fmt.Println("Starting server...")
 
 	logger.Info("Configuration loaded",
 		zap.String("environment", cfg.App.Environment),
@@ -477,4 +492,97 @@ func performSystemHealthCheck(cfg *config.Config) {
 		}
 		os.Exit(1)
 	}
+}
+
+// handlePasswordReset handles the password reset command for admin users
+func handlePasswordReset(cfg *config.Config, username string) {
+	fmt.Println("\n" + separator(80))
+	fmt.Println("🔐 PASSWORD RESET UTILITY")
+	fmt.Println(separator(80))
+
+	// Initialize database
+	if err := database.Initialize(cfg); err != nil {
+		fmt.Printf("❌ Failed to initialize database: %v\n", err)
+		os.Exit(1)
+	}
+	defer database.Close()
+
+	db := database.GetDB()
+	if db == nil {
+		fmt.Println("❌ Database connection failed")
+		os.Exit(1)
+	}
+
+	// Find user by username
+	var user models.User
+	if err := db.Where("username = ?", username).First(&user).Error; err != nil {
+		fmt.Printf("❌ User '%s' not found in database\n", username)
+		fmt.Println(separator(80))
+		os.Exit(1)
+	}
+
+	// Verify user is admin
+	if user.Role != "admin" {
+		fmt.Printf("❌ User '%s' is not an administrator (role: %s)\n", username, user.Role)
+		fmt.Println("⚠️  Password reset is only available for admin users")
+		fmt.Println(separator(80))
+		os.Exit(1)
+	}
+
+	// Generate new secure password
+	newPassword, err := generateSecurePassword(16)
+	if err != nil {
+		fmt.Printf("❌ Failed to generate password: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Set new password
+	if err := user.SetPassword(newPassword); err != nil {
+		fmt.Printf("❌ Failed to set password: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Update user in database
+	if err := db.Save(&user).Error; err != nil {
+		fmt.Printf("❌ Failed to update user in database: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Success - display new password
+	fmt.Printf("✅ Password reset successful for admin user: %s\n", user.Username)
+	fmt.Println(separator(80))
+	fmt.Printf("   Username: %s\n", user.Username)
+	fmt.Printf("   Email:    %s\n", user.Email)
+	fmt.Printf("   New Password: %s\n", newPassword)
+	fmt.Println(separator(80))
+	fmt.Println("⚠️  IMPORTANT SECURITY NOTES:")
+	fmt.Println("   - This password will NOT be shown again!")
+	fmt.Println("   - Save this password in a secure location NOW")
+	fmt.Println("   - Change this password after logging in")
+	fmt.Println("   - This password is NOT stored in any logs")
+	fmt.Println(separator(80))
+	fmt.Println()
+
+	logger.Info("Admin password reset completed",
+		zap.String("username", user.Username),
+		zap.String("user_id", fmt.Sprintf("%d", user.ID)))
+}
+
+// generateSecurePassword generates a cryptographically secure random password
+func generateSecurePassword(length int) (string, error) {
+	bytes := make([]byte, length)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	// Use base64 encoding for readable password
+	return base64.URLEncoding.EncodeToString(bytes)[:length], nil
+}
+
+// separator creates a visual separator line
+func separator(width int) string {
+	s := ""
+	for i := 0; i < width; i++ {
+		s += "="
+	}
+	return s
 }
