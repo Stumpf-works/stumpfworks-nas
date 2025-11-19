@@ -559,12 +559,14 @@ func handleGenerateResetToken(username string, configPath string) {
 	// Find user
 	var user models.User
 	if err := database.DB.Where("username = ?", username).First(&user).Error; err != nil {
+		database.Close() // Ensure database is closed before exit
 		fmt.Fprintf(os.Stderr, "❌ Error: User '%s' not found\n", username)
 		os.Exit(1)
 	}
 
 	// Check if user is admin
 	if !user.IsAdmin() {
+		database.Close() // Ensure database is closed before exit
 		fmt.Fprintf(os.Stderr, "❌ Error: Password reset tokens can only be generated for admin users\n")
 		fmt.Fprintf(os.Stderr, "   User '%s' has role '%s', not 'admin'\n", username, user.Role)
 		fmt.Fprintln(os.Stderr, separator(80))
@@ -578,8 +580,15 @@ func handleGenerateResetToken(username string, configPath string) {
 	// Generate reset token (valid for 15 minutes)
 	resetToken, err := models.CreatePasswordResetToken(database.DB, user.ID, 15*time.Minute)
 	if err != nil {
+		database.Close() // Ensure database is closed before exit
 		fmt.Fprintf(os.Stderr, "❌ Failed to generate reset token: %v\n", err)
 		os.Exit(1)
+	}
+
+	// CRITICAL: Ensure the database write is committed to disk
+	// With SQLite, we need to ensure the transaction is flushed before closing
+	if sqlDB, err := database.DB.DB(); err == nil {
+		sqlDB.Exec("PRAGMA wal_checkpoint(TRUNCATE)") // Force WAL checkpoint for SQLite
 	}
 
 	// Get server URL from config
@@ -609,5 +618,7 @@ func handleGenerateResetToken(username string, configPath string) {
 	fmt.Fprintln(os.Stdout, "   - Do not share this URL with anyone")
 	fmt.Fprintln(os.Stdout, separator(80))
 
+	// Properly close database connection before exiting
+	database.Close()
 	os.Exit(0)
 }

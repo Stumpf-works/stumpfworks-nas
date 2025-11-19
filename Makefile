@@ -1,4 +1,4 @@
-.PHONY: help install dev build release test clean docker-build docker-up docker-down lint format upgrade install-system uninstall
+.PHONY: help install dev build release test clean docker-build docker-up docker-down lint format upgrade install-system uninstall tools
 
 # Default target
 help:
@@ -7,7 +7,8 @@ help:
 	@echo "Available targets:"
 	@echo "  make install       - Install all dependencies (backend + frontend)"
 	@echo "  make dev           - Run development servers (backend + frontend)"
-	@echo "  make build         - Build for production"
+	@echo "  make build         - Build for production (includes admin tools)"
+	@echo "  make tools         - Build admin tools only (check-password, diagnose, set-password)"
 	@echo "  make release       - Build release binaries for all platforms"
 	@echo ""
 	@echo "System Installation:"
@@ -64,7 +65,26 @@ build:
 	@echo "Building backend with embedded frontend..."
 	mkdir -p dist
 	cd backend && go build -ldflags="-s -w" -o ../dist/stumpfworks-server cmd/stumpfworks-server/main.go
+	@echo "Building admin tools..."
+	cd backend && go build -ldflags="-s -w" -o ../dist/check-password cmd/check-password/main.go
+	cd backend && go build -ldflags="-s -w" -o ../dist/diagnose cmd/diagnose/main.go
+	cd backend && go build -ldflags="-s -w" -o ../dist/set-password cmd/set-password/main.go
 	@echo "✓ Build complete. Binary in ./dist/stumpfworks-server (includes embedded frontend)"
+	@echo "✓ Admin tools: check-password, diagnose, set-password"
+
+# Build admin tools only
+tools:
+	@echo "Building admin tools..."
+	@cd backend && go mod tidy
+	@cd backend && go mod download
+	@mkdir -p dist
+	cd backend && go build -ldflags="-s -w" -o ../dist/check-password cmd/check-password/main.go
+	cd backend && go build -ldflags="-s -w" -o ../dist/diagnose cmd/diagnose/main.go
+	cd backend && go build -ldflags="-s -w" -o ../dist/set-password cmd/set-password/main.go
+	@echo "✓ Admin tools built:"
+	@echo "   ./dist/check-password <username> <password>"
+	@echo "   ./dist/diagnose"
+	@echo "   ./dist/set-password <username> <new-password>"
 
 # Run tests
 test:
