@@ -6,54 +6,153 @@ set -e
 
 case "$1" in
     configure)
-        # Create data directory
-        mkdir -p /var/lib/stumpfworks-nas
-        chmod 755 /var/lib/stumpfworks-nas
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "  StumpfWorks NAS - Post-Installation Setup"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo ""
 
-        # Create config directory
+        # Create directories
+        echo "📁 Creating directories..."
+        mkdir -p /var/lib/stumpfworks-nas/backups
+        mkdir -p /var/lib/stumpfworks-nas/plugins
+        mkdir -p /var/log/stumpfworks-nas
         mkdir -p /etc/stumpfworks-nas
-        chmod 755 /etc/stumpfworks-nas
+        mkdir -p /usr/share/stumpfworks-nas/doc
 
-        # Initialize database if not exists
-        if [ ! -f /var/lib/stumpfworks-nas/stumpfworks.db ]; then
-            echo "Database will be initialized on first start..."
+        chmod 755 /var/lib/stumpfworks-nas
+        chmod 755 /etc/stumpfworks-nas
+        chmod 755 /var/log/stumpfworks-nas
+
+        # Setup PostgreSQL
+        echo "🗄️  Setting up PostgreSQL database..."
+
+        # Check if PostgreSQL is running
+        if ! systemctl is-active --quiet postgresql; then
+            echo "   Starting PostgreSQL..."
+            systemctl start postgresql
+        fi
+
+        # Run database setup as postgres user
+        if ! sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw stumpfworks_nas; then
+            echo "   Creating database and user..."
+
+            # Use stumpfworks-dbsetup tool if available
+            if [ -x /usr/bin/stumpfworks-dbsetup ]; then
+                sudo -u postgres /usr/bin/stumpfworks-dbsetup || true
+            else
+                # Fallback: manual setup
+                DB_PASSWORD=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-32)
+                echo "$DB_PASSWORD" > /etc/stumpfworks-nas/.db-password
+                chmod 600 /etc/stumpfworks-nas/.db-password
+
+                sudo -u postgres psql <<EOF
+CREATE USER stumpfworks WITH PASSWORD '$DB_PASSWORD';
+CREATE DATABASE stumpfworks_nas OWNER stumpfworks;
+GRANT ALL PRIVILEGES ON DATABASE stumpfworks_nas TO stumpfworks;
+EOF
+            fi
+
+            echo "   ✓ Database created"
+        else
+            echo "   ✓ Database already exists"
+        fi
+
+        # Create config if it doesn't exist
+        if [ ! -f /etc/stumpfworks-nas/config.yaml ]; then
+            echo "📝 Creating default configuration..."
+
+            # Read DB password
+            if [ -f /etc/stumpfworks-nas/.db-password ]; then
+                DB_PASSWORD=$(cat /etc/stumpfworks-nas/.db-password)
+            else
+                DB_PASSWORD=""
+            fi
+
+            # Generate JWT secret
+            JWT_SECRET=$(openssl rand -base64 32)
+
+            cat > /etc/stumpfworks-nas/config.yaml <<CONFIGEOF
+# Stumpf.Works NAS Configuration
+app:
+  name: "Stumpf.Works NAS"
+  version: "0.1.0"
+  environment: "production"
+
+server:
+  host: "0.0.0.0"
+  port: 8080
+  readTimeout: "15s"
+  writeTimeout: "15s"
+  idleTimeout: "60s"
+
+database:
+  driver: "postgres"
+  host: "localhost"
+  port: 5432
+  database: "stumpfworks_nas"
+  username: "stumpfworks"
+  password: "$DB_PASSWORD"
+  sslmode: "disable"
+  maxOpenConns: 25
+  maxIdleConns: 5
+  connMaxLifetime: "5m"
+
+auth:
+  jwtSecret: "$JWT_SECRET"
+  jwtExpirationHours: 24
+  jwtRefreshHours: 168
+  bcryptCost: 12
+  sessionTimeout: "24h"
+
+logging:
+  level: "info"
+  development: false
+CONFIGEOF
+
+            chmod 600 /etc/stumpfworks-nas/config.yaml
+            echo "   ✓ Configuration created"
+        else
+            echo "   ⚠️  Existing config found, keeping it"
         fi
 
         # Reload systemd
+        echo "🔄 Reloading systemd..."
         systemctl daemon-reload
 
-        # Enable service (don't start automatically - let admin configure first)
+        # Enable service
+        echo "✅ Enabling service..."
         systemctl enable stumpfworks-nas.service
 
         # Print post-install message
         echo ""
         echo "╔══════════════════════════════════════════════════════════════╗"
-        echo "║         Stumpf.Works NAS v1.0.0 installed successfully!      ║"
+        echo "║     Stumpf.Works NAS v0.1.0 installed successfully!          ║"
         echo "╚══════════════════════════════════════════════════════════════╝"
         echo ""
         echo "Next steps:"
         echo ""
-        echo "1. Configure the system:"
-        echo "   sudo nano /etc/stumpfworks-nas/config.yaml"
-        echo ""
-        echo "2. Start the service:"
+        echo "1. Start the service:"
         echo "   sudo systemctl start stumpfworks-nas"
+        echo "   or"
+        echo "   stumpfctl service start"
         echo ""
-        echo "3. Check status:"
-        echo "   sudo systemctl status stumpfworks-nas"
+        echo "2. Check status:"
+        echo "   stumpfctl service status"
         echo ""
-        echo "4. Access the web interface:"
+        echo "3. Access the web interface:"
         echo "   http://YOUR_SERVER_IP:8080"
         echo ""
-        echo "5. Default credentials:"
-        echo "   Username: admin"
-        echo "   Password: admin"
-        echo "   (Change immediately after first login!)"
+        echo "4. View logs:"
+        echo "   stumpfctl logs -f"
+        echo ""
+        echo "5. Manage users:"
+        echo "   stumpfctl user list"
         echo ""
         echo "For more information:"
         echo "  - Documentation: /usr/share/doc/stumpfworks-nas/"
-        echo "  - Logs: sudo journalctl -u stumpfworks-nas -f"
         echo "  - GitHub: https://github.com/Stumpf-works/stumpfworks-nas"
+        echo ""
+        echo "💡 Tip: Run 'stumpfctl --help' to see all available commands"
         echo ""
         ;;
 

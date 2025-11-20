@@ -10,7 +10,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 
-	"github.com/stumpf-works/stumpfworks-nas/backend/internal/database/models"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/database/models"
 )
 
 const (

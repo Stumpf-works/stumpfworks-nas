@@ -13,11 +13,11 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 
-	"github.com/stumpf-works/stumpfworks-nas/backend/internal/api/utils"
-	"github.com/stumpf-works/stumpfworks-nas/backend/internal/database"
-	"github.com/stumpf-works/stumpfworks-nas/backend/internal/database/models"
-	"github.com/stumpf-works/stumpfworks-nas/backend/internal/errors"
-	"github.com/stumpf-works/stumpfworks-nas/backend/internal/plugins"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/api/utils"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/database"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/database/models"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/errors"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/plugins"
 )
 
 const (

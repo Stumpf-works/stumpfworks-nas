@@ -1,4 +1,9 @@
-.PHONY: help install dev build release test clean docker-build docker-up docker-down lint format upgrade install-system uninstall
+.PHONY: help install dev build release test clean docker-build docker-up docker-down lint format upgrade install-system uninstall tools deb deploy
+
+# Version from Git
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+BUILD_TIME := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+LDFLAGS := -s -w -X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME)
 
 # Default target
 help:
@@ -8,7 +13,12 @@ help:
 	@echo "  make install       - Install all dependencies (backend + frontend)"
 	@echo "  make dev           - Run development servers (backend + frontend)"
 	@echo "  make build         - Build for production"
+	@echo "  make tools         - Build all CLI tools (stumpfctl, dbsetup, etc.)"
 	@echo "  make release       - Build release binaries for all platforms"
+	@echo ""
+	@echo "Packaging & Deployment:"
+	@echo "  make deb           - Build Debian package"
+	@echo "  make deploy        - Deploy to APT repository (requires SSH access)"
 	@echo ""
 	@echo "System Installation:"
 	@echo "  make install-system - Install to system (creates systemd service)"
@@ -489,3 +499,29 @@ docs:
 	@echo "Generating API documentation..."
 	cd backend && swag init -g cmd/stumpfworks-server/main.go
 	@echo "✓ API docs generated"
+
+# Build all CLI tools
+tools:
+	@echo "Building CLI tools..."
+	@mkdir -p dist
+	@echo "  Building stumpfctl..."
+	cd backend && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+		-ldflags="$(LDFLAGS)" \
+		-o ../dist/stumpfctl \
+		./cmd/stumpfctl
+	@echo "  Building stumpfworks-dbsetup..."
+	cd backend && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+		-ldflags="$(LDFLAGS)" \
+		-o ../dist/stumpfworks-dbsetup \
+		./cmd/stumpfworks-dbsetup
+	@echo "✓ All tools built successfully"
+
+# Build Debian package
+deb: build tools
+	@echo "Building Debian package..."
+	./scripts/build-deb.sh $(VERSION)
+
+# Deploy to APT repository
+deploy: deb
+	@echo "Deploying to APT repository..."
+	./scripts/deploy.sh $(VERSION)

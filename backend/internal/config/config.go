@@ -39,8 +39,17 @@ type ServerConfig struct {
 
 // DatabaseConfig contains database connection settings
 type DatabaseConfig struct {
-	Driver string
-	Path   string
+	Driver          string
+	Path            string // For SQLite
+	Host            string // For PostgreSQL
+	Port            int    // For PostgreSQL
+	Database        string // For PostgreSQL
+	Username        string // For PostgreSQL
+	Password        string // For PostgreSQL
+	SSLMode         string // For PostgreSQL
+	MaxOpenConns    int
+	MaxIdleConns    int
+	ConnMaxLifetime string
 }
 
 // AuthConfig contains authentication settings
@@ -117,8 +126,17 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("server.trustedProxies", []string{"127.0.0.1", "::1"})
 
 	// Database defaults
-	v.SetDefault("database.driver", "sqlite")
-	v.SetDefault("database.path", "./data/stumpfworks.db")
+	v.SetDefault("database.driver", "postgres")
+	v.SetDefault("database.path", "./data/stumpfworks.db") // SQLite fallback
+	v.SetDefault("database.host", "localhost")
+	v.SetDefault("database.port", 5432)
+	v.SetDefault("database.database", "stumpfworks_nas")
+	v.SetDefault("database.username", "stumpfworks")
+	v.SetDefault("database.password", "")
+	v.SetDefault("database.sslmode", "disable")
+	v.SetDefault("database.maxOpenConns", 25)
+	v.SetDefault("database.maxIdleConns", 5)
+	v.SetDefault("database.connMaxLifetime", "5m")
 
 	// Auth defaults
 	v.SetDefault("auth.jwtSecret", generateRandomSecret())
@@ -175,8 +193,20 @@ func (c *Config) Validate() error {
 		fmt.Fprintf(os.Stderr, "WARNING: JWT secret is very short (%d chars) - recommended minimum: 32 chars\n", len(c.Auth.JWTSecret))
 	}
 
-	if c.Database.Path == "" {
-		return fmt.Errorf("database path is required")
+	// Validate database config
+	if c.Database.Driver == "sqlite" && c.Database.Path == "" {
+		return fmt.Errorf("database path is required for SQLite")
+	}
+	if c.Database.Driver == "postgres" {
+		if c.Database.Host == "" {
+			return fmt.Errorf("database host is required for PostgreSQL")
+		}
+		if c.Database.Database == "" {
+			return fmt.Errorf("database name is required for PostgreSQL")
+		}
+		if c.Database.Username == "" {
+			return fmt.Errorf("database username is required for PostgreSQL")
+		}
 	}
 
 	// Validate CORS in production

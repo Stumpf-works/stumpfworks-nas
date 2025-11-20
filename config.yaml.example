@@ -17,7 +17,20 @@ server:
 
 # Database Settings
 database:
-  driver: "sqlite"           # Currently only sqlite supported
+  driver: "postgres"         # postgres | sqlite
+
+  # PostgreSQL settings (when driver is "postgres")
+  host: "localhost"
+  port: 5432
+  database: "stumpfworks_nas"
+  username: "stumpfworks"
+  password: ""               # Read from /etc/stumpfworks-nas/.db-password in production
+  sslmode: "disable"         # disable | require | verify-ca | verify-full
+  maxOpenConns: 25
+  maxIdleConns: 5
+  connMaxLifetime: "5m"
+
+  # SQLite settings (when driver is "sqlite") - fallback for development
   path: "./data/stumpfworks.db"
 
 # Authentication Settings

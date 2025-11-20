@@ -11,11 +11,12 @@ Vcs-Browser: https://github.com/Stumpf-works/stumpfworks-nas
 Package: stumpfworks-nas
 Architecture: amd64
 Depends: ${shlibs:Depends}, ${misc:Depends},
+         postgresql (>= 13),
+         postgresql-client,
          samba (>= 4.0),
          smbclient,
          smartmontools,
          systemd,
-         sqlite3,
          sudo
 Recommends: nfs-kernel-server,
             lvm2,

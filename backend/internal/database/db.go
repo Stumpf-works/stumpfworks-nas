@@ -10,6 +10,7 @@ import (
 	"github.com/Stumpf-works/stumpfworks-nas/internal/config"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
 	"go.uber.org/zap"
+	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
@@ -44,8 +45,20 @@ func Initialize(cfg *config.Config) error {
 	switch cfg.Database.Driver {
 	case "sqlite":
 		DB, err = gorm.Open(sqlite.Open(cfg.Database.Path), gormConfig)
+	case "postgres", "postgresql":
+		// Build PostgreSQL DSN
+		dsn := fmt.Sprintf(
+			"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
+			cfg.Database.Host,
+			cfg.Database.Port,
+			cfg.Database.Username,
+			cfg.Database.Password,
+			cfg.Database.Database,
+			cfg.Database.SSLMode,
+		)
+		DB, err = gorm.Open(postgres.Open(dsn), gormConfig)
 	default:
-		return fmt.Errorf("unsupported database driver: %s", cfg.Database.Driver)
+		return fmt.Errorf("unsupported database driver: %s (supported: sqlite, postgres)", cfg.Database.Driver)
 	}
 
 	if err != nil {
@@ -58,9 +71,23 @@ func Initialize(cfg *config.Config) error {
 		return fmt.Errorf("failed to get database instance: %w", err)
 	}
 
-	sqlDB.SetMaxIdleConns(10)
-	sqlDB.SetMaxOpenConns(100)
-	sqlDB.SetConnMaxLifetime(time.Hour)
+	// Use config values or defaults
+	maxOpenConns := cfg.Database.MaxOpenConns
+	if maxOpenConns == 0 {
+		maxOpenConns = 25
+	}
+	maxIdleConns := cfg.Database.MaxIdleConns
+	if maxIdleConns == 0 {
+		maxIdleConns = 5
+	}
+	connMaxLifetime, err := time.ParseDuration(cfg.Database.ConnMaxLifetime)
+	if err != nil || connMaxLifetime == 0 {
+		connMaxLifetime = 5 * time.Minute
+	}
+
+	sqlDB.SetMaxIdleConns(maxIdleConns)
+	sqlDB.SetMaxOpenConns(maxOpenConns)
+	sqlDB.SetConnMaxLifetime(connMaxLifetime)
 
 	logger.Info("Database connected successfully",
 		zap.String("driver", cfg.Database.Driver),

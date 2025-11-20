@@ -1,0 +1,129 @@
+name: Build and Deploy to APT Repository
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-deploy-apt:
+    name: Build Debian Package and Deploy to APT
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Get version
+        id: version
+        run: |
+          VERSION=$(git describe --tags --always | sed 's/^v//')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION"
+
+      - name: Install dependencies
+        run: |
+          cd backend && go mod download
+          cd ../frontend && npm install
+
+      - name: Build Frontend
+        run: |
+          cd frontend && npm run build
+
+      - name: Build Backend
+        run: |
+          make build
+
+      - name: Build CLI Tools
+        run: |
+          make tools
+
+      - name: Build Debian Package
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dpkg-dev fakeroot
+          make deb VERSION=${{ steps.version.outputs.version }}
+
+      - name: Setup SSH for APT deployment
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.APT_SERVER_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H 46.4.25.15 >> ~/.ssh/known_hosts
+
+      - name: Deploy to APT Server
+        run: |
+          make deploy VERSION=${{ steps.version.outputs.version }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/*.deb
+          body: |
+            ## StumpfWorks NAS ${{ steps.version.outputs.version }}
+
+            ### 📦 Installation via APT (Recommended)
+
+            ```bash
+            # Add repository (first time only)
+            echo "deb http://apt.stumpfworks.de stable main" | sudo tee /etc/apt/sources.list.d/stumpfworks.list
+
+            # Install
+            sudo apt update
+            sudo apt install stumpfworks-nas
+
+            # Start service
+            stumpfctl service start
+
+            # Check status
+            stumpfctl service status
+            ```
+
+            ### 🛠️ Manual Installation
+
+            Download the .deb package and install:
+            ```bash
+            wget https://github.com/${{ github.repository }}/releases/download/v${{ steps.version.outputs.version }}/stumpfworks-nas_${{ steps.version.outputs.version }}_amd64.deb
+            sudo apt install ./stumpfworks-nas_${{ steps.version.outputs.version }}_amd64.deb
+            ```
+
+            ### ✨ Features
+
+            - ✅ PostgreSQL database (automatic setup)
+            - ✅ Professional CLI tool (`stumpfctl`)
+            - ✅ User management with RBAC
+            - ✅ SMB/NFS shares
+            - ✅ Docker integration
+            - ✅ SMART monitoring
+            - ✅ 2FA support
+            - ✅ Backup management
+            - ✅ Modern React UI
+
+            ### 📝 What's New
+
+            See [CHANGELOG.md](CHANGELOG.md) for details.
+
+            ### 📚 Documentation
+
+            - [Installation Guide](https://github.com/${{ github.repository }}#installation)
+            - [User Guide](https://github.com/${{ github.repository }}#usage)
+            - [stumpfctl Commands](https://github.com/${{ github.repository }}#stumpfctl)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

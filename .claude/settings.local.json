@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ssh root@46.4.25.15 \"hostname\")",
+      "Bash(go mod tidy:*)",
+      "Bash(chmod:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run build:*)",
+      "Bash(CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build:*)",
+      "Bash(bash scripts/build-deb.sh:*)",
+      "Bash(ssh:*)",
+      "Bash(scp:*)",
+      "Bash(git describe:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

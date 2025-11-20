@@ -1,0 +1,18 @@
+# StumpfWorks NAS Installation Mapping
+# Format: source destination
+
+# Main binaries
+dist/stumpfworks-server /usr/bin/stumpfworks-nas
+dist/stumpfctl /usr/bin/stumpfctl
+dist/stumpfworks-dbsetup /usr/bin/stumpfworks-dbsetup
+
+# Systemd service
+debian/stumpfworks-nas.service /etc/systemd/system/
+
+# Configuration example
+config.yaml.example /etc/stumpfworks-nas/
+
+# Documentation
+README.md /usr/share/doc/stumpfworks-nas/
+CHANGELOG.md /usr/share/doc/stumpfworks-nas/
+LICENSE /usr/share/doc/stumpfworks-nas/
