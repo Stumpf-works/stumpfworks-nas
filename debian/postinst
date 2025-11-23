@@ -113,6 +113,104 @@ CONFIGEOF
             echo "   ⚠️  Existing config found, keeping it"
         fi
 
+        # Setup Samba for network shares
+        echo "🌐 Configuring Samba for Windows Network Discovery..."
+
+        # Create shares directory
+        mkdir -p /etc/samba/shares.d
+        chmod 755 /etc/samba/shares.d
+
+        # Only create/update Samba config if it doesn't have our marker or doesn't exist
+        if ! grep -q "Stumpf.Works NAS" /etc/samba/smb.conf 2>/dev/null; then
+            # Backup existing smb.conf if it exists
+            if [ -f /etc/samba/smb.conf ]; then
+                cp /etc/samba/smb.conf /etc/samba/smb.conf.backup-$(date +%Y%m%d-%H%M%S) 2>/dev/null || true
+            fi
+
+            echo "   Creating Samba configuration..."
+            # Create Samba base configuration with Windows Network Discovery
+            cat > /etc/samba/smb.conf <<'SMBCONF'
+#======================= Global Settings =======================
+
+[global]
+   # Basic Server Settings
+   workgroup = WORKGROUP
+   server string = Stumpf.Works NAS
+   netbios name = STUMPFWORKS-NAS
+   server role = standalone server
+
+   # Logging
+   log file = /var/log/samba/log.%m
+   max log size = 1000
+   logging = file
+   panic action = /usr/share/samba/panic-action %d
+
+   # Windows Network Discovery / Browser Settings
+   # This makes the NAS visible in Windows Network Explorer
+   local master = yes
+   preferred master = yes
+   os level = 65
+   domain master = no
+   wins support = yes
+   dns proxy = no
+
+   # Name Resolution Order
+   name resolve order = wins bcast host lmhosts
+
+   # Enable SMB2/SMB3 for Windows 10/11 compatibility
+   server min protocol = SMB2
+   server max protocol = SMB3
+
+   # Authentication
+   security = user
+   passdb backend = tdbsam
+   obey pam restrictions = yes
+   unix password sync = yes
+   passwd program = /usr/bin/passwd %u
+   passwd chat = *Enter\snew\s*\spassword:* %n\n *Retype\snew\s*\spassword:* %n\n *password\supdated\ssuccessfully* .
+   pam password change = yes
+   map to guest = bad user
+
+   # Performance optimizations
+   socket options = TCP_NODELAY IPTOS_LOWDELAY SO_RCVBUF=131072 SO_SNDBUF=131072
+   read raw = yes
+   write raw = yes
+   max xmit = 65535
+   min receivefile size = 16384
+   use sendfile = yes
+   aio read size = 16384
+   aio write size = 16384
+
+   # Character set
+   unix charset = UTF-8
+   dos charset = CP850
+
+   # Include share configurations from shares.d
+   include = /etc/samba/shares.d/*.conf
+
+#======================= Share Definitions =======================
+# Individual shares are configured in /etc/samba/shares.d/
+# This allows the Stumpf.Works NAS backend to manage shares dynamically
+SMBCONF
+        else
+            echo "   ✓ Samba configuration already exists, keeping it"
+        fi
+
+        # Enable and start Samba services
+        systemctl enable smbd nmbd 2>/dev/null || true
+        systemctl restart smbd nmbd 2>/dev/null || true
+
+        # Enable WSDD for Windows 10/11 Network Discovery
+        systemctl enable wsdd 2>/dev/null || true
+        systemctl start wsdd 2>/dev/null || true
+
+        # Enable Avahi for macOS/Linux Discovery
+        systemctl enable avahi-daemon 2>/dev/null || true
+        systemctl start avahi-daemon 2>/dev/null || true
+
+        echo "   ✓ Samba configured with Windows Network Discovery"
+        echo "   ✓ Server will appear as: STUMPFWORKS-NAS"
+
         # Reload systemd
         echo "🔄 Reloading systemd..."
         systemctl daemon-reload
