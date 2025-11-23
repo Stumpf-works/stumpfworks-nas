@@ -89,12 +89,12 @@ for i in "${!ARCHITECTURES[@]}"; do
     if [ -n "$GOARM" ]; then
         CGO_ENABLED=0 GOOS=linux GOARCH=$GOARCH GOARM=$GOARM go build \
             -ldflags="-s -w" \
-            -o "../$BUILD_DIR/stumpfworks-server-${GOARCH}" \
+            -o "$BUILD_DIR/stumpfworks-server-${GOARCH}" \
             cmd/stumpfworks-server/main.go
     else
         CGO_ENABLED=0 GOOS=linux GOARCH=$GOARCH go build \
             -ldflags="-s -w" \
-            -o "../$BUILD_DIR/stumpfworks-server-${GOARCH}" \
+            -o "$BUILD_DIR/stumpfworks-server-${GOARCH}" \
             cmd/stumpfworks-server/main.go
     fi
     cd ..
@@ -106,12 +106,12 @@ for i in "${!ARCHITECTURES[@]}"; do
     if [ -n "$GOARM" ]; then
         CGO_ENABLED=0 GOOS=linux GOARCH=$GOARCH GOARM=$GOARM go build \
             -ldflags="-s -w" \
-            -o "../$BUILD_DIR/stumpfctl-${GOARCH}" \
+            -o "$BUILD_DIR/stumpfctl-${GOARCH}" \
             cmd/stumpfctl/main.go
     else
         CGO_ENABLED=0 GOOS=linux GOARCH=$GOARCH go build \
             -ldflags="-s -w" \
-            -o "../$BUILD_DIR/stumpfctl-${GOARCH}" \
+            -o "$BUILD_DIR/stumpfctl-${GOARCH}" \
             cmd/stumpfctl/main.go
     fi
     cd ..
@@ -123,12 +123,12 @@ for i in "${!ARCHITECTURES[@]}"; do
     if [ -n "$GOARM" ]; then
         CGO_ENABLED=0 GOOS=linux GOARCH=$GOARCH GOARM=$GOARM go build \
             -ldflags="-s -w" \
-            -o "../$BUILD_DIR/stumpfworks-dbsetup-${GOARCH}" \
+            -o "$BUILD_DIR/stumpfworks-dbsetup-${GOARCH}" \
             cmd/stumpfworks-dbsetup/main.go
     else
         CGO_ENABLED=0 GOOS=linux GOARCH=$GOARCH go build \
             -ldflags="-s -w" \
-            -o "../$BUILD_DIR/stumpfworks-dbsetup-${GOARCH}" \
+            -o "$BUILD_DIR/stumpfworks-dbsetup-${GOARCH}" \
             cmd/stumpfworks-dbsetup/main.go
     fi
     cd ..
