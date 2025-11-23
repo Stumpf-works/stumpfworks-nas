@@ -5,7 +5,8 @@ set -e
 VERSION=${1:-$(git describe --tags --always --dirty 2>/dev/null || echo "0.1.0")}
 # Remove leading 'v' from version if present (Debian requirement)
 VERSION=${VERSION#v}
-BUILD_DIR="$(pwd)/dist"
+# Use absolute path for BUILD_DIR to avoid issues with cd commands
+BUILD_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/dist"
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  StumpfWorks NAS - Multi-Architecture Builder"
