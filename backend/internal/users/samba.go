@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/sysutil"
@@ -160,19 +161,56 @@ func (m *SambaUserManager) createLinuxUser(username string) error {
 	// Create user without home directory (-M) and with no shell access (-s /bin/false)
 	// This is a "system user" only for Samba authentication
 	useraddPath := sysutil.FindCommand("useradd")
-	cmd = exec.Command(useraddPath,
-		"-M",                  // No home directory
-		"-s", "/bin/false",    // No shell access (security)
-		"-c", "Stumpf.Works NAS User", // Comment
-		username)
 
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("useradd failed: %s: %w", string(output), err)
+	// Retry logic for /etc/passwd lock contention
+	maxRetries := 5
+	baseDelay := 100 * time.Millisecond
+
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		if attempt > 0 {
+			// Exponential backoff: 100ms, 200ms, 400ms, 800ms, 1600ms
+			delay := baseDelay * time.Duration(1<<uint(attempt-1))
+			logger.Debug("Retrying useradd after delay",
+				zap.String("username", username),
+				zap.Int("attempt", attempt+1),
+				zap.Duration("delay", delay))
+			time.Sleep(delay)
+		}
+
+		cmd = exec.Command(useraddPath,
+			"-M",                  // No home directory
+			"-s", "/bin/false",    // No shell access (security)
+			"-c", "Stumpf.Works NAS User", // Comment
+			username)
+
+		output, err := cmd.CombinedOutput()
+		if err == nil {
+			logger.Debug("Linux user created",
+				zap.String("username", username),
+				zap.String("useradd_path", useraddPath),
+				zap.Int("attempts", attempt+1))
+			return nil
+		}
+
+		// Check if error is due to /etc/passwd lock contention
+		outputStr := string(output)
+		isLockError := strings.Contains(outputStr, "konnte nicht gesperrt werden") ||
+			strings.Contains(outputStr, "cannot lock") ||
+			strings.Contains(outputStr, "unable to lock") ||
+			strings.Contains(outputStr, "temporarily unavailable")
+
+		// If it's not a lock error, or we're on the last attempt, return the error
+		if !isLockError || attempt == maxRetries-1 {
+			return fmt.Errorf("useradd failed: %s: %w", outputStr, err)
+		}
+
+		logger.Debug("useradd lock contention detected, will retry",
+			zap.String("username", username),
+			zap.Int("attempt", attempt+1),
+			zap.Int("max_retries", maxRetries))
 	}
 
-	logger.Debug("Linux user created", zap.String("username", username), zap.String("useradd_path", useraddPath))
-	return nil
+	return fmt.Errorf("useradd failed after %d attempts", maxRetries)
 }
 
 // deleteLinuxUser removes a Linux system user
