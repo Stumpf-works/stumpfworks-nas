@@ -15,7 +15,7 @@ Environment="STUMPFWORKS_CONFIG=/etc/stumpfworks-nas/config.yaml"
 Environment="STUMPFWORKS_DATA_DIR=/var/lib/stumpfworks-nas"
 
 # Binary
-ExecStart=/usr/bin/stumpfworks-server
+ExecStart=/usr/bin/stumpfworks-nas
 
 # Restart policy
 Restart=on-failure

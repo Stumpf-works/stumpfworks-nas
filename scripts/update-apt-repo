@@ -1,0 +1,97 @@
+#!/bin/bash
+
+REPO_DIR="/var/www/apt-repo"
+GPG_KEY="packages@stumpfworks.de"
+ARCHITECTURES=("amd64" "arm64" "armhf")
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  🔄 Updating StumpfWorks APT Repository (Multi-Arch)"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+# Ensure all architecture directories exist
+echo "📁 Ensuring directory structure..."
+cd "$REPO_DIR"
+for ARCH in "${ARCHITECTURES[@]}"; do
+    mkdir -p "dists/stable/main/binary-${ARCH}"
+    echo "   ✓ dists/stable/main/binary-${ARCH}"
+done
+echo ""
+
+# Scan packages for each architecture
+echo "📦 Scanning packages..."
+cd "$REPO_DIR"
+
+TOTAL_PACKAGES=0
+for ARCH in "${ARCHITECTURES[@]}"; do
+    echo "   Processing $ARCH..."
+
+    # Create temporary override file to filter packages by architecture
+    OVERRIDE_FILE=$(mktemp)
+
+    # Scan packages and filter by architecture
+    dpkg-scanpackages --arch "$ARCH" pool/main /dev/null > "dists/stable/main/binary-${ARCH}/Packages" 2>/dev/null || true
+
+    # Compress Packages file
+    gzip -9c "dists/stable/main/binary-${ARCH}/Packages" > "dists/stable/main/binary-${ARCH}/Packages.gz"
+
+    # Count packages for this architecture
+    ARCH_PKG_COUNT=$(grep -c "^Package:" "dists/stable/main/binary-${ARCH}/Packages" 2>/dev/null || echo 0)
+    TOTAL_PACKAGES=$((TOTAL_PACKAGES + ARCH_PKG_COUNT))
+
+    echo "      → $ARCH_PKG_COUNT packages"
+
+    rm -f "$OVERRIDE_FILE"
+done
+echo ""
+
+# Create Release file
+echo "📝 Updating Release file..."
+cd "$REPO_DIR/dists/stable"
+
+# Base Release info
+cat > Release <<RELEASE_EOF
+Origin: StumpfWorks
+Label: StumpfWorks NAS Repository
+Suite: stable
+Codename: stable
+Architectures: amd64 arm64 armhf
+Components: main
+Description: Official StumpfWorks NAS APT Repository - Multi-Architecture Support
+Date: $(date -R)
+RELEASE_EOF
+
+# Add checksums using apt-ftparchive
+apt-ftparchive release . >> Release
+
+# Sign Release file
+echo "🔐 Signing Release file..."
+gpg --batch --yes --default-key "$GPG_KEY" -abs -o Release.gpg Release 2>/dev/null
+gpg --batch --yes --default-key "$GPG_KEY" --clearsign -o InRelease Release 2>/dev/null
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  ✅ Repository Updated Successfully!"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "📊 Repository Statistics:"
+echo "   Total Packages: $TOTAL_PACKAGES"
+
+for ARCH in "${ARCHITECTURES[@]}"; do
+    ARCH_COUNT=$(grep -c "^Package:" "$REPO_DIR/dists/stable/main/binary-${ARCH}/Packages" 2>/dev/null || echo 0)
+    echo "   • $ARCH: $ARCH_COUNT packages"
+done
+
+echo ""
+echo "📍 Location: $REPO_DIR"
+echo ""
+echo "🌐 Access URLs:"
+echo "   http://apt.stumpfworks.de"
+echo "   http://46.4.25.15/apt"
+echo ""
+echo "📥 Install on any supported architecture:"
+echo "   wget -qO- http://apt.stumpfworks.de/key.gpg | sudo apt-key add -"
+echo "   echo \"deb http://apt.stumpfworks.de stable main\" | sudo tee /etc/apt/sources.list.d/stumpfworks.list"
+echo "   sudo apt update"
+echo "   sudo apt install stumpfworks-nas"
+echo ""

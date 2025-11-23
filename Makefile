@@ -17,8 +17,11 @@ help:
 	@echo "  make release       - Build release binaries for all platforms"
 	@echo ""
 	@echo "Packaging & Deployment:"
-	@echo "  make deb           - Build Debian package"
-	@echo "  make deploy        - Deploy to APT repository (requires SSH access)"
+	@echo "  make deb             - Build Debian package (single arch, default: amd64)"
+	@echo "  make build-multiarch - Build binaries for all architectures"
+	@echo "  make deb-multiarch   - Build Debian packages for all architectures"
+	@echo "  make deploy          - Deploy to APT repository (single arch)"
+	@echo "  make deploy-multiarch- Deploy all architectures to APT repository"
 	@echo ""
 	@echo "System Installation:"
 	@echo "  make install-system - Install to system (creates systemd service)"
@@ -516,12 +519,27 @@ tools:
 		./cmd/stumpfworks-dbsetup
 	@echo "✓ All tools built successfully"
 
-# Build Debian package
+# Build Debian package (single architecture)
 deb: build tools
 	@echo "Building Debian package..."
-	./scripts/build-deb.sh $(VERSION)
+	./scripts/build-deb.sh $(VERSION) $(ARCH)
 
-# Deploy to APT repository
+# Build for all architectures
+build-multiarch:
+	@echo "Building for all architectures..."
+	chmod +x ./scripts/build-multiarch.sh
+	./scripts/build-multiarch.sh $(VERSION)
+
+# Build Debian packages for all architectures
+deb-multiarch: build-multiarch
+	@echo "✅ All packages built successfully!"
+
+# Deploy to APT repository (single architecture)
 deploy: deb
 	@echo "Deploying to APT repository..."
-	./scripts/deploy.sh $(VERSION)
+	./scripts/deploy.sh $(VERSION) $(ARCH)
+
+# Deploy all architectures to APT repository
+deploy-multiarch: build-multiarch
+	@echo "Deploying all architectures to APT repository..."
+	./scripts/deploy.sh $(VERSION) all

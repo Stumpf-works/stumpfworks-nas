@@ -101,6 +101,12 @@ func NewRouter(cfg *config.Config) http.Handler {
 
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
+		// Setup wizard routes (no auth required, always accessible)
+		r.Group(func(r chi.Router) {
+			r.Get("/setup/status", handlers.SetupStatus)
+			r.Post("/setup/initialize", handlers.InitializeSetup)
+		})
+
 		// Public routes (no auth, but with IP blocking check)
 		r.Group(func(r chi.Router) {
 			r.Use(mw.IPBlockMiddleware)
@@ -109,8 +115,9 @@ func NewRouter(cfg *config.Config) http.Handler {
 			// r.Post("/auth/register", handlers.Register) // Will implement later
 		})
 
-		// Protected routes (auth required)
+		// Protected routes (auth required + setup check)
 		r.Group(func(r chi.Router) {
+			r.Use(mw.SetupRequired)
 			r.Use(mw.AuthMiddleware)
 
 			// Auth routes

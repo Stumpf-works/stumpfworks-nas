@@ -3,12 +3,13 @@
 set -e
 
 VERSION=${1:-$(git describe --tags --always --dirty 2>/dev/null || echo "0.1.0")}
+ARCH=${2:-"amd64"}  # Default to amd64 if not specified
 BUILD_DIR="$(pwd)/dist"
-DEB_DIR="$BUILD_DIR/debian-build"
+DEB_DIR="$BUILD_DIR/debian-build-${ARCH}"
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  StumpfWorks NAS - Debian Package Builder"
-echo "  Version: $VERSION"
+echo "  Version: $VERSION | Architecture: $ARCH"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
@@ -40,24 +41,42 @@ mkdir -p "$DEB_DIR/usr/share/doc/stumpfworks-nas"
 mkdir -p "$DEB_DIR/var/lib/stumpfworks-nas"
 mkdir -p "$DEB_DIR/var/log/stumpfworks-nas"
 
+# Determine binary suffix based on architecture
+case "$ARCH" in
+    amd64)
+        GOARCH="amd64"
+        ;;
+    arm64)
+        GOARCH="arm64"
+        ;;
+    armhf)
+        GOARCH="arm"
+        ;;
+    *)
+        echo "❌ Error: Unsupported architecture: $ARCH"
+        echo "   Supported: amd64, arm64, armhf"
+        exit 1
+        ;;
+esac
+
 # Copy binaries
-echo "📦 Copying binaries..."
-if [ ! -f "$BUILD_DIR/stumpfworks-server" ]; then
-    echo "❌ Error: stumpfworks-server binary not found"
-    echo "   Run 'make build' first"
+echo "📦 Copying binaries (GOARCH=$GOARCH)..."
+if [ ! -f "$BUILD_DIR/stumpfworks-server-${GOARCH}" ]; then
+    echo "❌ Error: stumpfworks-server-${GOARCH} binary not found"
+    echo "   Run 'make build-multiarch' first"
     exit 1
 fi
 
-cp "$BUILD_DIR/stumpfworks-server" "$DEB_DIR/usr/bin/stumpfworks-nas"
+cp "$BUILD_DIR/stumpfworks-server-${GOARCH}" "$DEB_DIR/usr/bin/stumpfworks-nas"
 chmod 755 "$DEB_DIR/usr/bin/stumpfworks-nas"
 
-if [ -f "$BUILD_DIR/stumpfctl" ]; then
-    cp "$BUILD_DIR/stumpfctl" "$DEB_DIR/usr/bin/stumpfctl"
+if [ -f "$BUILD_DIR/stumpfctl-${GOARCH}" ]; then
+    cp "$BUILD_DIR/stumpfctl-${GOARCH}" "$DEB_DIR/usr/bin/stumpfctl"
     chmod 755 "$DEB_DIR/usr/bin/stumpfctl"
 fi
 
-if [ -f "$BUILD_DIR/stumpfworks-dbsetup" ]; then
-    cp "$BUILD_DIR/stumpfworks-dbsetup" "$DEB_DIR/usr/bin/stumpfworks-dbsetup"
+if [ -f "$BUILD_DIR/stumpfworks-dbsetup-${GOARCH}" ]; then
+    cp "$BUILD_DIR/stumpfworks-dbsetup-${GOARCH}" "$DEB_DIR/usr/bin/stumpfworks-dbsetup"
     chmod 755 "$DEB_DIR/usr/bin/stumpfworks-dbsetup"
 fi
 
@@ -85,7 +104,7 @@ Package: stumpfworks-nas
 Version: $VERSION
 Section: admin
 Priority: optional
-Architecture: amd64
+Architecture: $ARCH
 Maintainer: Stumpf.Works Team <contact@stumpf.works>
 Depends: postgresql (>= 13), postgresql-client, samba (>= 4.0), smbclient, smartmontools, systemd, sudo
 Recommends: nfs-kernel-server, lvm2, mdadm, docker.io | docker-ce, btrfs-progs, zfsutils-linux
@@ -110,7 +129,7 @@ chmod 755 "$DEB_DIR/DEBIAN/postrm"
 # Build the package
 echo ""
 echo "🔨 Building Debian package..."
-DEB_FILE="$BUILD_DIR/stumpfworks-nas_${VERSION}_amd64.deb"
+DEB_FILE="$BUILD_DIR/stumpfworks-nas_${VERSION}_${ARCH}.deb"
 fakeroot dpkg-deb --build "$DEB_DIR" "$DEB_FILE"
 
 # Verify the package

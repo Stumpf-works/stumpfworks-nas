@@ -36,21 +36,19 @@ case "$1" in
         if ! sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw stumpfworks_nas; then
             echo "   Creating database and user..."
 
-            # Use stumpfworks-dbsetup tool if available
-            if [ -x /usr/bin/stumpfworks-dbsetup ]; then
-                sudo -u postgres /usr/bin/stumpfworks-dbsetup || true
-            else
-                # Fallback: manual setup
-                DB_PASSWORD=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-32)
-                echo "$DB_PASSWORD" > /etc/stumpfworks-nas/.db-password
-                chmod 600 /etc/stumpfworks-nas/.db-password
+            # Generate secure password
+            DB_PASSWORD=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-32)
 
-                sudo -u postgres psql <<EOF
+            # Create password file (must be done as root before running as postgres user)
+            echo "$DB_PASSWORD" > /etc/stumpfworks-nas/.db-password
+            chmod 600 /etc/stumpfworks-nas/.db-password
+
+            # Create database and user
+            sudo -u postgres psql <<EOF
 CREATE USER stumpfworks WITH PASSWORD '$DB_PASSWORD';
 CREATE DATABASE stumpfworks_nas OWNER stumpfworks;
 GRANT ALL PRIVILEGES ON DATABASE stumpfworks_nas TO stumpfworks;
 EOF
-            fi
 
             echo "   ✓ Database created"
         else
