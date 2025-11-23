@@ -161,3 +161,30 @@ func (c *Client) GetMetrics() (map[string]interface{}, error) {
 	err := c.Get("/api/metrics", &metrics)
 	return metrics, err
 }
+
+// GetVersion retrieves the server version
+func (c *Client) GetVersion() (string, error) {
+	var result map[string]string
+	err := c.Get("/api/v1/system/version", &result)
+	if err != nil {
+		return "", err
+	}
+	if version, ok := result["version"]; ok {
+		return version, nil
+	}
+	return "unknown", nil
+}
+
+// GetSystemInfo retrieves system information
+func (c *Client) GetSystemInfo() (map[string]interface{}, error) {
+	var info map[string]interface{}
+	err := c.Get("/api/v1/system/info", &info)
+	return info, err
+}
+
+// GetShares retrieves all shares
+func (c *Client) GetShares() ([]map[string]interface{}, error) {
+	var shares []map[string]interface{}
+	err := c.Get("/api/v1/shares", &shares)
+	return shares, err
+}

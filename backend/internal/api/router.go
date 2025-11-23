@@ -456,6 +456,88 @@ func NewRouter(cfg *config.Config) http.Handler {
 				r.Post("/users/sync", adHandler.SyncUser)
 			})
 
+			// Active Directory Domain Controller routes
+			r.Route("/ad-dc", func(r chi.Router) {
+				dcHandler := handlers.NewADDCHandler()
+
+				// Domain Controller Management
+				r.Get("/status", dcHandler.GetDCStatus)
+				r.Get("/config", dcHandler.GetDCConfig)
+				r.Put("/config", dcHandler.UpdateDCConfig)
+				r.Post("/provision", dcHandler.ProvisionDomain)
+				r.Post("/demote", dcHandler.DemoteDomain)
+				r.Get("/info", dcHandler.GetDomainInfo)
+				r.Get("/level", dcHandler.GetDomainLevel)
+				r.Post("/level/raise", dcHandler.RaiseDomainLevel)
+				r.Post("/service/restart", dcHandler.RestartService)
+
+				// User Management
+				r.Route("/users", func(r chi.Router) {
+					r.Get("/", dcHandler.ListUsers)
+					r.Post("/", dcHandler.CreateUser)
+					r.Delete("/{username}", dcHandler.DeleteUser)
+					r.Post("/{username}/enable", dcHandler.EnableUser)
+					r.Post("/{username}/disable", dcHandler.DisableUser)
+					r.Post("/{username}/password", dcHandler.SetUserPassword)
+					r.Post("/{username}/expiry", dcHandler.SetUserExpiry)
+				})
+
+				// Group Management
+				r.Route("/groups", func(r chi.Router) {
+					r.Get("/", dcHandler.ListGroups)
+					r.Post("/", dcHandler.CreateGroup)
+					r.Delete("/{name}", dcHandler.DeleteGroup)
+					r.Get("/{name}/members", dcHandler.ListGroupMembers)
+					r.Post("/{name}/members", dcHandler.AddGroupMember)
+					r.Delete("/{name}/members/{username}", dcHandler.RemoveGroupMember)
+				})
+
+				// Computer Management
+				r.Route("/computers", func(r chi.Router) {
+					r.Get("/", dcHandler.ListComputers)
+					r.Post("/", dcHandler.CreateComputer)
+					r.Delete("/{name}", dcHandler.DeleteComputer)
+				})
+
+				// Organizational Unit Management
+				r.Route("/ou", func(r chi.Router) {
+					r.Get("/", dcHandler.ListOUs)
+					r.Post("/", dcHandler.CreateOU)
+					r.Delete("/", dcHandler.DeleteOU) // Uses DN in body
+				})
+
+				// Group Policy Management
+				r.Route("/gpo", func(r chi.Router) {
+					r.Get("/", dcHandler.ListGPOs)
+					r.Post("/", dcHandler.CreateGPO)
+					r.Delete("/{name}", dcHandler.DeleteGPO)
+					r.Post("/{name}/link", dcHandler.LinkGPO)
+					r.Post("/{name}/unlink", dcHandler.UnlinkGPO)
+				})
+
+				// DNS Management
+				r.Route("/dns", func(r chi.Router) {
+					r.Get("/zones", dcHandler.ListDNSZones)
+					r.Post("/zones", dcHandler.CreateDNSZone)
+					r.Delete("/zones/{zone}", dcHandler.DeleteDNSZone)
+					r.Get("/zones/{zone}/records", dcHandler.ListDNSRecords)
+					r.Post("/zones/{zone}/records", dcHandler.AddDNSRecord)
+					r.Delete("/zones/{zone}/records/{record}", dcHandler.DeleteDNSRecord)
+				})
+
+				// FSMO Roles
+				r.Route("/fsmo", func(r chi.Router) {
+					r.Get("/", dcHandler.ShowFSMORoles)
+					r.Post("/transfer", dcHandler.TransferFSMORoles)
+					r.Post("/seize", dcHandler.SeizeFSMORoles)
+				})
+
+				// Utility
+				r.Post("/test-config", dcHandler.TestConfiguration)
+				r.Get("/dbcheck", dcHandler.ShowDBCheck)
+				r.Post("/backup", dcHandler.BackupOnline)
+			})
+
 			// Audit Log routes
 			r.Route("/audit", func(r chi.Router) {
 				auditHandler := handlers.NewAuditHandler()

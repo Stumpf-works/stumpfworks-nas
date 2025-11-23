@@ -177,7 +177,12 @@ func UninstallPlugin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Stop plugin if running
-	// TODO: Implement plugin stop
+	runtime := plugins.GetRuntime()
+	if runtime != nil {
+		if err := runtime.StopPlugin(r.Context(), pluginID); err != nil {
+			log.Debug().Err(err).Str("plugin_id", pluginID).Msg("Plugin was not running or failed to stop")
+		}
+	}
 
 	// Remove plugin directory
 	if err := os.RemoveAll(installed.InstallPath); err != nil {

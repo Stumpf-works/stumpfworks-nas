@@ -403,9 +403,90 @@ func createLVMVolume(req *CreateVolumeRequest) (*Volume, error) {
 		return nil, fmt.Errorf("LVM tools not available")
 	}
 
-	// For now, this is a simplified version
-	// In production, you'd need to create VG first, then LV
-	return nil, fmt.Errorf("LVM volume creation not yet implemented")
+	if len(req.Disks) == 0 {
+		return nil, fmt.Errorf("at least one disk is required for LVM volume")
+	}
+
+	// Prepare disk paths
+	var diskPaths []string
+	for _, disk := range req.Disks {
+		if !strings.HasPrefix(disk, "/dev/") {
+			disk = "/dev/" + disk
+		}
+		diskPaths = append(diskPaths, disk)
+	}
+
+	vgName := "vg_" + req.Name
+	lvName := "lv_" + req.Name
+
+	// Create physical volumes on each disk
+	for _, disk := range diskPaths {
+		cmd := exec.Command("pvcreate", "-f", disk)
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			return nil, fmt.Errorf("failed to create physical volume on %s: %s: %w", disk, string(output), err)
+		}
+		logger.Info("Physical volume created", zap.String("disk", disk))
+	}
+
+	// Create volume group
+	args := []string{vgName}
+	args = append(args, diskPaths...)
+	cmd := exec.Command("vgcreate", args...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create volume group: %s: %w", string(output), err)
+	}
+	logger.Info("Volume group created", zap.String("vg", vgName))
+
+	// Create logical volume (use 100% of VG space)
+	cmd = exec.Command("lvcreate", "-l", "100%FREE", "-n", lvName, vgName)
+	output, err = cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create logical volume: %s: %w", string(output), err)
+	}
+	logger.Info("Logical volume created", zap.String("lv", lvName))
+
+	lvPath := "/dev/" + vgName + "/" + lvName
+
+	// Format the logical volume
+	formatReq := &FormatDiskRequest{
+		Disk:       lvPath,
+		Filesystem: req.Filesystem,
+		Label:      req.Name,
+	}
+
+	if err := FormatDisk(formatReq); err != nil {
+		return nil, fmt.Errorf("failed to format LVM volume: %w", err)
+	}
+
+	// Create mount point and mount
+	if err := os.MkdirAll(req.MountPoint, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create mount point: %w", err)
+	}
+
+	cmd = exec.Command("mount", lvPath, req.MountPoint)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return nil, fmt.Errorf("failed to mount: %s: %w", string(output), err)
+	}
+
+	// Add to /etc/fstab for persistence
+	if err := addToFstab(lvPath, req.MountPoint, req.Filesystem); err != nil {
+		logger.Warn("Failed to add LVM volume to /etc/fstab - volume will not persist across reboots",
+			zap.String("name", req.Name),
+			zap.Error(err))
+		// Don't fail - volume is created and mounted, just won't persist
+	} else {
+		logger.Info("LVM volume added to /etc/fstab for persistence",
+			zap.String("name", req.Name))
+	}
+
+	logger.Info("LVM volume created successfully",
+		zap.String("name", req.Name),
+		zap.String("vg", vgName),
+		zap.String("lv", lvName))
+
+	return GetVolume(vgName + "/" + lvName)
 }
 
 // createSingleVolume creates a single-disk volume

@@ -2,6 +2,7 @@ package commands
 
 import (
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/cli"
+	"github.com/Stumpf-works/stumpfworks-nas/pkg/client"
 	"github.com/spf13/cobra"
 )
 
@@ -25,6 +26,10 @@ func VersionCmd(version, buildTime string) *cobra.Command {
 }
 
 func getServerVersion() string {
-	// TODO: Query server API for version
-	return "v0.1.0"
+	apiClient := client.NewClient("http://localhost:8080")
+	version, err := apiClient.GetVersion()
+	if err != nil {
+		return "unavailable (server not running)"
+	}
+	return version
 }

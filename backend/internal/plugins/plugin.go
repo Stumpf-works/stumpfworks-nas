@@ -48,6 +48,7 @@ type Service struct {
 
 var (
 	globalService *Service
+	globalRuntime *Runtime
 	once          sync.Once
 )
 
@@ -73,6 +74,9 @@ func Initialize(pluginsDir string) (*Service, error) {
 			plugins:    make(map[string]*Plugin),
 		}
 
+		// Initialize global runtime
+		globalRuntime = NewRuntime(globalService)
+
 		// Discover installed plugins
 		if err = globalService.discoverPlugins(); err != nil {
 			return
@@ -85,6 +89,11 @@ func Initialize(pluginsDir string) (*Service, error) {
 // GetService returns the global plugin service
 func GetService() *Service {
 	return globalService
+}
+
+// GetRuntime returns the global plugin runtime
+func GetRuntime() *Runtime {
+	return globalRuntime
 }
 
 // discoverPlugins scans the plugins directory and loads plugin manifests
