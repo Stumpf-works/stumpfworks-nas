@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/cli"
+	"github.com/Stumpf-works/stumpfworks-nas/pkg/client"
 	"github.com/spf13/cobra"
 )
 
@@ -26,7 +27,35 @@ func shareListCmd() *cobra.Command {
 		Short: "List all shares",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cli.PrintHeader("StumpfWorks NAS Shares")
-			fmt.Println("Share listing not yet implemented")
+
+			apiClient := client.NewClient("http://localhost:8080")
+			shares, err := apiClient.GetShares()
+			if err != nil {
+				cli.PrintError("Failed to retrieve shares: %v", err)
+				return err
+			}
+
+			if len(shares) == 0 {
+				fmt.Println("No shares configured")
+				return nil
+			}
+
+			// Display shares
+			for _, share := range shares {
+				if name, ok := share["name"].(string); ok {
+					fmt.Printf("\nShare: %s\n", name)
+				}
+				if path, ok := share["path"].(string); ok {
+					fmt.Printf("  Path: %s\n", path)
+				}
+				if shareType, ok := share["type"].(string); ok {
+					fmt.Printf("  Type: %s\n", shareType)
+				}
+				if enabled, ok := share["enabled"].(bool); ok {
+					fmt.Printf("  Enabled: %v\n", enabled)
+				}
+			}
+
 			return nil
 		},
 	}

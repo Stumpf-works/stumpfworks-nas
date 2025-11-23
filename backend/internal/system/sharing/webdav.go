@@ -60,19 +60,61 @@ func (w *WebDAVManager) GetStatus() (bool, error) {
 
 // CreateShare creates a new WebDAV share
 func (w *WebDAVManager) CreateShare(share WebDAVShare) error {
-	// This would require:
 	// 1. Enable WebDAV modules (Apache: a2enmod dav dav_fs)
-	// 2. Create virtual host configuration
-	// 3. Set up authentication
-	// 4. Restart web server
+	if err := w.EnableApacheWebDAV(); err != nil {
+		return fmt.Errorf("failed to enable WebDAV modules: %w", err)
+	}
 
-	// Simplified stub - actual implementation would be more complex
-	return fmt.Errorf("WebDAV share creation not yet implemented - please configure manually via Apache/nginx")
+	// 2. Create htpasswd file for authentication if users are specified
+	htpasswdPath := fmt.Sprintf("/etc/apache2/webdav-%s.htpasswd", share.Name)
+	if len(share.Users) > 0 {
+		// Convert user strings to WebDAVUser structs (assuming format "username:password")
+		// For now, we'll create empty passwords and require manual setup
+		// In production, you'd want to handle this more securely
+		var webdavUsers []WebDAVUser
+		for _, username := range share.Users {
+			webdavUsers = append(webdavUsers, WebDAVUser{
+				Username: username,
+				Password: "changeme", // Default password - should be changed
+				ReadOnly: share.ReadOnly,
+			})
+		}
+
+		if err := w.CreateHTPasswdFile(htpasswdPath, webdavUsers); err != nil {
+			return fmt.Errorf("failed to create htpasswd file: %w", err)
+		}
+	}
+
+	// 3. Set up permissions on the share directory
+	if err := w.SetPermissions(share.Path, "www-data", "www-data", "0755"); err != nil {
+		return fmt.Errorf("failed to set permissions: %w", err)
+	}
+
+	// 4. Create virtual host configuration
+	if err := w.CreateApacheVHost(share, htpasswdPath); err != nil {
+		return fmt.Errorf("failed to create virtual host: %w", err)
+	}
+
+	// 5. Test configuration
+	if err := w.TestConfiguration(); err != nil {
+		return fmt.Errorf("Apache configuration test failed: %w", err)
+	}
+
+	return nil
 }
 
 // DeleteShare deletes a WebDAV share
 func (w *WebDAVManager) DeleteShare(name string) error {
-	return fmt.Errorf("WebDAV share deletion not yet implemented")
+	// 1. Delete Apache virtual host
+	if err := w.DeleteApacheVHost(name); err != nil {
+		return fmt.Errorf("failed to delete virtual host: %w", err)
+	}
+
+	// 2. Remove htpasswd file
+	htpasswdPath := fmt.Sprintf("/etc/apache2/webdav-%s.htpasswd", name)
+	_, _ = w.shell.Execute("rm", "-f", htpasswdPath)
+
+	return nil
 }
 
 // ListShares lists all WebDAV shares
