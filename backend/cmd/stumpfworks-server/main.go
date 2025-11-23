@@ -202,6 +202,15 @@ func main() {
 		logger.Info("Active Directory service initialized")
 	}
 
+	// Initialize Active Directory Domain Controller service (non-fatal if fails)
+	if err := initializeADDC(); err != nil {
+		logger.Warn("AD Domain Controller service initialization failed",
+			zap.Error(err),
+			zap.String("message", "AD DC features will be disabled"))
+	} else {
+		logger.Info("AD Domain Controller service initialized")
+	}
+
 	// Initialize Audit Log service
 	if err := initializeAuditLog(); err != nil {
 		logger.Warn("Audit log service initialization failed",
@@ -337,6 +346,13 @@ func initializeBackup() error {
 func initializeAD() error {
 	// Initialize with default config (disabled by default)
 	_, err := ad.Initialize(nil)
+	return err
+}
+
+// initializeADDC initializes the Active Directory Domain Controller service
+// Returns error if AD DC service fails to initialize, but this is non-fatal
+func initializeADDC() error {
+	_, err := ad.InitializeDC()
 	return err
 }
 
