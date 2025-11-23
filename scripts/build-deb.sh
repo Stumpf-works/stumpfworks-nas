@@ -3,6 +3,8 @@
 set -e
 
 VERSION=${1:-$(git describe --tags --always --dirty 2>/dev/null || echo "0.1.0")}
+# Remove leading 'v' from version if present (Debian requirement)
+VERSION=${VERSION#v}
 ARCH=${2:-"amd64"}  # Default to amd64 if not specified
 BUILD_DIR="$(pwd)/dist"
 DEB_DIR="$BUILD_DIR/debian-build-${ARCH}"

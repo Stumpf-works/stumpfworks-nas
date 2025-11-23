@@ -3,6 +3,8 @@
 set -e
 
 VERSION=${1:-$(git describe --tags --always --dirty 2>/dev/null || echo "0.1.0")}
+# Remove leading 'v' from version if present (Debian requirement)
+VERSION=${VERSION#v}
 BUILD_DIR="$(pwd)/dist"
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
