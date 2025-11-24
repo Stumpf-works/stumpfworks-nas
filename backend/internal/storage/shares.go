@@ -8,6 +8,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database/models"
@@ -780,15 +781,63 @@ func ensureSMBGroup(groupName string) error {
 		return nil
 	}
 
-	// Group doesn't exist, create it
+	// Group doesn't exist, create it with retry logic
 	groupaddPath := sysutil.FindCommand("groupadd")
-	cmd = exec.Command(groupaddPath, groupName)
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to create group %s: %s: %w", groupName, string(output), err)
+
+	// Retry logic for /etc/group lock contention
+	// Increased retries due to severe lock contention during service startup
+	maxRetries := 10
+	baseDelay := 150 * time.Millisecond
+
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		if attempt > 0 {
+			// Exponential backoff: 150ms, 300ms, 600ms, 1200ms, 2400ms, 4800ms, 9600ms, 19200ms, 38400ms
+			delay := baseDelay * time.Duration(1<<uint(attempt-1))
+			logger.Info("Retrying groupadd after delay",
+				zap.String("group", groupName),
+				zap.Int("attempt", attempt+1),
+				zap.Duration("delay", delay))
+			time.Sleep(delay)
+		}
+
+		cmd = exec.Command(groupaddPath, groupName)
+		output, err := cmd.CombinedOutput()
+		if err == nil {
+			logger.Info("Created SMB group successfully",
+				zap.String("group", groupName),
+				zap.String("groupadd_path", groupaddPath),
+				zap.Int("attempts", attempt+1))
+			return nil
+		}
+
+		// Check if error is due to /etc/group lock contention
+		outputStr := string(output)
+		isLockError := strings.Contains(outputStr, "konnte nicht gesperrt werden") ||
+			strings.Contains(outputStr, "cannot lock") ||
+			strings.Contains(outputStr, "unable to lock") ||
+			strings.Contains(outputStr, "temporarily unavailable") ||
+			strings.Contains(outputStr, "group") && strings.Contains(outputStr, "lock")
+
+		// If group already exists (race condition), that's fine
+		if strings.Contains(outputStr, "already exists") {
+			logger.Info("SMB group already exists (race condition resolved)",
+				zap.String("group", groupName))
+			return nil
+		}
+
+		// If it's not a lock error, or we're on the last attempt, return the error
+		if !isLockError || attempt == maxRetries-1 {
+			return fmt.Errorf("failed to create group %s: %s: %w", groupName, outputStr, err)
+		}
+
+		logger.Info("groupadd lock contention detected, will retry",
+			zap.String("group", groupName),
+			zap.Int("attempt", attempt+1),
+			zap.Int("max_retries", maxRetries),
+			zap.String("error", outputStr))
 	}
 
-	logger.Info("Created SMB group", zap.String("group", groupName))
-	return nil
+	return fmt.Errorf("groupadd failed after %d attempts for group %s", maxRetries, groupName)
 }
 
 // setShareGroupOwnership sets the group ownership of a path
