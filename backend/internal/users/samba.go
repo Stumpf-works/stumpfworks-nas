@@ -75,6 +75,11 @@ func (m *SambaUserManager) CreateSambaUser(username, password string) error {
 		return fmt.Errorf("failed to create Linux user: %w", err)
 	}
 
+	// Small delay to ensure /etc/passwd locks are fully released
+	// This prevents lock contention between useradd and smbpasswd
+	time.Sleep(50 * time.Millisecond)
+	logger.Info("Linux user created, proceeding to Samba password setup", zap.String("username", username))
+
 	// Step 2: Add user to Samba database with password
 	if err := m.addSambaPassword(username, password); err != nil {
 		// Cleanup: remove Linux user if Samba setup failed
@@ -170,7 +175,7 @@ func (m *SambaUserManager) createLinuxUser(username string) error {
 		if attempt > 0 {
 			// Exponential backoff: 100ms, 200ms, 400ms, 800ms, 1600ms
 			delay := baseDelay * time.Duration(1<<uint(attempt-1))
-			logger.Debug("Retrying useradd after delay",
+			logger.Info("Retrying useradd after delay",
 				zap.String("username", username),
 				zap.Int("attempt", attempt+1),
 				zap.Duration("delay", delay))
@@ -185,7 +190,7 @@ func (m *SambaUserManager) createLinuxUser(username string) error {
 
 		output, err := cmd.CombinedOutput()
 		if err == nil {
-			logger.Debug("Linux user created",
+			logger.Info("Linux user created successfully",
 				zap.String("username", username),
 				zap.String("useradd_path", useraddPath),
 				zap.Int("attempts", attempt+1))
@@ -204,10 +209,11 @@ func (m *SambaUserManager) createLinuxUser(username string) error {
 			return fmt.Errorf("useradd failed: %s: %w", outputStr, err)
 		}
 
-		logger.Debug("useradd lock contention detected, will retry",
+		logger.Info("useradd lock contention detected, will retry",
 			zap.String("username", username),
 			zap.Int("attempt", attempt+1),
-			zap.Int("max_retries", maxRetries))
+			zap.Int("max_retries", maxRetries),
+			zap.String("error", outputStr))
 	}
 
 	return fmt.Errorf("useradd failed after %d attempts", maxRetries)
@@ -235,21 +241,62 @@ func (m *SambaUserManager) deleteLinuxUser(username string) error {
 
 // addSambaPassword adds or updates a password for a Samba user
 func (m *SambaUserManager) addSambaPassword(username, password string) error {
-	// Use smbpasswd to set password
-	// -a = add user (or update if exists)
-	// -s = silent mode (read password from stdin)
-	cmd := exec.Command(sysutil.FindCommand("smbpasswd"), "-a", "-s", username)
+	smbpasswdPath := sysutil.FindCommand("smbpasswd")
 
-	// Pass password via stdin (format: password\npassword\n)
-	cmd.Stdin = strings.NewReader(password + "\n" + password + "\n")
+	// Retry logic for /etc/passwd lock contention
+	// smbpasswd needs to read /etc/passwd to get user UID
+	maxRetries := 5
+	baseDelay := 100 * time.Millisecond
 
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("smbpasswd failed: %s: %w", string(output), err)
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		if attempt > 0 {
+			// Exponential backoff: 100ms, 200ms, 400ms, 800ms, 1600ms
+			delay := baseDelay * time.Duration(1<<uint(attempt-1))
+			logger.Info("Retrying smbpasswd after delay",
+				zap.String("username", username),
+				zap.Int("attempt", attempt+1),
+				zap.Duration("delay", delay))
+			time.Sleep(delay)
+		}
+
+		// Use smbpasswd to set password
+		// -a = add user (or update if exists)
+		// -s = silent mode (read password from stdin)
+		cmd := exec.Command(smbpasswdPath, "-a", "-s", username)
+
+		// Pass password via stdin (format: password\npassword\n)
+		cmd.Stdin = strings.NewReader(password + "\n" + password + "\n")
+
+		output, err := cmd.CombinedOutput()
+		if err == nil {
+			logger.Info("Samba password set successfully",
+				zap.String("username", username),
+				zap.String("smbpasswd_path", smbpasswdPath),
+				zap.Int("attempts", attempt+1))
+			return nil
+		}
+
+		// Check if error is due to /etc/passwd lock contention
+		outputStr := string(output)
+		isLockError := strings.Contains(outputStr, "konnte nicht gesperrt werden") ||
+			strings.Contains(outputStr, "cannot lock") ||
+			strings.Contains(outputStr, "unable to lock") ||
+			strings.Contains(outputStr, "temporarily unavailable") ||
+			strings.Contains(outputStr, "passwd") && strings.Contains(outputStr, "lock")
+
+		// If it's not a lock error, or we're on the last attempt, return the error
+		if !isLockError || attempt == maxRetries-1 {
+			return fmt.Errorf("smbpasswd failed: %s: %w", outputStr, err)
+		}
+
+		logger.Info("smbpasswd lock contention detected, will retry",
+			zap.String("username", username),
+			zap.Int("attempt", attempt+1),
+			zap.Int("max_retries", maxRetries),
+			zap.String("error", outputStr))
 	}
 
-	logger.Debug("Samba password set", zap.String("username", username))
-	return nil
+	return fmt.Errorf("smbpasswd failed after %d attempts", maxRetries)
 }
 
 // enableSambaUser enables a Samba user account
