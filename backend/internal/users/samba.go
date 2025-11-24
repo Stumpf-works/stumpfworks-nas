@@ -168,12 +168,13 @@ func (m *SambaUserManager) createLinuxUser(username string) error {
 	useraddPath := sysutil.FindCommand("useradd")
 
 	// Retry logic for /etc/passwd lock contention
-	maxRetries := 5
-	baseDelay := 100 * time.Millisecond
+	// Increased retries due to severe lock contention in production
+	maxRetries := 10
+	baseDelay := 150 * time.Millisecond
 
 	for attempt := 0; attempt < maxRetries; attempt++ {
 		if attempt > 0 {
-			// Exponential backoff: 100ms, 200ms, 400ms, 800ms, 1600ms
+			// Exponential backoff: 150ms, 300ms, 600ms, 1200ms, 2400ms, 4800ms, 9600ms, 19200ms, 38400ms
 			delay := baseDelay * time.Duration(1<<uint(attempt-1))
 			logger.Info("Retrying useradd after delay",
 				zap.String("username", username),
@@ -245,12 +246,13 @@ func (m *SambaUserManager) addSambaPassword(username, password string) error {
 
 	// Retry logic for /etc/passwd lock contention
 	// smbpasswd needs to read /etc/passwd to get user UID
-	maxRetries := 5
-	baseDelay := 100 * time.Millisecond
+	// Increased retries due to severe lock contention in production
+	maxRetries := 10
+	baseDelay := 150 * time.Millisecond
 
 	for attempt := 0; attempt < maxRetries; attempt++ {
 		if attempt > 0 {
-			// Exponential backoff: 100ms, 200ms, 400ms, 800ms, 1600ms
+			// Exponential backoff: 150ms, 300ms, 600ms, 1200ms, 2400ms, 4800ms, 9600ms, 19200ms, 38400ms
 			delay := baseDelay * time.Duration(1<<uint(attempt-1))
 			logger.Info("Retrying smbpasswd after delay",
 				zap.String("username", username),
