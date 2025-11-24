@@ -196,6 +196,15 @@ SMBCONF
             echo "   ✓ Samba configuration already exists, keeping it"
         fi
 
+        # Create SMB users group
+        echo "👥 Creating Samba user group..."
+        if ! getent group smbusers > /dev/null 2>&1; then
+            groupadd smbusers
+            echo "   ✓ Created smbusers group"
+        else
+            echo "   ✓ smbusers group already exists"
+        fi
+
         # Enable and start Samba services
         systemctl enable smbd nmbd 2>/dev/null || true
         systemctl restart smbd nmbd 2>/dev/null || true
