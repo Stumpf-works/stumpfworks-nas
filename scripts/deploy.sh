@@ -36,9 +36,9 @@ for DEPLOY_ARCH in "${ARCHITECTURES[@]}"; do
         exit 1
     fi
 
-    echo "📤 Uploading $DEB_FILE to APT server..."
-    scp "$DEB_FILE" "$SERVER:$REPO_PATH"
-    echo "   ✓ Uploaded $(basename $DEB_FILE) ($(du -h "$DEB_FILE" | cut -f1))"
+    echo "📤 Copying $DEB_FILE to APT repository..."
+    cp "$DEB_FILE" "$REPO_PATH"
+    echo "   ✓ Copied $(basename $DEB_FILE) ($(du -h "$DEB_FILE" | cut -f1))"
     echo ""
 done
 
@@ -47,7 +47,7 @@ echo "  🔄 Updating Repository Metadata"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
-ssh "$SERVER" "update-apt-repo"
+update-apt-repo
 echo "   ✓ Repository metadata updated!"
 
 echo ""
@@ -72,7 +72,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 # Verify packages in repository
 echo ""
 echo "🔍 Verifying packages in repository..."
-if ssh "$SERVER" "apt-cache policy stumpfworks-nas" | grep -q "$VERSION"; then
+if apt-cache policy stumpfworks-nas | grep -q "$VERSION"; then
     echo "   ✓ Packages verified successfully!"
 
     # Show available architectures
