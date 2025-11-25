@@ -28,6 +28,7 @@ const (
 type Disk struct {
 	Name         string     `json:"name"`         // e.g., "sda", "nvme0n1"
 	Path         string     `json:"path"`         // e.g., "/dev/sda"
+	Label        string     `json:"label"`        // User-defined friendly name (optional)
 	Model        string     `json:"model"`        // Disk model
 	Serial       string     `json:"serial"`       // Serial number
 	Size         uint64     `json:"size"`         // Size in bytes

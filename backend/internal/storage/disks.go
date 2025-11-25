@@ -12,9 +12,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Stumpf-works/stumpfworks-nas/internal/database"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/database/models"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/sysutil"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 // ListDisks lists all available disks on the system
@@ -78,6 +81,12 @@ func GetDiskInfo(diskName string) (*Disk, error) {
 		disk.Model = strings.TrimSpace(model)
 	}
 
+	// Get disk serial number
+	serial, err := sysutil.ReadSysFile(filepath.Join(sysPath, "device/serial"))
+	if err == nil {
+		disk.Serial = strings.TrimSpace(serial)
+	}
+
 	// Get disk type (HDD/SSD/NVMe)
 	disk.Type = getDiskType(diskName, sysPath)
 
@@ -107,6 +116,11 @@ func GetDiskInfo(diskName string) (*Disk, error) {
 		disk.Temperature = smart.Temperature
 	} else {
 		disk.Status = DiskStatusUnknown
+	}
+
+	// Load custom label from database if serial number is available
+	if disk.Serial != "" {
+		disk.Label = getDiskLabel(disk.Serial)
 	}
 
 	return disk, nil
@@ -595,6 +609,84 @@ func FormatDisk(req *FormatDiskRequest) error {
 	logger.Info("Disk formatted successfully",
 		zap.String("disk", diskPath),
 		zap.String("filesystem", req.Filesystem))
+
+	return nil
+}
+
+// getDiskLabel retrieves the user-defined label for a disk by its serial number
+func getDiskLabel(serial string) string {
+	if serial == "" {
+		return ""
+	}
+
+	db := database.GetDB()
+	if db == nil {
+		return ""
+	}
+
+	var label models.DiskLabel
+	if err := db.Where("serial = ?", serial).First(&label).Error; err != nil {
+		if err != gorm.ErrRecordNotFound {
+			logger.Warn("Failed to load disk label",
+				zap.String("serial", serial),
+				zap.Error(err))
+		}
+		return ""
+	}
+
+	return label.Label
+}
+
+// SetDiskLabel sets or updates the user-defined label for a disk
+func SetDiskLabel(serial, label string) error {
+	if serial == "" {
+		return fmt.Errorf("serial number is required")
+	}
+
+	db := database.GetDB()
+	if db == nil {
+		return fmt.Errorf("database not available")
+	}
+
+	// Trim the label
+	label = strings.TrimSpace(label)
+
+	// If label is empty, delete the record
+	if label == "" {
+		if err := db.Where("serial = ?", serial).Delete(&models.DiskLabel{}).Error; err != nil {
+			return fmt.Errorf("failed to delete disk label: %w", err)
+		}
+		logger.Info("Disk label removed", zap.String("serial", serial))
+		return nil
+	}
+
+	// Upsert the label
+	var diskLabel models.DiskLabel
+	err := db.Where("serial = ?", serial).First(&diskLabel).Error
+	if err == gorm.ErrRecordNotFound {
+		// Create new label
+		diskLabel = models.DiskLabel{
+			Serial: serial,
+			Label:  label,
+		}
+		if err := db.Create(&diskLabel).Error; err != nil {
+			return fmt.Errorf("failed to create disk label: %w", err)
+		}
+		logger.Info("Disk label created",
+			zap.String("serial", serial),
+			zap.String("label", label))
+	} else if err != nil {
+		return fmt.Errorf("failed to query disk label: %w", err)
+	} else {
+		// Update existing label
+		diskLabel.Label = label
+		if err := db.Save(&diskLabel).Error; err != nil {
+			return fmt.Errorf("failed to update disk label: %w", err)
+		}
+		logger.Info("Disk label updated",
+			zap.String("serial", serial),
+			zap.String("label", label))
+	}
 
 	return nil
 }

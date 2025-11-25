@@ -15,6 +15,7 @@ func RunMigrations() error {
 		&models.User{},
 		&models.UserGroup{},
 		&models.Share{},
+		&models.DiskLabel{},
 		&models.AuditLog{},
 		&models.FailedLoginAttempt{},
 		&models.IPBlock{},

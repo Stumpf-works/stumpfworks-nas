@@ -3,11 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { storageApi, Disk } from '@/api/storage';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
+import Input from '@/components/ui/Input';
 
 export default function DiskManager() {
   const [disks, setDisks] = useState<Disk[]>([]);
   const [selectedDisk, setSelectedDisk] = useState<Disk | null>(null);
   const [showSMART, setShowSMART] = useState(false);
+  const [showRename, setShowRename] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -85,6 +87,10 @@ export default function DiskManager() {
               setSelectedDisk(disk);
               setShowSMART(true);
             }}
+            onRename={() => {
+              setSelectedDisk(disk);
+              setShowRename(true);
+            }}
             formatBytes={formatBytes}
             getDiskIcon={getDiskIcon}
             getStatusColor={getStatusColor}
@@ -115,6 +121,24 @@ export default function DiskManager() {
           />
         )}
       </AnimatePresence>
+
+      {/* Rename Disk Modal */}
+      <AnimatePresence>
+        {showRename && selectedDisk && (
+          <RenameDiskModal
+            disk={selectedDisk}
+            onClose={() => {
+              setShowRename(false);
+              setSelectedDisk(null);
+            }}
+            onSuccess={() => {
+              loadDisks();
+              setShowRename(false);
+              setSelectedDisk(null);
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -122,30 +146,50 @@ export default function DiskManager() {
 interface DiskCardProps {
   disk: Disk;
   onSelect: () => void;
+  onRename: () => void;
   formatBytes: (bytes: number) => string;
   getDiskIcon: (type: string) => string;
   getStatusColor: (status: string) => string;
 }
 
-function DiskCard({ disk, onSelect, formatBytes, getDiskIcon, getStatusColor }: DiskCardProps) {
+function DiskCard({ disk, onSelect, onRename, formatBytes, getDiskIcon, getStatusColor }: DiskCardProps) {
   return (
     <Card>
       <div className="flex items-start justify-between">
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-3 flex-1">
           <div className="text-3xl">{getDiskIcon(disk.type)}</div>
-          <div>
-            <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-              {disk.name}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">
+                {disk.label || disk.model || disk.name}
+              </h3>
+              <button
+                onClick={onRename}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors flex-shrink-0"
+                title="Rename disk"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+              </button>
               {disk.isSystem && (
-                <span className="ml-2 px-2 py-0.5 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 rounded">
+                <span className="px-2 py-0.5 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 rounded flex-shrink-0">
                   System
                 </span>
               )}
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">{disk.model}</p>
+            </div>
+            {disk.label ? (
+              <p className="text-xs text-gray-500 dark:text-gray-500 truncate">
+                {disk.model} • {disk.name}
+              </p>
+            ) : (
+              <p className="text-xs text-gray-500 dark:text-gray-500 truncate">
+                {disk.name}
+              </p>
+            )}
           </div>
         </div>
-        <div className={`text-sm font-medium ${getStatusColor(disk.status)}`}>
+        <div className={`text-sm font-medium ${getStatusColor(disk.status)} flex-shrink-0 ml-2`}>
           {disk.status.toUpperCase()}
         </div>
       </div>
@@ -332,5 +376,153 @@ function SMARTAttribute({ label, value, warning }: SMARTAttributeProps) {
         {value}
       </div>
     </div>
+  );
+}
+
+interface RenameDiskModalProps {
+  disk: Disk;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+function RenameDiskModal({ disk, onClose, onSuccess }: RenameDiskModalProps) {
+  const [label, setLabel] = useState(disk.label || '');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await storageApi.setDiskLabel(disk.name, label.trim());
+      if (response.success) {
+        onSuccess();
+      } else {
+        setError(response.error?.message || 'Failed to update disk label');
+      }
+    } catch (err) {
+      setError('Failed to update disk label');
+      console.error('Failed to update disk label:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClear = async () => {
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await storageApi.setDiskLabel(disk.name, '');
+      if (response.success) {
+        onSuccess();
+      } else {
+        setError(response.error?.message || 'Failed to clear disk label');
+      }
+    } catch (err) {
+      setError('Failed to clear disk label');
+      console.error('Failed to clear disk label:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white dark:bg-macos-dark-100 rounded-lg shadow-2xl p-6 w-full max-w-md"
+      >
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+            Rename Disk
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="p-3 bg-gray-50 dark:bg-macos-dark-200 rounded text-sm">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-gray-600 dark:text-gray-400">Disk:</span>
+              <span className="font-mono text-gray-900 dark:text-gray-100">{disk.name}</span>
+            </div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-gray-600 dark:text-gray-400">Model:</span>
+              <span className="text-gray-900 dark:text-gray-100">{disk.model}</span>
+            </div>
+            {disk.serial && (
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600 dark:text-gray-400">Serial:</span>
+                <span className="font-mono text-xs text-gray-600 dark:text-gray-400">{disk.serial}</span>
+              </div>
+            )}
+            {!disk.serial && (
+              <div className="mt-2 text-xs text-yellow-600 dark:text-yellow-400">
+                ⚠️ This disk has no serial number and cannot be labeled
+              </div>
+            )}
+          </div>
+
+          <div>
+            <Input
+              label="Custom Label"
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder="e.g., Main Storage, Backup Drive"
+              disabled={!disk.serial || loading}
+            />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Give this disk a friendly name. Leave empty to show model name.
+            </p>
+          </div>
+
+          {error && (
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded text-sm">
+              {error}
+            </div>
+          )}
+
+          <div className="flex gap-2 pt-2">
+            {disk.label && disk.serial && (
+              <Button
+                type="button"
+                onClick={handleClear}
+                variant="secondary"
+                isLoading={loading}
+                className="flex-1"
+              >
+                Clear Label
+              </Button>
+            )}
+            <Button
+              type="submit"
+              isLoading={loading}
+              disabled={!disk.serial}
+              className="flex-1"
+            >
+              Save Label
+            </Button>
+          </div>
+        </form>
+      </motion.div>
+    </motion.div>
   );
 }

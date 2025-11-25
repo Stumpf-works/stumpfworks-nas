@@ -91,6 +91,47 @@ func GetDiskHealth(w http.ResponseWriter, r *http.Request) {
 	utils.RespondSuccess(w, health)
 }
 
+// SetDiskLabel sets a custom label for a disk
+func SetDiskLabel(w http.ResponseWriter, r *http.Request) {
+	diskName := chi.URLParam(r, "name")
+
+	var req struct {
+		Label string `json:"label"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.RespondError(w, errors.BadRequest("Invalid request", err))
+		return
+	}
+
+	// Get disk info to retrieve serial number
+	disk, err := storage.GetDiskInfo(diskName)
+	if err != nil {
+		logger.Error("Failed to get disk info", zap.String("disk", diskName), zap.Error(err))
+		utils.RespondError(w, errors.NotFound("Disk not found", err))
+		return
+	}
+
+	if disk.Serial == "" {
+		utils.RespondError(w, errors.BadRequest("Disk has no serial number - cannot set label", nil))
+		return
+	}
+
+	// Set the label
+	if err := storage.SetDiskLabel(disk.Serial, req.Label); err != nil {
+		logger.Error("Failed to set disk label",
+			zap.String("disk", diskName),
+			zap.String("serial", disk.Serial),
+			zap.Error(err))
+		utils.RespondError(w, errors.InternalServerError("Failed to set disk label", err))
+		return
+	}
+
+	utils.RespondSuccess(w, map[string]string{
+		"message": "Disk label updated successfully",
+		"label":   req.Label,
+	})
+}
+
 // ===== Volume Handlers =====
 
 // ListVolumes lists all storage volumes

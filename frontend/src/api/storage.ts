@@ -5,6 +5,7 @@ import client, { ApiResponse } from './client';
 export interface Disk {
   name: string;
   path: string;
+  label?: string; // User-defined friendly name
   model: string;
   serial: string;
   size: number;
@@ -198,6 +199,11 @@ export const storageApi = {
 
   formatDisk: async (data: FormatDiskRequest) => {
     const response = await client.post<ApiResponse<{ message: string }>>('/storage/disks/format', data);
+    return response.data;
+  },
+
+  setDiskLabel: async (diskName: string, label: string) => {
+    const response = await client.put<ApiResponse<{ message: string; label: string }>>(`/storage/disks/${diskName}/label`, { label });
     return response.data;
   },
 

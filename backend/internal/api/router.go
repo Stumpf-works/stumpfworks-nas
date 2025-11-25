@@ -204,6 +204,7 @@ func NewRouter(cfg *config.Config) http.Handler {
 
 					// Disk operations
 					r.Post("/disks/format", handlers.FormatDisk)
+					r.Put("/disks/{name}/label", handlers.SetDiskLabel)
 
 					// Volume operations
 					r.Post("/volumes", handlers.CreateVolume)
