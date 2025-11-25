@@ -640,12 +640,22 @@ func DeleteVolume(id string) error {
 		return err
 	}
 
+	logger.Info("Deleting volume",
+		zap.String("id", id),
+		zap.String("name", volume.Name),
+		zap.String("mountPoint", volume.MountPoint),
+		zap.String("type", string(volume.Type)))
+
 	// Unmount if mounted
 	if volume.MountPoint != "" {
+		logger.Info("Unmounting volume", zap.String("mountPoint", volume.MountPoint))
 		cmd := exec.Command("umount", volume.MountPoint)
 		if output, err := cmd.CombinedOutput(); err != nil {
 			return fmt.Errorf("failed to unmount: %s: %w", string(output), err)
 		}
+		logger.Info("Volume unmounted successfully", zap.String("mountPoint", volume.MountPoint))
+	} else {
+		logger.Warn("Volume has no mount point, skipping unmount", zap.String("id", id))
 	}
 
 	// Delete based on type
@@ -811,8 +821,11 @@ func addToFstabByDevice(device, mountPoint, fstype string) error {
 // removeFromFstab removes an entry from /etc/fstab
 func removeFromFstab(mountPoint string) error {
 	if mountPoint == "" {
+		logger.Warn("removeFromFstab called with empty mount point, skipping")
 		return nil // Nothing to remove
 	}
+
+	logger.Info("Attempting to remove from /etc/fstab", zap.String("mountPoint", mountPoint))
 
 	// Read current fstab
 	data, err := os.ReadFile("/etc/fstab")
