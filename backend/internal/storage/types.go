@@ -181,7 +181,7 @@ type CreateVolumeRequest struct {
 	Type       VolumeType `json:"type" validate:"required"`
 	Disks      []string   `json:"disks" validate:"required,min=1"`
 	Filesystem string     `json:"filesystem" validate:"required,oneof=ext4 xfs btrfs zfs"`
-	MountPoint string     `json:"mountPoint" validate:"required"`
+	MountPoint string     `json:"mountPoint,omitempty"` // Optional - auto-generated from Name if empty
 	RaidLevel  string     `json:"raidLevel,omitempty"`
 }
 

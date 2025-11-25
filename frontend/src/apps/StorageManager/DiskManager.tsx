@@ -487,7 +487,7 @@ function RenameDiskModal({ disk, onClose, onSuccess }: RenameDiskModalProps) {
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               placeholder="e.g., Main Storage, Backup Drive"
-              disabled={!disk.serial || loading}
+              disabled={loading}
             />
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
               Give this disk a friendly name. Leave empty to show model name.

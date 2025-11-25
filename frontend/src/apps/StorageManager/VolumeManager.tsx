@@ -230,6 +230,22 @@ interface CreateVolumeModalProps {
   onSuccess: () => void;
 }
 
+// Helper function to preview auto-generated mount point
+function generateMountPointPreview(name: string): string {
+  if (!name) return '/mnt/my-volume';
+
+  // Same logic as backend
+  let safeName = name.toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9\-_]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  if (!safeName) safeName = 'volume';
+
+  return `/mnt/${safeName}`;
+}
+
 function CreateVolumeModal({ onClose, onSuccess }: CreateVolumeModalProps) {
   const [availableDisks, setAvailableDisks] = useState<Disk[]>([]);
   const [formData, setFormData] = useState<CreateVolumeRequest>({
@@ -347,13 +363,21 @@ function CreateVolumeModal({ onClose, onSuccess }: CreateVolumeModalProps) {
             </select>
           </div>
 
-          <Input
-            label="Mount Point"
-            value={formData.mountPoint}
-            onChange={(e) => setFormData({ ...formData, mountPoint: e.target.value })}
-            placeholder="/mnt/volume1"
-            required
-          />
+          <div>
+            <Input
+              label="Mount Point (Optional)"
+              value={formData.mountPoint}
+              onChange={(e) => setFormData({ ...formData, mountPoint: e.target.value })}
+              placeholder={formData.name ? generateMountPointPreview(formData.name) : "/mnt/my-volume"}
+            />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {formData.mountPoint
+                ? `Will be mounted at: ${formData.mountPoint}`
+                : formData.name
+                  ? `Will auto-generate: ${generateMountPointPreview(formData.name)}`
+                  : "Leave empty to auto-generate from volume name"}
+            </p>
+          </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

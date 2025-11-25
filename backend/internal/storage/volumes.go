@@ -307,11 +307,55 @@ func GetVolume(id string) (*Volume, error) {
 	return nil, fmt.Errorf("volume not found: %s", id)
 }
 
+// generateMountPoint generates a safe mount point path from a volume name
+// Example: "Main Storage" -> "/mnt/main-storage"
+func generateMountPoint(name string) string {
+	// Convert to lowercase
+	name = strings.ToLower(name)
+
+	// Replace spaces with hyphens
+	name = strings.ReplaceAll(name, " ", "-")
+
+	// Remove unsafe characters (keep only alphanumeric, hyphens, underscores)
+	var safe strings.Builder
+	for _, r := range name {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' || r == '_' {
+			safe.WriteRune(r)
+		}
+	}
+
+	safeName := safe.String()
+
+	// Remove consecutive hyphens
+	for strings.Contains(safeName, "--") {
+		safeName = strings.ReplaceAll(safeName, "--", "-")
+	}
+
+	// Trim hyphens from start and end
+	safeName = strings.Trim(safeName, "-")
+
+	// Fallback if name is empty after sanitization
+	if safeName == "" {
+		safeName = "volume"
+	}
+
+	return "/mnt/" + safeName
+}
+
 // CreateVolume creates a new storage volume
 func CreateVolume(req *CreateVolumeRequest) (*Volume, error) {
+	// Auto-generate mount point if not provided
+	if req.MountPoint == "" {
+		req.MountPoint = generateMountPoint(req.Name)
+		logger.Info("Auto-generated mount point",
+			zap.String("name", req.Name),
+			zap.String("mountPoint", req.MountPoint))
+	}
+
 	logger.Info("Creating volume",
 		zap.String("name", req.Name),
 		zap.String("type", string(req.Type)),
+		zap.String("mountPoint", req.MountPoint),
 		zap.Strings("disks", req.Disks))
 
 	switch req.Type {
