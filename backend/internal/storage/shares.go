@@ -82,6 +82,7 @@ func toShare(s *models.Share) *Share {
 		ID:          fmt.Sprintf("%d", s.ID),
 		Name:        s.Name,
 		Path:        s.Path,
+		VolumeID:    s.VolumeID,
 		Type:        ShareType(s.Type),
 		Description: s.Description,
 		Enabled:     s.Enabled,
@@ -128,11 +129,37 @@ func CreateShare(req *CreateShareRequest) (*Share, error) {
 	logger.Info("Creating share",
 		zap.String("name", req.Name),
 		zap.String("type", string(req.Type)),
+		zap.String("volumeId", req.VolumeID),
 		zap.String("path", req.Path))
 
+	// Validate that either VolumeID or Path is provided
+	if req.VolumeID == "" && req.Path == "" {
+		return nil, fmt.Errorf("either volumeId or path must be provided")
+	}
+
+	// Resolve the actual path
+	sharePath := req.Path
+	volumeID := req.VolumeID
+
+	// If VolumeID is provided, resolve the volume's mount point
+	if req.VolumeID != "" {
+		volume, err := GetVolume(req.VolumeID)
+		if err != nil {
+			return nil, fmt.Errorf("volume not found: %s", req.VolumeID)
+		}
+		if volume.Status != VolumeStatusOnline {
+			return nil, fmt.Errorf("volume '%s' is not online (status: %s)", req.VolumeID, volume.Status)
+		}
+		// Use the volume's mount point as the share path
+		sharePath = volume.MountPoint
+		logger.Info("Resolved volume to mount point",
+			zap.String("volumeId", req.VolumeID),
+			zap.String("mountPoint", sharePath))
+	}
+
 	// Validate path exists
-	if _, err := os.Stat(req.Path); os.IsNotExist(err) {
-		return nil, fmt.Errorf("path does not exist: %s", req.Path)
+	if _, err := os.Stat(sharePath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("path does not exist: %s", sharePath)
 	}
 
 	// Validate that all users in ValidUsers exist
@@ -158,7 +185,8 @@ func CreateShare(req *CreateShareRequest) (*Share, error) {
 	// Create database record
 	model := &models.Share{
 		Name:        req.Name,
-		Path:        req.Path,
+		Path:        sharePath, // Use resolved path (from volume or manual)
+		VolumeID:    volumeID,  // Store volume reference if provided
 		Type:        string(req.Type),
 		Description: req.Description,
 		Enabled:     true,

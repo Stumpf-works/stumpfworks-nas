@@ -135,6 +135,7 @@ type Share struct {
 	ID          string    `json:"id"`
 	Name        string    `json:"name"`
 	Path        string    `json:"path"`
+	VolumeID    string    `json:"volumeId,omitempty"` // Optional - linked volume
 	Type        ShareType `json:"type"`
 	Description string    `json:"description"`
 	Enabled     bool      `json:"enabled"`
@@ -186,7 +187,8 @@ type CreateVolumeRequest struct {
 // CreateShareRequest represents a request to create a new share
 type CreateShareRequest struct {
 	Name        string    `json:"name" validate:"required,min=1,max=255"`
-	Path        string    `json:"path" validate:"required"`
+	VolumeID    string    `json:"volumeId,omitempty"` // Optional - select from managed volumes
+	Path        string    `json:"path,omitempty"`     // Optional - manual path (used if VolumeID not provided)
 	Type        ShareType `json:"type" validate:"required,oneof=smb nfs ftp"`
 	Description string    `json:"description"`
 	ReadOnly    bool      `json:"readOnly"`

@@ -148,8 +148,18 @@ func getDiskType(diskName, sysPath string) DiskType {
 	return DiskTypeHDD
 }
 
-// isSystemDisk checks if the disk contains the root partition
+// isSystemDisk checks if the disk contains any critical system partitions
 func isSystemDisk(diskName string) bool {
+	// Critical mount points that indicate a system disk
+	criticalMounts := []string{
+		"/",           // Root filesystem
+		"/boot",       // Boot partition
+		"/boot/efi",   // EFI partition
+		"/etc",        // Config files (if separate partition)
+		"/usr",        // System programs
+		"/var",        // System data
+	}
+
 	// Read /proc/mounts
 	file, err := os.Open("/proc/mounts")
 	if err != nil {
@@ -167,9 +177,20 @@ func isSystemDisk(diskName string) bool {
 		device := fields[0]
 		mountPoint := fields[1]
 
-		// Check if this is the root partition
-		if mountPoint == "/" && strings.Contains(device, diskName) {
-			return true
+		// Check if device belongs to this disk
+		if !strings.Contains(device, diskName) {
+			continue
+		}
+
+		// Check if this is a critical mount point
+		for _, critical := range criticalMounts {
+			if mountPoint == critical {
+				logger.Info("Detected system disk",
+					zap.String("disk", diskName),
+					zap.String("mountPoint", mountPoint),
+					zap.String("device", device))
+				return true
+			}
 		}
 	}
 
@@ -486,6 +507,21 @@ func FormatDisk(req *FormatDiskRequest) error {
 	diskPath := req.Disk
 	if !strings.HasPrefix(diskPath, "/dev/") {
 		diskPath = "/dev/" + diskPath
+	}
+
+	// Extract disk name from path (e.g., /dev/sda1 -> sda, /dev/nvme0n1p1 -> nvme0n1)
+	diskName := strings.TrimPrefix(diskPath, "/dev/")
+	// Remove partition numbers: sda1 -> sda, nvme0n1p1 -> nvme0n1
+	diskName = strings.TrimRight(diskName, "0123456789")
+	// Handle nvme partitions that end with 'p'
+	diskName = strings.TrimSuffix(diskName, "p")
+
+	// CRITICAL SAFETY CHECK: Never allow formatting system disk
+	if isSystemDisk(diskName) {
+		logger.Error("Attempted to format system disk - BLOCKED",
+			zap.String("disk", diskPath),
+			zap.String("baseDisk", diskName))
+		return fmt.Errorf("SAFETY PROTECTION: cannot format system disk '%s' - it contains critical system partitions. This operation is permanently blocked to prevent system damage", diskName)
 	}
 
 	// Check if disk exists

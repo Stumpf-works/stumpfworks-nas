@@ -10,6 +10,7 @@ type Share struct {
 	gorm.Model
 	Name        string `gorm:"size:255;not null;uniqueIndex:idx_name_deleted"` // Composite unique with deleted_at
 	Path        string `gorm:"size:500;not null"`
+	VolumeID    string `gorm:"size:100;index"` // Optional - links to a managed volume
 	Type        string `gorm:"size:10;not null"` // smb, nfs, ftp
 	Description string `gorm:"size:500"`
 	Enabled     bool   `gorm:"default:true"`
