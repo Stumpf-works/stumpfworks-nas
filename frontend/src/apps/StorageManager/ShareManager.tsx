@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { storageApi, Share, CreateShareRequest } from '@/api/storage';
+import { storageApi, Share, CreateShareRequest, Volume } from '@/api/storage';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -130,6 +130,14 @@ export default function ShareManager() {
             )}
 
             <div className="space-y-2 mb-4 text-sm">
+              {share.volumeId && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Volume:</span>
+                  <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 rounded text-xs font-mono">
+                    {share.volumeId}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-gray-600 dark:text-gray-400">Path:</span>
                 <span className="font-mono text-gray-900 dark:text-gray-100">
@@ -254,6 +262,7 @@ interface ShareModalProps {
 function ShareModal({ share, onClose, onSuccess }: ShareModalProps) {
   const [formData, setFormData] = useState<CreateShareRequest>({
     name: share?.name || '',
+    volumeId: share?.volumeId || '',
     path: share?.path || '',
     type: share?.type || 'smb',
     description: share?.description || '',
@@ -263,13 +272,37 @@ function ShareModal({ share, onClose, onSuccess }: ShareModalProps) {
     validUsers: share?.validUsers || [],
     validGroups: share?.validGroups || [],
   });
+  const [volumes, setVolumes] = useState<Volume[]>([]);
+  const [useManualPath, setUseManualPath] = useState(!share?.volumeId);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    loadVolumes();
+  }, []);
+
+  const loadVolumes = async () => {
+    try {
+      const response = await storageApi.listVolumes();
+      if (response.success && response.data) {
+        setVolumes(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to load volumes:', error);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+
+    // Validate that either volumeId or path is provided
+    if (!formData.volumeId && !formData.path) {
+      setError('Please select a volume or provide a manual path');
+      setLoading(false);
+      return;
+    }
 
     try {
       const response = share
@@ -316,13 +349,71 @@ function ShareModal({ share, onClose, onSuccess }: ShareModalProps) {
             required
           />
 
-          <FolderPicker
-            label="Path"
-            value={formData.path}
-            onChange={(path) => setFormData({ ...formData, path })}
-            placeholder="/mnt/storage/share"
-            required
-          />
+          {/* Path Source Toggle */}
+          <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+              Path Source
+            </label>
+            <div className="flex space-x-4 mb-3">
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  checked={!useManualPath}
+                  onChange={() => {
+                    setUseManualPath(false);
+                    setFormData({ ...formData, path: undefined });
+                  }}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm text-gray-700 dark:text-gray-300">
+                  Select Volume
+                </span>
+              </label>
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  checked={useManualPath}
+                  onChange={() => {
+                    setUseManualPath(true);
+                    setFormData({ ...formData, volumeId: undefined });
+                  }}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm text-gray-700 dark:text-gray-300">
+                  Manual Path
+                </span>
+              </label>
+            </div>
+
+            {!useManualPath ? (
+              <div>
+                <select
+                  value={formData.volumeId || ''}
+                  onChange={(e) => setFormData({ ...formData, volumeId: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-macos-dark-200 text-gray-900 dark:text-gray-100"
+                  required={!useManualPath}
+                >
+                  <option value="">Select a volume...</option>
+                  {volumes.filter(v => v.status === 'online').map((volume) => (
+                    <option key={volume.id} value={volume.id}>
+                      {volume.name} ({volume.mountPoint})
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Select a mounted volume for the share
+                </p>
+              </div>
+            ) : (
+              <FolderPicker
+                label=""
+                value={formData.path || ''}
+                onChange={(path) => setFormData({ ...formData, path })}
+                placeholder="/mnt/storage/share"
+                required={useManualPath}
+              />
+            )}
+          </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

@@ -72,6 +72,7 @@ export interface Share {
   id: string;
   name: string;
   path: string;
+  volumeId?: string; // Optional - linked volume
   type: 'smb' | 'nfs' | 'ftp';
   description: string;
   enabled: boolean;
@@ -127,7 +128,8 @@ export interface CreateVolumeRequest {
 
 export interface CreateShareRequest {
   name: string;
-  path: string;
+  volumeId?: string; // Optional - select from managed volumes
+  path?: string;     // Optional - manual path (used if volumeId not provided)
   type: 'smb' | 'nfs' | 'ftp';
   description: string;
   readOnly: boolean;
