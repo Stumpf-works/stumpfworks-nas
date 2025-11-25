@@ -6,6 +6,7 @@ import (
 
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database/models"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/users"
 	"github.com/go-playground/validator/v10"
 )
 
@@ -160,6 +161,14 @@ func InitializeSetup(w http.ResponseWriter, r *http.Request) {
 			},
 		})
 		return
+	}
+
+	// Create Samba user for network share access
+	sambaManager := users.GetSambaManager()
+	if err := sambaManager.CreateSambaUser(user.Username, req.Password); err != nil {
+		// Log warning but don't fail - user can still access web interface
+		// Admin can manually create Samba user later if needed
+		// TODO: Consider displaying this warning in the UI
 	}
 
 	respondJSON(w, http.StatusCreated, map[string]interface{}{
