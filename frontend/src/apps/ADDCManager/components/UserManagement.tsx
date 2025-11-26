@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { addcApi, ADDCUser, CreateUserRequest } from '../../../api/addc';
+import { addcApi, CreateUserRequest } from '../../../api/addc';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Plus, Trash2, RefreshCw, AlertCircle, UserCheck, UserX, Key, Clock } from 'lucide-react';
+import { Users, Plus, Trash2, RefreshCw, AlertCircle, UserCheck, UserX } from 'lucide-react';
 
 export default function UserManagement() {
   const [users, setUsers] = useState<string[]>([]);
