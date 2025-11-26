@@ -5,7 +5,7 @@ import { StorageManager } from './StorageManager/StorageManager';
 import FileManager from './FileManager/FileManager';
 import { NetworkManager } from './NetworkManager/NetworkManager';
 import { DockerManager } from './DockerManager/DockerManager';
-import { PluginManager } from './PluginManager/PluginManager';
+import { PluginManager} from './PluginManager/PluginManager';
 import { BackupManager } from './BackupManager/BackupManager';
 import { AuditLogs } from './AuditLogs/AuditLogs';
 import { Security } from './Security/Security';
@@ -14,6 +14,7 @@ import { Tasks } from './Tasks/Tasks';
 import { AppStore } from './AppStore/AppStore';
 import { Terminal } from './Terminal/Terminal';
 import { ADDCManager } from './ADDCManager';
+import { Monitoring } from './Monitoring';
 import type { App } from '@/types';
 
 export const registeredApps: App[] = [
@@ -24,6 +25,14 @@ export const registeredApps: App[] = [
     component: Dashboard,
     defaultSize: { width: 900, height: 600 },
     minSize: { width: 600, height: 400 },
+  },
+  {
+    id: 'monitoring',
+    name: 'Monitoring',
+    icon: '📈',
+    component: Monitoring,
+    defaultSize: { width: 1200, height: 800 },
+    minSize: { width: 900, height: 600 },
   },
   {
     id: 'storage',
@@ -153,7 +162,7 @@ export function getAppById(id: string): App | undefined {
 
 // App categories for App Gallery
 export const appCategories = {
-  system: ['dashboard', 'settings', 'terminal'],
+  system: ['dashboard', 'monitoring', 'settings', 'terminal'],
   management: ['users', 'network', 'storage', 'ad-dc'],
   security: ['security', 'audit-logs', 'alerts'],
   tools: ['files', 'backups', 'tasks'],
