@@ -20,8 +20,8 @@ export function AppGallery({ isOpen, onClose, onLaunchApp }: AppGalleryProps) {
 
     // Filter by category
     if (selectedCategory !== 'all') {
-      const categoryAppIds = appCategories[selectedCategory];
-      apps = apps.filter((app) => categoryAppIds.includes(app.id as any));
+      const categoryAppIds = appCategories[selectedCategory] as readonly string[];
+      apps = apps.filter((app) => categoryAppIds.includes(app.id));
     }
 
     // Filter by search query
@@ -50,7 +50,7 @@ export function AppGallery({ isOpen, onClose, onLaunchApp }: AppGalleryProps) {
     filteredApps.forEach((app) => {
       // Find which category this app belongs to
       for (const [category, appIds] of Object.entries(appCategories)) {
-        if (appIds.includes(app.id as any)) {
+        if ((appIds as readonly string[]).includes(app.id)) {
           grouped[category as AppCategory].push(app);
           break;
         }
