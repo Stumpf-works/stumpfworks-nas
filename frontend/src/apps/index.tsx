@@ -123,7 +123,7 @@ export const registeredApps: App[] = [
   {
     id: 'backups',
     name: 'Backups',
-    icon: '💾',
+    icon: '⏱️',
     component: BackupManager,
     defaultSize: { width: 1200, height: 800 },
     minSize: { width: 900, height: 600 },

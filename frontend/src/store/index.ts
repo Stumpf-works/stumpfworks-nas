@@ -47,6 +47,26 @@ interface ThemeState {
   setTheme: (isDark: boolean) => void;
 }
 
+interface DockState {
+  dockApps: string[]; // Array of app IDs
+  addToDock: (appId: string) => void;
+  removeFromDock: (appId: string) => void;
+  reorderDock: (from: number, to: number) => void;
+  resetToDefault: () => void;
+  isInDock: (appId: string) => boolean;
+}
+
+// Default dock apps (essential apps only)
+const DEFAULT_DOCK_APPS = [
+  'dashboard',
+  'files',
+  'storage',
+  'network',
+  'docker',
+  'terminal',
+  'settings',
+];
+
 // Auth Store
 export const useAuthStore = create<AuthState>()(
   devtools(
@@ -207,5 +227,46 @@ export const useThemeStore = create<ThemeState>()(
       { name: 'theme-storage' }
     ),
     { name: 'ThemeStore' }
+  )
+);
+
+// Dock Store
+export const useDockStore = create<DockState>()(
+  devtools(
+    persist(
+      (set, get) => ({
+        dockApps: DEFAULT_DOCK_APPS,
+
+        addToDock: (appId) => {
+          const { dockApps } = get();
+          if (!dockApps.includes(appId)) {
+            set({ dockApps: [...dockApps, appId] });
+          }
+        },
+
+        removeFromDock: (appId) => {
+          const { dockApps } = get();
+          set({ dockApps: dockApps.filter((id) => id !== appId) });
+        },
+
+        reorderDock: (from, to) => {
+          const { dockApps } = get();
+          const newDockApps = [...dockApps];
+          const [removed] = newDockApps.splice(from, 1);
+          newDockApps.splice(to, 0, removed);
+          set({ dockApps: newDockApps });
+        },
+
+        resetToDefault: () => {
+          set({ dockApps: DEFAULT_DOCK_APPS });
+        },
+
+        isInDock: (appId) => {
+          return get().dockApps.includes(appId);
+        },
+      }),
+      { name: 'dock-storage' }
+    ),
+    { name: 'DockStore' }
   )
 );

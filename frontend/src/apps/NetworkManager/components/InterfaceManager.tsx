@@ -6,6 +6,33 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Card from '@/components/ui/Card';
 
+// IP address validation regex
+const IPV4_REGEX = /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+
+// Validate IP address format
+const isValidIP = (ip: string): boolean => {
+  return IPV4_REGEX.test(ip.trim());
+};
+
+// Validate netmask format
+const isValidNetmask = (netmask: string): boolean => {
+  if (!IPV4_REGEX.test(netmask.trim())) return false;
+
+  // Common netmasks
+  const validNetmasks = [
+    '255.255.255.255', '255.255.255.254', '255.255.255.252', '255.255.255.248',
+    '255.255.255.240', '255.255.255.224', '255.255.255.192', '255.255.255.128',
+    '255.255.255.0', '255.255.254.0', '255.255.252.0', '255.255.248.0',
+    '255.255.240.0', '255.255.224.0', '255.255.192.0', '255.255.128.0',
+    '255.255.0.0', '255.254.0.0', '255.252.0.0', '255.248.0.0',
+    '255.240.0.0', '255.224.0.0', '255.192.0.0', '255.128.0.0',
+    '255.0.0.0', '254.0.0.0', '252.0.0.0', '248.0.0.0',
+    '240.0.0.0', '224.0.0.0', '192.0.0.0', '128.0.0.0'
+  ];
+
+  return validNetmasks.includes(netmask.trim());
+};
+
 export default function InterfaceManager() {
   const [interfaces, setInterfaces] = useState<NetworkInterface[]>([]);
   const [loading, setLoading] = useState(true);
@@ -17,6 +44,16 @@ export default function InterfaceManager() {
     netmask: '255.255.255.0',
     gateway: '',
   });
+  const [validationErrors, setValidationErrors] = useState<{
+    address?: string;
+    netmask?: string;
+    gateway?: string;
+  }>({});
+  const [confirmAction, setConfirmAction] = useState<{
+    title: string;
+    message: string;
+    action: () => void;
+  } | null>(null);
 
   useEffect(() => {
     loadInterfaces();
@@ -40,18 +77,29 @@ export default function InterfaceManager() {
     }
   };
 
-  const toggleInterfaceState = async (iface: NetworkInterface) => {
-    try {
-      const newState = iface.isUp ? 'down' : 'up';
-      const response = await networkApi.setInterfaceState(iface.name, newState);
-      if (response.success) {
-        loadInterfaces();
-      } else {
-        alert(response.error?.message || 'Failed to change interface state');
-      }
-    } catch (err) {
-      alert(getErrorMessage(err));
-    }
+  const toggleInterfaceState = (iface: NetworkInterface) => {
+    const action = iface.isUp ? 'bring down' : 'bring up';
+    const newState = iface.isUp ? 'down' : 'up';
+
+    setConfirmAction({
+      title: `${action.charAt(0).toUpperCase() + action.slice(1)} ${iface.name}?`,
+      message: `Are you sure you want to ${action} interface ${iface.name}? This may interrupt network connectivity.`,
+      action: async () => {
+        try {
+          const response = await networkApi.setInterfaceState(iface.name, newState);
+          if (response.success) {
+            loadInterfaces();
+            setError('');
+          } else {
+            setError(response.error?.message || 'Failed to change interface state');
+          }
+        } catch (err) {
+          setError(getErrorMessage(err));
+        } finally {
+          setConfirmAction(null);
+        }
+      },
+    });
   };
 
   const openConfigModal = (iface: NetworkInterface) => {
@@ -62,38 +110,83 @@ export default function InterfaceManager() {
       netmask: '255.255.255.0',
       gateway: '',
     });
+    setValidationErrors({});
   };
 
-  const handleConfigure = async () => {
+  const validateStaticConfig = (): boolean => {
+    const errors: { address?: string; netmask?: string; gateway?: string } = {};
+    let isValid = true;
+
+    // Validate IP address
+    if (!staticConfig.address.trim()) {
+      errors.address = 'IP address is required';
+      isValid = false;
+    } else if (!isValidIP(staticConfig.address)) {
+      errors.address = 'Invalid IP address format (e.g., 192.168.1.100)';
+      isValid = false;
+    }
+
+    // Validate netmask
+    if (!staticConfig.netmask.trim()) {
+      errors.netmask = 'Netmask is required';
+      isValid = false;
+    } else if (!isValidNetmask(staticConfig.netmask)) {
+      errors.netmask = 'Invalid netmask format (e.g., 255.255.255.0)';
+      isValid = false;
+    }
+
+    // Validate gateway (optional, but must be valid if provided)
+    if (staticConfig.gateway.trim() && !isValidIP(staticConfig.gateway)) {
+      errors.gateway = 'Invalid gateway IP address format';
+      isValid = false;
+    }
+
+    setValidationErrors(errors);
+    return isValid;
+  };
+
+  const handleConfigure = () => {
     if (!configuring) return;
 
-    try {
-      let response;
-      if (configMode === 'dhcp') {
-        response = await networkApi.configureInterface(configuring.name, 'dhcp');
-      } else {
-        if (!staticConfig.address || !staticConfig.netmask) {
-          alert('Please provide IP address and netmask');
-          return;
-        }
-        response = await networkApi.configureInterface(
-          configuring.name,
-          'static',
-          staticConfig.address,
-          staticConfig.netmask,
-          staticConfig.gateway
-        );
-      }
-
-      if (response.success) {
-        setConfiguring(null);
-        loadInterfaces();
-      } else {
-        alert(response.error?.message || 'Failed to configure interface');
-      }
-    } catch (err) {
-      alert(getErrorMessage(err));
+    // Validate static config if in static mode
+    if (configMode === 'static' && !validateStaticConfig()) {
+      return;
     }
+
+    // Show confirmation dialog
+    const modeDesc = configMode === 'dhcp' ? 'DHCP (automatic)' : `Static IP (${staticConfig.address})`;
+    setConfirmAction({
+      title: `Configure ${configuring.name}?`,
+      message: `Are you sure you want to configure ${configuring.name} to use ${modeDesc}? This may interrupt network connectivity.`,
+      action: async () => {
+        try {
+          let response;
+          if (configMode === 'dhcp') {
+            response = await networkApi.configureInterface(configuring.name, 'dhcp');
+          } else {
+            response = await networkApi.configureInterface(
+              configuring.name,
+              'static',
+              staticConfig.address.trim(),
+              staticConfig.netmask.trim(),
+              staticConfig.gateway.trim()
+            );
+          }
+
+          if (response.success) {
+            setConfiguring(null);
+            setError('');
+            loadInterfaces();
+          } else {
+            setError(response.error?.message || 'Failed to configure interface');
+          }
+        } catch (err) {
+          setError(getErrorMessage(err));
+        } finally {
+          setConfirmAction(null);
+        }
+      },
+    });
   };
 
   const getInterfaceTypeIcon = (type: string) => {
@@ -321,32 +414,65 @@ export default function InterfaceManager() {
               {/* Static IP Configuration */}
               {configMode === 'static' && (
                 <div className="space-y-4">
-                  <Input
-                    label="IP Address"
-                    value={staticConfig.address}
-                    onChange={(e) =>
-                      setStaticConfig({ ...staticConfig, address: e.target.value })
-                    }
-                    placeholder="192.168.1.100"
-                    required
-                  />
-                  <Input
-                    label="Netmask"
-                    value={staticConfig.netmask}
-                    onChange={(e) =>
-                      setStaticConfig({ ...staticConfig, netmask: e.target.value })
-                    }
-                    placeholder="255.255.255.0"
-                    required
-                  />
-                  <Input
-                    label="Gateway (Optional)"
-                    value={staticConfig.gateway}
-                    onChange={(e) =>
-                      setStaticConfig({ ...staticConfig, gateway: e.target.value })
-                    }
-                    placeholder="192.168.1.1"
-                  />
+                  <div>
+                    <Input
+                      label="IP Address"
+                      value={staticConfig.address}
+                      onChange={(e) => {
+                        setStaticConfig({ ...staticConfig, address: e.target.value });
+                        // Clear error when user types
+                        if (validationErrors.address) {
+                          setValidationErrors({ ...validationErrors, address: undefined });
+                        }
+                      }}
+                      placeholder="192.168.1.100"
+                      required
+                    />
+                    {validationErrors.address && (
+                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                        {validationErrors.address}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <Input
+                      label="Netmask"
+                      value={staticConfig.netmask}
+                      onChange={(e) => {
+                        setStaticConfig({ ...staticConfig, netmask: e.target.value });
+                        // Clear error when user types
+                        if (validationErrors.netmask) {
+                          setValidationErrors({ ...validationErrors, netmask: undefined });
+                        }
+                      }}
+                      placeholder="255.255.255.0"
+                      required
+                    />
+                    {validationErrors.netmask && (
+                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                        {validationErrors.netmask}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <Input
+                      label="Gateway (Optional)"
+                      value={staticConfig.gateway}
+                      onChange={(e) => {
+                        setStaticConfig({ ...staticConfig, gateway: e.target.value });
+                        // Clear error when user types
+                        if (validationErrors.gateway) {
+                          setValidationErrors({ ...validationErrors, gateway: undefined });
+                        }
+                      }}
+                      placeholder="192.168.1.1"
+                    />
+                    {validationErrors.gateway && (
+                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                        {validationErrors.gateway}
+                      </p>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -368,6 +494,49 @@ export default function InterfaceManager() {
                 </Button>
                 <Button onClick={handleConfigure} className="flex-1">
                   Apply Configuration
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Confirmation Dialog */}
+      <AnimatePresence>
+        {confirmAction && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={() => setConfirmAction(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white dark:bg-macos-dark-100 rounded-lg shadow-2xl p-6 w-full max-w-md"
+            >
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+                {confirmAction.title}
+              </h2>
+              <p className="text-gray-700 dark:text-gray-300 mb-6">
+                {confirmAction.message}
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  variant="secondary"
+                  onClick={() => setConfirmAction(null)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={confirmAction.action}
+                  className="flex-1 bg-red-600 hover:bg-red-700"
+                >
+                  Confirm
                 </Button>
               </div>
             </motion.div>
