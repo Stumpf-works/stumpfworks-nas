@@ -68,15 +68,15 @@ export interface DiagnosticResult {
 export const networkApi = {
   // Interfaces
   async listInterfaces(): Promise<ApiResponse<NetworkInterface[]>> {
-    return client.get('/api/v1/network/interfaces');
+    return client.get('/network/interfaces');
   },
 
   async getInterfaceStats(): Promise<ApiResponse<InterfaceStats[]>> {
-    return client.get('/api/v1/network/interfaces/stats');
+    return client.get('/network/interfaces/stats');
   },
 
   async setInterfaceState(name: string, state: 'up' | 'down'): Promise<ApiResponse<any>> {
-    return client.post(`/api/v1/network/interfaces/${name}/state`, { state });
+    return client.post(`/network/interfaces/${name}/state`, { state });
   },
 
   async configureInterface(
@@ -86,7 +86,7 @@ export const networkApi = {
     netmask?: string,
     gateway?: string
   ): Promise<ApiResponse<any>> {
-    return client.post(`/api/v1/network/interfaces/${name}/configure`, {
+    return client.post(`/network/interfaces/${name}/configure`, {
       mode,
       address,
       netmask,
@@ -96,25 +96,25 @@ export const networkApi = {
 
   // Routes
   async getRoutes(): Promise<ApiResponse<Route[]>> {
-    return client.get('/api/v1/network/routes');
+    return client.get('/network/routes');
   },
 
   // DNS
   async getDNS(): Promise<ApiResponse<DNSConfig>> {
-    return client.get('/api/v1/network/dns');
+    return client.get('/network/dns');
   },
 
   async setDNS(nameservers: string[], searchDomains: string[]): Promise<ApiResponse<any>> {
-    return client.post('/api/v1/network/dns', { nameservers, searchDomains });
+    return client.post('/network/dns', { nameservers, searchDomains });
   },
 
   // Firewall
   async getFirewallStatus(): Promise<ApiResponse<FirewallStatus>> {
-    return client.get('/api/v1/network/firewall');
+    return client.get('/network/firewall');
   },
 
   async setFirewallState(enabled: boolean): Promise<ApiResponse<any>> {
-    return client.post('/api/v1/network/firewall/state', { enabled });
+    return client.post('/network/firewall/state', { enabled });
   },
 
   async addFirewallRule(
@@ -124,36 +124,36 @@ export const networkApi = {
     from: string,
     to: string
   ): Promise<ApiResponse<any>> {
-    return client.post('/api/v1/network/firewall/rules', { action, port, protocol, from, to });
+    return client.post('/network/firewall/rules', { action, port, protocol, from, to });
   },
 
   async deleteFirewallRule(number: number): Promise<ApiResponse<any>> {
-    return client.delete(`/api/v1/network/firewall/rules/${number}`);
+    return client.delete(`/network/firewall/rules/${number}`);
   },
 
   async setDefaultPolicy(direction: string, policy: string): Promise<ApiResponse<any>> {
-    return client.post('/api/v1/network/firewall/default', { direction, policy });
+    return client.post('/network/firewall/default', { direction, policy });
   },
 
   async resetFirewall(): Promise<ApiResponse<any>> {
-    return client.post('/api/v1/network/firewall/reset', {});
+    return client.post('/network/firewall/reset', {});
   },
 
   // Diagnostics
   async ping(host: string, count: number = 4): Promise<ApiResponse<DiagnosticResult>> {
-    return client.post('/api/v1/network/diagnostics/ping', { host, count });
+    return client.post('/network/diagnostics/ping', { host, count });
   },
 
   async traceroute(host: string): Promise<ApiResponse<DiagnosticResult>> {
-    return client.post('/api/v1/network/diagnostics/traceroute', { host });
+    return client.post('/network/diagnostics/traceroute', { host });
   },
 
   async netstat(options: string = ''): Promise<ApiResponse<DiagnosticResult>> {
-    return client.post('/api/v1/network/diagnostics/netstat', { options });
+    return client.post('/network/diagnostics/netstat', { options });
   },
 
   // Wake-on-LAN
   async wakeOnLAN(macAddress: string): Promise<ApiResponse<any>> {
-    return client.post('/api/v1/network/wol', { macAddress });
+    return client.post('/network/wol', { macAddress });
   },
 };
