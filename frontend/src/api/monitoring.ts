@@ -12,18 +12,18 @@ export interface SystemMetrics {
   timestamp: string;
   cpu_usage_percent: number;
   memory_usage_percent: number;
-  memory_total_mb: number;
-  memory_used_mb: number;
-  memory_available_mb: number;
+  memory_total_bytes: number;
+  memory_used_bytes: number;
+  memory_free_bytes: number;
   disk_usage_percent: number;
-  disk_total_gb: number;
-  disk_used_gb: number;
-  disk_available_gb: number;
-  network_rx_bytes: number;
-  network_tx_bytes: number;
-  load_average_1m: number;
-  load_average_5m: number;
-  load_average_15m: number;
+  disk_total_bytes: number;
+  disk_used_bytes: number;
+  disk_free_bytes: number;
+  network_bytes_sent_total: number;
+  network_bytes_recv_total: number;
+  load_average_1: number;
+  load_average_5: number;
+  load_average_15: number;
   uptime_seconds: number;
 }
 
