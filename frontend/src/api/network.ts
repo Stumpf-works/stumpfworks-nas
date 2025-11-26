@@ -68,15 +68,18 @@ export interface DiagnosticResult {
 export const networkApi = {
   // Interfaces
   async listInterfaces(): Promise<ApiResponse<NetworkInterface[]>> {
-    return client.get('/network/interfaces');
+    const response = await client.get('/network/interfaces');
+    return response.data;
   },
 
   async getInterfaceStats(): Promise<ApiResponse<InterfaceStats[]>> {
-    return client.get('/network/interfaces/stats');
+    const response = await client.get('/network/interfaces/stats');
+    return response.data;
   },
 
   async setInterfaceState(name: string, state: 'up' | 'down'): Promise<ApiResponse<any>> {
-    return client.post(`/network/interfaces/${name}/state`, { state });
+    const response = await client.post(`/network/interfaces/${name}/state`, { state });
+    return response.data;
   },
 
   async configureInterface(
@@ -86,35 +89,41 @@ export const networkApi = {
     netmask?: string,
     gateway?: string
   ): Promise<ApiResponse<any>> {
-    return client.post(`/network/interfaces/${name}/configure`, {
+    const response = await client.post(`/network/interfaces/${name}/configure`, {
       mode,
       address,
       netmask,
       gateway,
     });
+    return response.data;
   },
 
   // Routes
   async getRoutes(): Promise<ApiResponse<Route[]>> {
-    return client.get('/network/routes');
+    const response = await client.get('/network/routes');
+    return response.data;
   },
 
   // DNS
   async getDNS(): Promise<ApiResponse<DNSConfig>> {
-    return client.get('/network/dns');
+    const response = await client.get('/network/dns');
+    return response.data;
   },
 
   async setDNS(nameservers: string[], searchDomains: string[]): Promise<ApiResponse<any>> {
-    return client.post('/network/dns', { nameservers, searchDomains });
+    const response = await client.post('/network/dns', { nameservers, searchDomains });
+    return response.data;
   },
 
   // Firewall
   async getFirewallStatus(): Promise<ApiResponse<FirewallStatus>> {
-    return client.get('/network/firewall');
+    const response = await client.get('/network/firewall');
+    return response.data;
   },
 
   async setFirewallState(enabled: boolean): Promise<ApiResponse<any>> {
-    return client.post('/network/firewall/state', { enabled });
+    const response = await client.post('/network/firewall/state', { enabled });
+    return response.data;
   },
 
   async addFirewallRule(
@@ -124,36 +133,44 @@ export const networkApi = {
     from: string,
     to: string
   ): Promise<ApiResponse<any>> {
-    return client.post('/network/firewall/rules', { action, port, protocol, from, to });
+    const response = await client.post('/network/firewall/rules', { action, port, protocol, from, to });
+    return response.data;
   },
 
   async deleteFirewallRule(number: number): Promise<ApiResponse<any>> {
-    return client.delete(`/network/firewall/rules/${number}`);
+    const response = await client.delete(`/network/firewall/rules/${number}`);
+    return response.data;
   },
 
   async setDefaultPolicy(direction: string, policy: string): Promise<ApiResponse<any>> {
-    return client.post('/network/firewall/default', { direction, policy });
+    const response = await client.post('/network/firewall/default', { direction, policy });
+    return response.data;
   },
 
   async resetFirewall(): Promise<ApiResponse<any>> {
-    return client.post('/network/firewall/reset', {});
+    const response = await client.post('/network/firewall/reset', {});
+    return response.data;
   },
 
   // Diagnostics
   async ping(host: string, count: number = 4): Promise<ApiResponse<DiagnosticResult>> {
-    return client.post('/network/diagnostics/ping', { host, count });
+    const response = await client.post('/network/diagnostics/ping', { host, count });
+    return response.data;
   },
 
   async traceroute(host: string): Promise<ApiResponse<DiagnosticResult>> {
-    return client.post('/network/diagnostics/traceroute', { host });
+    const response = await client.post('/network/diagnostics/traceroute', { host });
+    return response.data;
   },
 
   async netstat(options: string = ''): Promise<ApiResponse<DiagnosticResult>> {
-    return client.post('/network/diagnostics/netstat', { options });
+    const response = await client.post('/network/diagnostics/netstat', { options });
+    return response.data;
   },
 
   // Wake-on-LAN
   async wakeOnLAN(macAddress: string): Promise<ApiResponse<any>> {
-    return client.post('/network/wol', { macAddress });
+    const response = await client.post('/network/wol', { macAddress });
+    return response.data;
   },
 };
