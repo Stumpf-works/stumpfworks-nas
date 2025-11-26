@@ -70,13 +70,13 @@ export default function MetricsCharts() {
   }
 
   // Calculate statistics
-  const avgCpu = history.reduce((sum, m) => sum + m.cpu_usage_percent, 0) / history.length;
-  const avgMem = history.reduce((sum, m) => sum + m.memory_usage_percent, 0) / history.length;
-  const avgDisk = history.reduce((sum, m) => sum + m.disk_usage_percent, 0) / history.length;
+  const avgCpu = history.reduce((sum, m) => sum + m.cpuUsage, 0) / history.length;
+  const avgMem = history.reduce((sum, m) => sum + m.memoryUsage, 0) / history.length;
+  const avgDisk = history.reduce((sum, m) => sum + m.diskUsage, 0) / history.length;
 
-  const maxCpu = Math.max(...history.map((m) => m.cpu_usage_percent));
-  const maxMem = Math.max(...history.map((m) => m.memory_usage_percent));
-  const maxDisk = Math.max(...history.map((m) => m.disk_usage_percent));
+  const maxCpu = Math.max(...history.map((m) => m.cpuUsage));
+  const maxMem = Math.max(...history.map((m) => m.memoryUsage));
+  const maxDisk = Math.max(...history.map((m) => m.diskUsage));
 
   const stats = [
     { label: 'CPU', avg: avgCpu, max: maxCpu, color: 'text-blue-500' },
