@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Activity, TrendingUp, AlertCircle, RefreshCw } from 'lucide-react';
+import { Activity, AlertCircle, RefreshCw } from 'lucide-react';
 import { monitoringApi, type SystemMetrics, type HealthScore } from '@/api/monitoring';
 import { getErrorMessage } from '@/api/client';
 import Card from '@/components/ui/Card';

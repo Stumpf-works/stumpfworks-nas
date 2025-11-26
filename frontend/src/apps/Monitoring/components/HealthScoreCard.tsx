@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Heart, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Heart } from 'lucide-react';
 import type { HealthScore } from '@/api/monitoring';
 import Card from '@/components/ui/Card';
 
