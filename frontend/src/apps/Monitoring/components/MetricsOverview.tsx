@@ -16,16 +16,6 @@ export default function MetricsOverview({ metrics }: MetricsOverviewProps) {
     return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
   };
 
-  const formatUptime = (seconds: number): string => {
-    const days = Math.floor(seconds / 86400);
-    const hours = Math.floor((seconds % 86400) / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-
-    if (days > 0) return `${days}d ${hours}h`;
-    if (hours > 0) return `${hours}h ${minutes}m`;
-    return `${minutes}m`;
-  };
-
   const getUsageColor = (usage: number): string => {
     if (usage >= 90) return 'bg-red-500';
     if (usage >= 75) return 'bg-yellow-500';
@@ -36,42 +26,42 @@ export default function MetricsOverview({ metrics }: MetricsOverviewProps) {
     {
       icon: Cpu,
       title: 'CPU Usage',
-      value: `${metrics.cpu_usage_percent.toFixed(1)}%`,
-      usage: metrics.cpu_usage_percent,
-      details: `Load: ${metrics.load_average_1.toFixed(2)} / ${metrics.load_average_5.toFixed(2)} / ${metrics.load_average_15.toFixed(2)}`,
+      value: `${metrics.cpuUsage.toFixed(1)}%`,
+      usage: metrics.cpuUsage,
+      details: `Load: ${metrics.cpuLoadAvg1.toFixed(2)} / ${metrics.cpuLoadAvg5.toFixed(2)} / ${metrics.cpuLoadAvg15.toFixed(2)}`,
       color: 'text-blue-500',
     },
     {
       icon: MemoryStick,
       title: 'Memory',
-      value: `${metrics.memory_usage_percent.toFixed(1)}%`,
-      usage: metrics.memory_usage_percent,
-      details: `${(metrics.memory_used_bytes / (1024 * 1024)).toFixed(0)} MB / ${(metrics.memory_total_bytes / (1024 * 1024)).toFixed(0)} MB`,
+      value: `${metrics.memoryUsage.toFixed(1)}%`,
+      usage: metrics.memoryUsage,
+      details: `${(metrics.memoryUsedBytes / (1024 * 1024)).toFixed(0)} MB / ${(metrics.memoryTotalBytes / (1024 * 1024)).toFixed(0)} MB`,
       color: 'text-purple-500',
     },
     {
       icon: HardDrive,
       title: 'Disk',
-      value: `${metrics.disk_usage_percent.toFixed(1)}%`,
-      usage: metrics.disk_usage_percent,
-      details: `${(metrics.disk_used_bytes / (1024 * 1024 * 1024)).toFixed(1)} GB / ${(metrics.disk_total_bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`,
+      value: `${metrics.diskUsage.toFixed(1)}%`,
+      usage: metrics.diskUsage,
+      details: `${(metrics.diskUsedBytes / (1024 * 1024 * 1024)).toFixed(1)} GB / ${(metrics.diskTotalBytes / (1024 * 1024 * 1024)).toFixed(1)} GB`,
       color: 'text-orange-500',
     },
     {
       icon: Network,
       title: 'Network',
-      value: formatBytes(metrics.network_bytes_recv_total + metrics.network_bytes_sent_total),
+      value: formatBytes(metrics.networkRxBytesPerSec + metrics.networkTxBytesPerSec),
       usage: 0,
-      details: `↓ ${formatBytes(metrics.network_bytes_recv_total)} | ↑ ${formatBytes(metrics.network_bytes_sent_total)}`,
+      details: `↓ ${formatBytes(metrics.networkRxBytesPerSec)}/s | ↑ ${formatBytes(metrics.networkTxBytesPerSec)}/s`,
       color: 'text-green-500',
       hideProgressBar: true,
     },
     {
       icon: Clock,
-      title: 'Uptime',
-      value: formatUptime(metrics.uptime_seconds),
+      title: 'Last Update',
+      value: new Date(metrics.timestamp).toLocaleTimeString(),
       usage: 0,
-      details: new Date(metrics.timestamp).toLocaleString(),
+      details: new Date(metrics.timestamp).toLocaleDateString(),
       color: 'text-gray-500',
       hideProgressBar: true,
     },

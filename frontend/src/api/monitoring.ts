@@ -10,33 +10,28 @@ export interface MonitoringConfig {
 
 export interface SystemMetrics {
   timestamp: string;
-  cpu_usage_percent: number;
-  memory_usage_percent: number;
-  memory_total_bytes: number;
-  memory_used_bytes: number;
-  memory_free_bytes: number;
-  disk_usage_percent: number;
-  disk_total_bytes: number;
-  disk_used_bytes: number;
-  disk_free_bytes: number;
-  network_bytes_sent_total: number;
-  network_bytes_recv_total: number;
-  load_average_1: number;
-  load_average_5: number;
-  load_average_15: number;
-  uptime_seconds: number;
+  cpuUsage: number;
+  cpuLoadAvg1: number;
+  cpuLoadAvg5: number;
+  cpuLoadAvg15: number;
+  memoryUsedBytes: number;
+  memoryTotalBytes: number;
+  memoryUsage: number;
+  diskUsedBytes: number;
+  diskTotalBytes: number;
+  diskUsage: number;
+  networkRxBytesPerSec: number;
+  networkTxBytesPerSec: number;
 }
 
 export interface HealthScore {
   timestamp: string;
   score: number;
-  status: 'healthy' | 'warning' | 'critical';
-  details: {
-    cpu_health: number;
-    memory_health: number;
-    disk_health: number;
-    network_health: number;
-  };
+  cpuScore: number;
+  memoryScore: number;
+  diskScore: number;
+  networkScore: number;
+  issues?: string;
 }
 
 export interface MetricsTrend {

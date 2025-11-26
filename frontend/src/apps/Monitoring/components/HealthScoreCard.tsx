@@ -8,30 +8,29 @@ interface HealthScoreCardProps {
 }
 
 export default function HealthScoreCard({ healthScore }: HealthScoreCardProps) {
-  const getStatusColor = (status: string): string => {
-    switch (status) {
-      case 'healthy':
-        return 'text-green-500 bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800';
-      case 'warning':
-        return 'text-yellow-500 bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800';
-      case 'critical':
-        return 'text-red-500 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800';
-      default:
-        return 'text-gray-500 bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800';
-    }
-  };
-
   const getScoreColor = (score: number): string => {
     if (score >= 80) return 'text-green-500';
     if (score >= 60) return 'text-yellow-500';
     return 'text-red-500';
   };
 
+  const getStatusColor = (score: number): string => {
+    if (score >= 80) return 'text-green-500 bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800';
+    if (score >= 60) return 'text-yellow-500 bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800';
+    return 'text-red-500 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800';
+  };
+
+  const getStatusLabel = (score: number): string => {
+    if (score >= 80) return 'Healthy';
+    if (score >= 60) return 'Warning';
+    return 'Critical';
+  };
+
   const healthDetails = [
-    { label: 'CPU Health', value: healthScore.details.cpu_health },
-    { label: 'Memory Health', value: healthScore.details.memory_health },
-    { label: 'Disk Health', value: healthScore.details.disk_health },
-    { label: 'Network Health', value: healthScore.details.network_health },
+    { label: 'CPU Health', value: healthScore.cpuScore },
+    { label: 'Memory Health', value: healthScore.memoryScore },
+    { label: 'Disk Health', value: healthScore.diskScore },
+    { label: 'Network Health', value: healthScore.networkScore },
   ];
 
   return (
@@ -40,7 +39,7 @@ export default function HealthScoreCard({ healthScore }: HealthScoreCardProps) {
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.3 }}
     >
-      <Card className={`p-6 border-2 ${getStatusColor(healthScore.status)}`}>
+      <Card className={`p-6 border-2 ${getStatusColor(healthScore.score)}`}>
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <Heart className={`w-8 h-8 ${getScoreColor(healthScore.score)}`} />
@@ -48,7 +47,7 @@ export default function HealthScoreCard({ healthScore }: HealthScoreCardProps) {
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">System Health</h2>
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Status: <span className={`font-medium ${getScoreColor(healthScore.score)}`}>
-                  {healthScore.status.charAt(0).toUpperCase() + healthScore.status.slice(1)}
+                  {getStatusLabel(healthScore.score)}
                 </span>
               </p>
             </div>
