@@ -12,7 +12,13 @@
       "Bash(scp:*)",
       "Bash(git describe:*)",
       "Bash(bash scripts/build-multiarch.sh:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git pull:*)",
+      "Bash(git commit:*)",
+      "Bash(git push)",
+      "Bash(ping:*)",
+      "Bash(curl:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []

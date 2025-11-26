@@ -13,6 +13,7 @@ import { Alerts } from './Alerts/Alerts';
 import { Tasks } from './Tasks/Tasks';
 import { AppStore } from './AppStore/AppStore';
 import { Terminal } from './Terminal/Terminal';
+import { ADDCManager } from './ADDCManager';
 import type { App } from '@/types';
 
 export const registeredApps: App[] = [
@@ -87,6 +88,14 @@ export const registeredApps: App[] = [
     component: NetworkManager,
     defaultSize: { width: 1200, height: 800 },
     minSize: { width: 900, height: 600 },
+  },
+  {
+    id: 'ad-dc',
+    name: 'AD Domain Controller',
+    icon: '🏢',
+    component: ADDCManager,
+    defaultSize: { width: 1400, height: 900 },
+    minSize: { width: 1000, height: 700 },
   },
   {
     id: 'docker',
