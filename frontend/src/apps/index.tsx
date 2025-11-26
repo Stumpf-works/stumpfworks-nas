@@ -150,3 +150,30 @@ export const registeredApps: App[] = [
 export function getAppById(id: string): App | undefined {
   return registeredApps.find((app) => app.id === id);
 }
+
+// App categories for App Gallery
+export const appCategories = {
+  system: ['dashboard', 'settings', 'terminal'],
+  management: ['users', 'network', 'storage', 'ad-dc'],
+  security: ['security', 'audit-logs', 'alerts'],
+  tools: ['files', 'backups', 'tasks'],
+  development: ['docker', 'plugins', 'app-store'],
+} as const;
+
+export type AppCategory = keyof typeof appCategories;
+
+export const categoryNames: Record<AppCategory, string> = {
+  system: 'System',
+  management: 'Management',
+  security: 'Security',
+  tools: 'Tools',
+  development: 'Development',
+};
+
+export const categoryIcons: Record<AppCategory, string> = {
+  system: '⚙️',
+  management: '📊',
+  security: '🛡️',
+  tools: '🔧',
+  development: '💻',
+};

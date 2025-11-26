@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { Grid3x3 } from 'lucide-react';
 import { useWindowStore, useDockStore } from '@/store';
 import { registeredApps, getAppById } from '@/apps';
 
@@ -123,6 +124,38 @@ export default function Dock() {
               onRemove={() => handleRemoveFromDock(app.id)}
             />
           ))}
+
+          {/* Separator */}
+          <div className="w-px h-12 bg-gray-300/50 dark:bg-gray-600/50 mx-1" />
+
+          {/* App Gallery Launcher */}
+          <motion.div
+            className="relative flex flex-col items-center group"
+            whileHover={{ scale: 1.4, y: -10 }}
+            whileTap={{ scale: 0.9 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+          >
+            <button
+              onClick={() => {
+                if ((window as any).openAppGallery) {
+                  (window as any).openAppGallery();
+                }
+              }}
+              className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg flex items-center justify-center hover:shadow-xl transition-shadow"
+              title="App Gallery"
+            >
+              <Grid3x3 className="w-6 h-6 text-white" />
+            </button>
+
+            {/* Tooltip */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              whileHover={{ opacity: 1, y: 0 }}
+              className="absolute -top-10 px-2 py-1 bg-gray-900/90 dark:bg-gray-100/90 text-white dark:text-gray-900 text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none"
+            >
+              App Gallery
+            </motion.div>
+          </motion.div>
         </div>
       </div>
     </motion.div>
