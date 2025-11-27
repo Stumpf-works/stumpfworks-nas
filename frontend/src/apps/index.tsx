@@ -7,9 +7,7 @@ import { NetworkManager } from './NetworkManager/NetworkManager';
 import { DockerManager } from './DockerManager/DockerManager';
 import { PluginManager} from './PluginManager/PluginManager';
 import { BackupManager } from './BackupManager/BackupManager';
-import { AuditLogs } from './AuditLogs/AuditLogs';
-import { Security } from './Security/Security';
-import { Alerts } from './Alerts/Alerts';
+import { SecurityCenter } from './SecurityCenter';
 import { Tasks } from './Tasks/Tasks';
 import { AppStore } from './AppStore/AppStore';
 import { Terminal } from './Terminal/Terminal';
@@ -59,28 +57,12 @@ export const registeredApps: App[] = [
     minSize: { width: 800, height: 600 },
   },
   {
-    id: 'audit-logs',
-    name: 'Audit Logs',
-    icon: '🔒',
-    component: AuditLogs,
-    defaultSize: { width: 1400, height: 800 },
-    minSize: { width: 1000, height: 600 },
-  },
-  {
-    id: 'security',
-    name: 'Security',
+    id: 'security-center',
+    name: 'Security Center',
     icon: '🛡️',
-    component: Security,
-    defaultSize: { width: 1400, height: 800 },
-    minSize: { width: 1000, height: 600 },
-  },
-  {
-    id: 'alerts',
-    name: 'Alerts',
-    icon: '🔔',
-    component: Alerts,
-    defaultSize: { width: 1000, height: 800 },
-    minSize: { width: 800, height: 600 },
+    component: SecurityCenter,
+    defaultSize: { width: 1400, height: 900 },
+    minSize: { width: 1000, height: 700 },
   },
   {
     id: 'tasks',
@@ -164,7 +146,7 @@ export function getAppById(id: string): App | undefined {
 export const appCategories = {
   system: ['dashboard', 'monitoring', 'settings', 'terminal'],
   management: ['users', 'network', 'storage', 'ad-dc'],
-  security: ['security', 'audit-logs', 'alerts'],
+  security: ['security-center'],
   tools: ['files', 'backups', 'tasks'],
   development: ['docker', 'plugins', 'app-store'],
 } as const;
