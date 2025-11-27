@@ -62,14 +62,14 @@ function DockIcon({ id, app, isRunning, onClick, onRemove }: DockIconProps) {
           className="relative flex flex-col items-center group"
           onHoverStart={() => setIsHovered(true)}
           onHoverEnd={() => setIsHovered(false)}
-          whileHover={{ scale: 1.4, y: -10 }}
+          whileHover={{ scale: 1.3, y: -8 }}
           whileTap={{ scale: 0.9 }}
           transition={{ type: 'spring', stiffness: 300, damping: 20 }}
         >
           <button
             onClick={onClick}
             onContextMenu={handleContextMenu}
-            className="relative w-12 h-12 rounded-xl bg-white dark:bg-macos-dark-200 shadow-lg flex items-center justify-center text-2xl hover:shadow-xl transition-shadow cursor-grab active:cursor-grabbing"
+            className="relative w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-xl bg-white dark:bg-macos-dark-200 shadow-lg flex items-center justify-center text-xl sm:text-2xl hover:shadow-xl transition-shadow cursor-grab active:cursor-grabbing"
           >
             {app.icon}
           </button>
@@ -257,9 +257,9 @@ export default function Dock() {
         initial={{ y: 100 }}
         animate={{ y: 0 }}
         transition={{ type: 'spring', stiffness: 100, damping: 20 }}
-        className="fixed bottom-2 left-1/2 transform -translate-x-1/2 z-50"
+        className="fixed bottom-2 left-1/2 transform -translate-x-1/2 z-50 max-w-[95vw]"
       >
-        <div className="px-4 py-2 glass-light dark:glass-dark rounded-2xl border border-gray-200/20 dark:border-gray-700/20 shadow-macos-xl">
+        <div className="px-2 sm:px-4 py-2 glass-light dark:glass-dark rounded-2xl border border-gray-200/20 dark:border-gray-700/20 shadow-macos-xl">
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
@@ -269,7 +269,7 @@ export default function Dock() {
               items={dockItemsWithIds.map((item) => item.id)}
               strategy={horizontalListSortingStrategy}
             >
-              <div className="flex items-end space-x-3">
+              <div className="flex items-end space-x-1 sm:space-x-2 md:space-x-3">
                 {dockItemsWithIds.map((dockItem) => {
                   if (dockItem.type === 'app') {
                     const app = getAppById(dockItem.item);
@@ -299,21 +299,21 @@ export default function Dock() {
                 })}
 
                 {/* Separator */}
-                <div className="w-px h-12 bg-gray-300/50 dark:bg-gray-600/50 mx-1" />
+                <div className="w-px h-10 sm:h-11 md:h-12 bg-gray-300/50 dark:bg-gray-600/50 mx-0.5 sm:mx-1" />
 
                 {/* Create Folder Button */}
                 <motion.div
                   className="relative flex flex-col items-center group"
-                  whileHover={{ scale: 1.4, y: -10 }}
+                  whileHover={{ scale: 1.3, y: -8 }}
                   whileTap={{ scale: 0.9 }}
                   transition={{ type: 'spring', stiffness: 300, damping: 20 }}
                 >
                   <button
                     onClick={() => setShowCreateFolder(true)}
-                    className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-teal-600 shadow-lg flex items-center justify-center hover:shadow-xl transition-shadow"
+                    className="relative w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-green-500 to-teal-600 shadow-lg flex items-center justify-center hover:shadow-xl transition-shadow"
                     title="Create Folder"
                   >
-                    <FolderPlus className="w-6 h-6 text-white" />
+                    <FolderPlus className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                   </button>
 
                   <motion.div
@@ -328,7 +328,7 @@ export default function Dock() {
                 {/* App Gallery Launcher */}
                 <motion.div
                   className="relative flex flex-col items-center group"
-                  whileHover={{ scale: 1.4, y: -10 }}
+                  whileHover={{ scale: 1.3, y: -8 }}
                   whileTap={{ scale: 0.9 }}
                   transition={{ type: 'spring', stiffness: 300, damping: 20 }}
                 >
@@ -338,10 +338,10 @@ export default function Dock() {
                         (window as any).openAppGallery();
                       }
                     }}
-                    className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg flex items-center justify-center hover:shadow-xl transition-shadow"
+                    className="relative w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg flex items-center justify-center hover:shadow-xl transition-shadow"
                     title="App Gallery"
                   >
-                    <Grid3x3 className="w-6 h-6 text-white" />
+                    <Grid3x3 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                   </button>
 
                   <motion.div
