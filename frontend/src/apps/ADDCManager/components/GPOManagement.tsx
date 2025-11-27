@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { addcApi, ADGPO } from '../../../api/addc';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, Plus, Trash2, RefreshCw, AlertCircle, Link, Unlink } from 'lucide-react';
+import { FileText, Plus, Trash2, RefreshCw, AlertCircle, Link } from 'lucide-react';
 
 export default function GPOManagement() {
   const [gpos, setGPOs] = useState<string[]>([]);
