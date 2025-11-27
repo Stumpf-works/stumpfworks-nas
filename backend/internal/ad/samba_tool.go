@@ -40,15 +40,15 @@ func (st *SambaTool) GetVersion() (string, error) {
 
 // ProvisionOptions contains options for provisioning a new AD domain
 type ProvisionOptions struct {
-	Realm           string // e.g., EXAMPLE.COM
-	Domain          string // NetBIOS domain name, e.g., EXAMPLE
-	AdminPassword   string // Administrator password
-	DNSBackend      string // SAMBA_INTERNAL, BIND9_DLZ, or NONE
-	DNSForwarder    string // Optional DNS forwarder IP
-	ServerRole      string // dc, member, standalone
-	UseTLS          bool   // Use LDAPS
-	FunctionLevel   string // 2008_R2, 2012, 2012_R2, 2016
-	HostIP          string // Server IP address
+	Realm           string `json:"realm"`            // e.g., EXAMPLE.COM
+	Domain          string `json:"domain"`           // NetBIOS domain name, e.g., EXAMPLE
+	AdminPassword   string `json:"admin_password"`   // Administrator password
+	DNSBackend      string `json:"dns_backend"`      // SAMBA_INTERNAL, BIND9_DLZ, or NONE
+	DNSForwarder    string `json:"dns_forwarder"`    // Optional DNS forwarder IP
+	ServerRole      string `json:"server_role"`      // dc, member, standalone
+	UseTLS          bool   `json:"use_tls"`          // Use LDAPS
+	FunctionLevel   string `json:"function_level"`   // 2008_R2, 2012, 2012_R2, 2016
+	HostIP          string `json:"host_ip"`          // Server IP address
 }
 
 // ProvisionDomain provisions a new AD domain
