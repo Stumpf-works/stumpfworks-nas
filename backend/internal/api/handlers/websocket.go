@@ -42,11 +42,19 @@ func createUpgrader() *websocket.Upgrader {
 				}
 			}
 
-			// In development, also allow same-origin requests
+			// Allow same-host requests (frontend served from same server)
+			host := r.Host
+			if strings.Contains(origin, "://"+host) {
+				logger.Debug("WebSocket same-host connection allowed",
+					zap.String("origin", origin),
+					zap.String("host", host))
+				return true
+			}
+
+			// In development, allow localhost variants
 			if cfg.IsDevelopment() {
-				host := r.Host
-				if strings.Contains(origin, host) {
-					logger.Debug("WebSocket same-origin allowed in development",
+				if strings.Contains(origin, "localhost") || strings.Contains(origin, "127.0.0.1") {
+					logger.Debug("WebSocket localhost allowed in development",
 						zap.String("origin", origin))
 					return true
 				}
@@ -55,6 +63,7 @@ func createUpgrader() *websocket.Upgrader {
 			// Deny and log
 			logger.Warn("WebSocket connection from unauthorized origin denied",
 				zap.String("origin", origin),
+				zap.String("host", host),
 				zap.Strings("allowed_origins", cfg.Server.AllowedOrigins))
 			return false
 		},
