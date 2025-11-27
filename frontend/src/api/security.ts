@@ -47,7 +47,7 @@ export const securityApi = {
     if (offset) queryParams.append('offset', offset.toString());
 
     const response = await client.get<ApiResponse<FailedLoginListResponse>>(
-      `/api/v1/security/failed-logins?${queryParams.toString()}`
+      `/security/failed-logins?${queryParams.toString()}`
     );
     return response.data;
   },
