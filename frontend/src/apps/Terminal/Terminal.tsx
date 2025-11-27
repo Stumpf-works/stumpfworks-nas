@@ -23,7 +23,14 @@ export function Terminal() {
   useEffect(() => {
     // WebSocket connection for real-time terminal
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/api/v1/terminal/ws`;
+    const token = localStorage.getItem('accessToken');
+
+    if (!token) {
+      addOutput('✗ Authentication required - please log in', 'error');
+      return;
+    }
+
+    const wsUrl = `${protocol}//${window.location.host}/api/v1/terminal/ws?token=${token}`;
 
     try {
       const ws = new WebSocket(wsUrl);

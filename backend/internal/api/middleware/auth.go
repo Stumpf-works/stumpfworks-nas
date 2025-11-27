@@ -18,21 +18,26 @@ const UserContextKey contextKey = "user"
 // AuthMiddleware validates JWT tokens and adds user to context
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Extract token from Authorization header
+		var tokenString string
+
+		// Try to extract token from Authorization header first
 		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
-			utils.RespondError(w, errors.Unauthorized("Missing authorization header", nil))
-			return
+		if authHeader != "" {
+			// Check Bearer prefix
+			parts := strings.Split(authHeader, " ")
+			if len(parts) != 2 || parts[0] != "Bearer" {
+				utils.RespondError(w, errors.Unauthorized("Invalid authorization header format", nil))
+				return
+			}
+			tokenString = parts[1]
+		} else {
+			// Fallback to query parameter for WebSocket connections
+			tokenString = r.URL.Query().Get("token")
+			if tokenString == "" {
+				utils.RespondError(w, errors.Unauthorized("Missing authorization header", nil))
+				return
+			}
 		}
-
-		// Check Bearer prefix
-		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			utils.RespondError(w, errors.Unauthorized("Invalid authorization header format", nil))
-			return
-		}
-
-		tokenString := parts[1]
 
 		// Validate token
 		claims, err := users.ValidateToken(tokenString)
