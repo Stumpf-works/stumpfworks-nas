@@ -87,6 +87,26 @@ export interface UpdateStackRequest {
   compose: string;
 }
 
+export interface CreateContainerRequest {
+  name: string;
+  image: string;
+  command?: string[];
+  env?: string[];
+  ports?: Array<{
+    container: number;
+    host?: number;
+    protocol?: string;
+  }>;
+  volumes?: Array<{
+    host: string;
+    container: string;
+    mode?: string;
+  }>;
+  restart?: string;
+  network?: string;
+  labels?: Record<string, string>;
+}
+
 // API
 export const dockerApi = {
   // Containers
@@ -234,6 +254,11 @@ export const dockerApi = {
 
   async getStackCompose(name: string): Promise<ApiResponse<string>> {
     const response = await client.get(`/docker/stacks/${name}/compose`);
+    return response.data;
+  },
+
+  async createContainer(request: CreateContainerRequest): Promise<ApiResponse<any>> {
+    const response = await client.post('/docker/containers', request);
     return response.data;
   },
 };
