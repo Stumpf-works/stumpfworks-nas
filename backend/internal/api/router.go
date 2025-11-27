@@ -325,6 +325,8 @@ func NewRouter(cfg *config.Config) http.Handler {
 
 				// Routes and DNS
 				r.Get("/routes", netHandler.GetRoutes)
+				r.Post("/routes", netHandler.AddRoute)
+				r.Delete("/routes", netHandler.DeleteRoute)
 				r.Get("/dns", netHandler.GetDNS)
 
 				// Firewall (read-only)

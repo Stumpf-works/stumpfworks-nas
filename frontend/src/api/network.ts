@@ -104,6 +104,27 @@ export const networkApi = {
     return response.data;
   },
 
+  async addRoute(destination: string, gateway?: string, iface?: string, metric?: number): Promise<ApiResponse<any>> {
+    const response = await client.post('/network/routes', {
+      destination,
+      gateway,
+      interface: iface,
+      metric,
+    });
+    return response.data;
+  },
+
+  async deleteRoute(destination: string, gateway?: string, iface?: string): Promise<ApiResponse<any>> {
+    const response = await client.delete('/network/routes', {
+      data: {
+        destination,
+        gateway,
+        interface: iface,
+      },
+    });
+    return response.data;
+  },
+
   // DNS
   async getDNS(): Promise<ApiResponse<DNSConfig>> {
     const response = await client.get('/network/dns');

@@ -123,6 +123,67 @@ func (h *NetworkHandler) GetRoutes(w http.ResponseWriter, r *http.Request) {
 	utils.RespondSuccess(w, routes)
 }
 
+// AddRoute handles POST /api/network/routes
+func (h *NetworkHandler) AddRoute(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Destination string `json:"destination"`
+		Gateway     string `json:"gateway"`
+		Interface   string `json:"interface"`
+		Metric      int    `json:"metric"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.RespondError(w, errors.BadRequest("Invalid request body", err))
+		return
+	}
+
+	// Validate destination
+	if req.Destination == "" {
+		utils.RespondError(w, errors.BadRequest("Destination is required", nil))
+		return
+	}
+
+	// Either gateway or interface must be provided
+	if req.Gateway == "" && req.Interface == "" {
+		utils.RespondError(w, errors.BadRequest("Either gateway or interface must be provided", nil))
+		return
+	}
+
+	if err := network.AddRoute(req.Destination, req.Gateway, req.Interface, req.Metric); err != nil {
+		utils.RespondError(w, errors.InternalServerError("Failed to add route", err))
+		return
+	}
+
+	utils.RespondSuccess(w, map[string]string{"message": "Route added successfully"})
+}
+
+// DeleteRoute handles DELETE /api/network/routes
+func (h *NetworkHandler) DeleteRoute(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Destination string `json:"destination"`
+		Gateway     string `json:"gateway"`
+		Interface   string `json:"interface"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.RespondError(w, errors.BadRequest("Invalid request body", err))
+		return
+	}
+
+	// Validate destination
+	if req.Destination == "" {
+		utils.RespondError(w, errors.BadRequest("Destination is required", nil))
+		return
+	}
+
+	if err := network.DeleteRoute(req.Destination, req.Gateway, req.Interface); err != nil {
+		utils.RespondError(w, errors.InternalServerError("Failed to delete route", err))
+		return
+	}
+
+	utils.RespondSuccess(w, map[string]string{"message": "Route deleted successfully"})
+}
+
 // GetDNS handles GET /api/network/dns
 func (h *NetworkHandler) GetDNS(w http.ResponseWriter, r *http.Request) {
 	config, err := network.GetDNSConfig()
