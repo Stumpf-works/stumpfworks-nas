@@ -8,7 +8,7 @@ import VolumeManager from './components/VolumeManager';
 import NetworkManager from './components/NetworkManager';
 import StackManager from './components/StackManager';
 import Card from '@/components/ui/Card';
-import { Box, Disc, HardDrive, Network, Layers, Container as ContainerIcon, AlertCircle, RefreshCw } from 'lucide-react';
+import { Disc, HardDrive, Network, Layers, Container as ContainerIcon, AlertCircle, RefreshCw } from 'lucide-react';
 
 type Tab = 'containers' | 'images' | 'volumes' | 'networks' | 'stacks';
 

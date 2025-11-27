@@ -18,7 +18,13 @@
       "Bash(git push)",
       "Bash(ping:*)",
       "Bash(curl:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(go run:*)",
+      "Bash(for file in ad.ts metrics.ts tasks.ts twofa.ts)",
+      "Bash(do sed -i \"s|''/api/v1/|''/|g\" \"$file\")",
+      "Bash(echo:*)",
+      "Bash(done)",
+      "Bash(bash:*)"
     ],
     "deny": [],
     "ask": []

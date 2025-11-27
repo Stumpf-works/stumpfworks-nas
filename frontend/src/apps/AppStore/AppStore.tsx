@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { pluginApi } from '../../api/plugins';
 import { Search, Download, Star, X, Package } from 'lucide-react';
-import { toast } from 'react-hot-toast';
 
 interface StorePlugin {
   id: string;
