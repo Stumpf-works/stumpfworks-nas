@@ -4,6 +4,8 @@ import { dockerApi, DockerContainer } from '@/api/docker';
 import { getErrorMessage } from '@/api/client';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
+import { Play, Square, RotateCw, Trash2, FileText, Terminal, Settings, AlertTriangle } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 export default function ContainerManager() {
   const [containers, setContainers] = useState<DockerContainer[]>([]);
@@ -51,12 +53,13 @@ export default function ContainerManager() {
     try {
       const response = await dockerApi.startContainer(container.id);
       if (response.success) {
+        toast.success(`Container ${container.name} started successfully`);
         loadContainers();
       } else {
-        alert(response.error?.message || 'Failed to start container');
+        toast.error(response.error?.message || 'Failed to start container');
       }
     } catch (err) {
-      alert(getErrorMessage(err));
+      toast.error(getErrorMessage(err));
     } finally {
       setActionLoading(null);
     }
@@ -67,12 +70,13 @@ export default function ContainerManager() {
     try {
       const response = await dockerApi.stopContainer(container.id);
       if (response.success) {
+        toast.success(`Container ${container.name} stopped successfully`);
         loadContainers();
       } else {
-        alert(response.error?.message || 'Failed to stop container');
+        toast.error(response.error?.message || 'Failed to stop container');
       }
     } catch (err) {
-      alert(getErrorMessage(err));
+      toast.error(getErrorMessage(err));
     } finally {
       setActionLoading(null);
     }
@@ -83,12 +87,13 @@ export default function ContainerManager() {
     try {
       const response = await dockerApi.restartContainer(container.id);
       if (response.success) {
+        toast.success(`Container ${container.name} restarted successfully`);
         loadContainers();
       } else {
-        alert(response.error?.message || 'Failed to restart container');
+        toast.error(response.error?.message || 'Failed to restart container');
       }
     } catch (err) {
-      alert(getErrorMessage(err));
+      toast.error(getErrorMessage(err));
     } finally {
       setActionLoading(null);
     }
@@ -100,12 +105,13 @@ export default function ContainerManager() {
       const response = await dockerApi.removeContainer(container.id);
       if (response.success) {
         setDeleteModal(null);
+        toast.success(`Container ${container.name} deleted successfully`);
         loadContainers();
       } else {
-        alert(response.error?.message || 'Failed to remove container');
+        toast.error(response.error?.message || 'Failed to remove container');
       }
     } catch (err) {
-      alert(getErrorMessage(err));
+      toast.error(getErrorMessage(err));
     } finally {
       setActionLoading(null);
     }
@@ -117,10 +123,10 @@ export default function ContainerManager() {
       if (response.success && response.data) {
         setLogsModal({ container, logs: response.data });
       } else {
-        alert(response.error?.message || 'Failed to load logs');
+        toast.error(response.error?.message || 'Failed to load logs');
       }
     } catch (err) {
-      alert(getErrorMessage(err));
+      toast.error(getErrorMessage(err));
     }
   };
 
@@ -143,12 +149,13 @@ export default function ContainerManager() {
       if (response.success) {
         setResourcesModal(null);
         setResourceLimits({ memory: '', cpuShares: '' });
+        toast.success(`Resources updated for ${resourcesModal.name}`);
         loadContainers();
       } else {
-        alert(response.error?.message || 'Failed to update resources');
+        toast.error(response.error?.message || 'Failed to update resources');
       }
     } catch (err) {
-      alert(getErrorMessage(err));
+      toast.error(getErrorMessage(err));
     }
   };
 
@@ -160,10 +167,10 @@ export default function ContainerManager() {
       if (response.success && response.data) {
         setExecOutput(response.data.output);
       } else {
-        alert(response.error?.message || 'Failed to execute command');
+        toast.error(response.error?.message || 'Failed to execute command');
       }
     } catch (err) {
-      alert(getErrorMessage(err));
+      toast.error(getErrorMessage(err));
     }
   };
 
@@ -243,7 +250,9 @@ export default function ContainerManager() {
       {/* Containers Grid */}
       {containers.length === 0 ? (
         <div className="text-center py-12">
-          <div className="text-6xl mb-4">📦</div>
+          <div className="flex justify-center mb-4">
+            <Settings className="w-16 h-16 text-gray-400 dark:text-gray-600" />
+          </div>
           <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
             No containers found
           </h3>
@@ -313,9 +322,10 @@ export default function ContainerManager() {
                       variant="secondary"
                       onClick={() => handleStart(container)}
                       disabled={actionLoading === container.id}
-                      className="flex-1 min-w-[80px]"
+                      className="flex-1 min-w-[80px] flex items-center justify-center gap-1"
                     >
-                      ▶️ Start
+                      <Play className="w-3 h-3" />
+                      Start
                     </Button>
                   )}
                   {container.state.toLowerCase() === 'running' && (
@@ -325,18 +335,20 @@ export default function ContainerManager() {
                         variant="secondary"
                         onClick={() => handleStop(container)}
                         disabled={actionLoading === container.id}
-                        className="flex-1 min-w-[80px]"
+                        className="flex-1 min-w-[80px] flex items-center justify-center gap-1"
                       >
-                        ⏸️ Stop
+                        <Square className="w-3 h-3" />
+                        Stop
                       </Button>
                       <Button
                         size="sm"
                         variant="secondary"
                         onClick={() => handleRestart(container)}
                         disabled={actionLoading === container.id}
-                        className="flex-1 min-w-[80px]"
+                        className="flex-1 min-w-[80px] flex items-center justify-center gap-1"
                       >
-                        🔄 Restart
+                        <RotateCw className="w-3 h-3" />
+                        Restart
                       </Button>
                     </>
                   )}
@@ -344,9 +356,10 @@ export default function ContainerManager() {
                     size="sm"
                     variant="secondary"
                     onClick={() => handleViewLogs(container)}
-                    className="flex-1 min-w-[80px]"
+                    className="flex-1 min-w-[80px] flex items-center justify-center gap-1"
                   >
-                    📄 Logs
+                    <FileText className="w-3 h-3" />
+                    Logs
                   </Button>
                   {container.state.toLowerCase() === 'running' && (
                     <Button
@@ -356,27 +369,30 @@ export default function ContainerManager() {
                         setExecModal(container);
                         setExecOutput('');
                       }}
-                      className="flex-1 min-w-[80px]"
+                      className="flex-1 min-w-[80px] flex items-center justify-center gap-1"
                     >
-                      💻 Exec
+                      <Terminal className="w-3 h-3" />
+                      Exec
                     </Button>
                   )}
                   <Button
                     size="sm"
                     variant="secondary"
                     onClick={() => setResourcesModal(container)}
-                    className="flex-1 min-w-[80px]"
+                    className="flex-1 min-w-[80px] flex items-center justify-center gap-1"
                   >
-                    ⚙️ Resources
+                    <Settings className="w-3 h-3" />
+                    Resources
                   </Button>
                   <Button
                     size="sm"
                     variant="danger"
                     onClick={() => setDeleteModal(container)}
                     disabled={actionLoading === container.id}
-                    className="flex-1 min-w-[80px]"
+                    className="flex-1 min-w-[80px] flex items-center justify-center gap-1"
                   >
-                    🗑️ Delete
+                    <Trash2 className="w-3 h-3" />
+                    Delete
                   </Button>
                 </div>
               </div>
@@ -402,7 +418,8 @@ export default function ContainerManager() {
               onClick={(e) => e.stopPropagation()}
               className="bg-white dark:bg-macos-dark-100 rounded-lg shadow-2xl w-full max-w-4xl max-h-[80vh] flex flex-col"
             >
-              <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-macos-blue" />
                 <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
                   Container Logs: {logsModal.container.name}
                 </h2>
@@ -439,13 +456,18 @@ export default function ContainerManager() {
               onClick={(e) => e.stopPropagation()}
               className="bg-white dark:bg-macos-dark-100 rounded-lg shadow-2xl p-6 w-full max-w-md"
             >
-              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-                Delete Container
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
-                Are you sure you want to delete container <strong>{deleteModal.name}</strong>? This
-                action cannot be undone.
-              </p>
+              <div className="flex items-start gap-3 mb-4">
+                <AlertTriangle className="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+                    Delete Container
+                  </h2>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Are you sure you want to delete container <strong>{deleteModal.name}</strong>? This
+                    action cannot be undone.
+                  </p>
+                </div>
+              </div>
               <div className="flex gap-3">
                 <Button
                   variant="secondary"
@@ -476,19 +498,22 @@ export default function ContainerManager() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
             onClick={() => setResourcesModal(null)}
           >
             <motion.div
               initial={{ scale: 0.95 }}
               animate={{ scale: 1 }}
               exit={{ scale: 0.95 }}
-              className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full"
+              className="bg-white dark:bg-macos-dark-100 rounded-lg p-6 max-w-md w-full"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-gray-100">
-                Update Resource Limits
-              </h3>
+              <div className="flex items-center gap-2 mb-4">
+                <Settings className="w-5 h-5 text-macos-blue" />
+                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                  Update Resource Limits
+                </h3>
+              </div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                 Container: {resourcesModal.name}
               </p>
@@ -552,19 +577,22 @@ export default function ContainerManager() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
             onClick={() => setExecModal(null)}
           >
             <motion.div
               initial={{ scale: 0.95 }}
               animate={{ scale: 1 }}
               exit={{ scale: 0.95 }}
-              className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col"
+              className="bg-white dark:bg-macos-dark-100 rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-gray-100">
-                Execute Command
-              </h3>
+              <div className="flex items-center gap-2 mb-4">
+                <Terminal className="w-5 h-5 text-macos-blue" />
+                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                  Execute Command
+                </h3>
+              </div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                 Container: {execModal.name}
               </p>

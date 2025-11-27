@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { pluginApi } from '../../api/plugins';
+import { Search, Download, Star, X, Package } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 interface StorePlugin {
   id: string;
@@ -197,9 +199,7 @@ export function AppStore() {
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full px-4 py-3 pl-12 bg-gray-50 dark:bg-macos-dark-50 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500"
           />
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-            🔍
-          </span>
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
         </div>
 
         {/* Categories */}
@@ -245,8 +245,9 @@ export function AppStore() {
       {/* Plugin Grid */}
       <div className="flex-1 overflow-auto p-6">
         {filteredPlugins.length === 0 ? (
-          <div className="text-center py-12 text-gray-400">
-            No plugins found matching your criteria.
+          <div className="text-center py-12">
+            <Package className="w-16 h-16 mx-auto mb-4 text-gray-400 dark:text-gray-600" />
+            <p className="text-gray-600 dark:text-gray-400">No plugins found matching your criteria.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -287,13 +288,13 @@ export function AppStore() {
                   <div className="flex items-center gap-4 mb-4 text-xs text-gray-500 dark:text-gray-400">
                     {plugin.rating && (
                       <div className="flex items-center gap-1">
-                        <span className="text-yellow-500">⭐</span>
+                        <Star className="w-4 h-4 fill-yellow-500 text-yellow-500" />
                         <span>{plugin.rating.toFixed(1)}</span>
                       </div>
                     )}
                     {plugin.downloads && (
                       <div className="flex items-center gap-1">
-                        <span>⬇️</span>
+                        <Download className="w-4 h-4" />
                         <span>{plugin.downloads.toLocaleString()}</span>
                       </div>
                     )}
@@ -367,9 +368,9 @@ export function AppStore() {
                 </div>
                 <button
                   onClick={() => setSelectedPlugin(null)}
-                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl"
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
                 >
-                  ✕
+                  <X className="w-6 h-6" />
                 </button>
               </div>
 
@@ -377,7 +378,7 @@ export function AppStore() {
               <div className="flex items-center gap-6 mb-6 pb-6 border-b border-gray-200 dark:border-gray-700">
                 {selectedPlugin.rating && (
                   <div className="flex items-center gap-2">
-                    <span className="text-yellow-500 text-xl">⭐</span>
+                    <Star className="w-5 h-5 fill-yellow-500 text-yellow-500" />
                     <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                       {selectedPlugin.rating.toFixed(1)}
                     </span>
@@ -385,7 +386,7 @@ export function AppStore() {
                 )}
                 {selectedPlugin.downloads && (
                   <div className="flex items-center gap-2">
-                    <span className="text-xl">⬇️</span>
+                    <Download className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                     <span className="text-gray-600 dark:text-gray-400">
                       {selectedPlugin.downloads.toLocaleString()} downloads
                     </span>
