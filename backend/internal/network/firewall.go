@@ -1,13 +1,21 @@
-// Revision: 2025-11-16 | Author: Claude | Version: 1.1.1
+// Revision: 2025-11-27 | Author: Claude | Version: 1.1.2
 package network
 
 import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
+	"sync"
+)
+
+var (
+	ufwPath     string
+	ufwPathOnce sync.Once
+	ufwPathErr  error
 )
 
 // FirewallStatus represents the firewall status
@@ -19,15 +27,50 @@ type FirewallStatus struct {
 	Rules        []FirewallRule `json:"rules"`
 }
 
+// getUFWPath finds and caches the ufw executable path
+func getUFWPath() (string, error) {
+	ufwPathOnce.Do(func() {
+		// Common paths where ufw might be installed
+		commonPaths := []string{
+			"/usr/sbin/ufw",
+			"/sbin/ufw",
+			"/usr/bin/ufw",
+			"/bin/ufw",
+		}
+
+		// First try PATH lookup
+		if path, err := exec.LookPath("ufw"); err == nil {
+			ufwPath = path
+			return
+		}
+
+		// Then check common paths
+		for _, path := range commonPaths {
+			if _, err := os.Stat(path); err == nil {
+				ufwPath = path
+				return
+			}
+		}
+
+		ufwPathErr = fmt.Errorf("ufw is not installed")
+	})
+
+	if ufwPathErr != nil {
+		return "", ufwPathErr
+	}
+	return ufwPath, nil
+}
+
 // GetFirewallStatus returns the current firewall status
 func GetFirewallStatus() (*FirewallStatus, error) {
-	// Check if ufw is installed
-	if _, err := exec.LookPath("ufw"); err != nil {
-		return nil, fmt.Errorf("ufw is not installed")
+	// Find ufw executable
+	ufw, err := getUFWPath()
+	if err != nil {
+		return nil, err
 	}
 
 	// Get status
-	cmd := exec.Command("ufw", "status", "verbose")
+	cmd := exec.Command(ufw, "status", "verbose")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get firewall status: %s", string(output))
@@ -71,7 +114,7 @@ func GetFirewallStatus() (*FirewallStatus, error) {
 	}
 
 	// Get numbered rules
-	cmd = exec.Command("ufw", "status", "numbered")
+	cmd = exec.Command(ufw, "status", "numbered")
 	output, err = cmd.CombinedOutput()
 	if err == nil {
 		status.Rules = parseFirewallRules(string(output))
@@ -147,7 +190,12 @@ func parseFirewallRules(output string) []FirewallRule {
 
 // EnableFirewall enables the firewall
 func EnableFirewall() error {
-	cmd := exec.Command("ufw", "--force", "enable")
+	ufw, err := getUFWPath()
+	if err != nil {
+		return err
+	}
+
+	cmd := exec.Command(ufw, "--force", "enable")
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to enable firewall: %s", string(output))
 	}
@@ -156,7 +204,12 @@ func EnableFirewall() error {
 
 // DisableFirewall disables the firewall
 func DisableFirewall() error {
-	cmd := exec.Command("ufw", "disable")
+	ufw, err := getUFWPath()
+	if err != nil {
+		return err
+	}
+
+	cmd := exec.Command(ufw, "disable")
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to disable firewall: %s", string(output))
 	}
@@ -194,7 +247,12 @@ func AddFirewallRule(action, port, protocol, from, to string) error {
 		args = append(args, "proto", protocol)
 	}
 
-	cmd := exec.Command("ufw", args...)
+	ufw, err := getUFWPath()
+	if err != nil {
+		return err
+	}
+
+	cmd := exec.Command(ufw, args...)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to add rule: %s", string(output))
 	}
@@ -204,7 +262,12 @@ func AddFirewallRule(action, port, protocol, from, to string) error {
 
 // DeleteFirewallRule deletes a firewall rule by number
 func DeleteFirewallRule(ruleNumber int) error {
-	cmd := exec.Command("ufw", "--force", "delete", strconv.Itoa(ruleNumber))
+	ufw, err := getUFWPath()
+	if err != nil {
+		return err
+	}
+
+	cmd := exec.Command(ufw, "--force", "delete", strconv.Itoa(ruleNumber))
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to delete rule: %s", string(output))
 	}
@@ -220,7 +283,12 @@ func SetDefaultPolicy(direction, policy string) error {
 		return fmt.Errorf("invalid policy: %s", policy)
 	}
 
-	cmd := exec.Command("ufw", "default", policy, direction)
+	ufw, err := getUFWPath()
+	if err != nil {
+		return err
+	}
+
+	cmd := exec.Command(ufw, "default", policy, direction)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to set default policy: %s", string(output))
 	}
@@ -230,7 +298,12 @@ func SetDefaultPolicy(direction, policy string) error {
 
 // ResetFirewall resets all firewall rules
 func ResetFirewall() error {
-	cmd := exec.Command("ufw", "--force", "reset")
+	ufw, err := getUFWPath()
+	if err != nil {
+		return err
+	}
+
+	cmd := exec.Command(ufw, "--force", "reset")
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to reset firewall: %s", string(output))
 	}
@@ -239,7 +312,12 @@ func ResetFirewall() error {
 
 // AllowService allows a predefined service
 func AllowService(service string) error {
-	cmd := exec.Command("ufw", "allow", service)
+	ufw, err := getUFWPath()
+	if err != nil {
+		return err
+	}
+
+	cmd := exec.Command(ufw, "allow", service)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to allow service: %s", string(output))
 	}
@@ -248,7 +326,12 @@ func AllowService(service string) error {
 
 // DenyService denies a predefined service
 func DenyService(service string) error {
-	cmd := exec.Command("ufw", "deny", service)
+	ufw, err := getUFWPath()
+	if err != nil {
+		return err
+	}
+
+	cmd := exec.Command(ufw, "deny", service)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to deny service: %s", string(output))
 	}
