@@ -95,7 +95,7 @@ export const metricsApi = {
     if (end) params.end = end;
     if (limit) params.limit = limit;
 
-    const response = await client.get('/api/v1/metrics/history', { params });
+    const response = await client.get('/metrics/history', { params });
     return response.data.data;
   },
 
@@ -103,7 +103,7 @@ export const metricsApi = {
    * Get latest metric
    */
   getLatest: async (): Promise<SystemMetric> => {
-    const response = await client.get('/api/v1/metrics/latest');
+    const response = await client.get('/metrics/latest');
     return response.data.data;
   },
 
@@ -114,7 +114,7 @@ export const metricsApi = {
     const params: any = {};
     if (duration) params.duration = duration;
 
-    const response = await client.get('/api/v1/metrics/trends', { params });
+    const response = await client.get('/metrics/trends', { params });
     return response.data.data;
   },
 
@@ -131,7 +131,7 @@ export const metricsApi = {
     if (end) params.end = end;
     if (limit) params.limit = limit;
 
-    const response = await client.get('/api/v1/health/scores', { params });
+    const response = await client.get('/health/scores', { params });
     return response.data.data;
   },
 
@@ -139,7 +139,7 @@ export const metricsApi = {
    * Get latest health score
    */
   getLatestHealthScore: async (): Promise<HealthScore> => {
-    const response = await client.get('/api/v1/health/score');
+    const response = await client.get('/health/score');
     return response.data.data;
   },
 };

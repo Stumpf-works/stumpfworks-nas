@@ -61,7 +61,7 @@ export const tasksApi = {
    * List all scheduled tasks with pagination
    */
   listTasks: async (offset = 0, limit = 50): Promise<TaskListResponse> => {
-    const response = await client.get('/api/v1/tasks', {
+    const response = await client.get('/tasks', {
       params: { offset, limit },
     });
     return response.data.data;
@@ -79,7 +79,7 @@ export const tasksApi = {
    * Create a new scheduled task
    */
   createTask: async (task: Omit<ScheduledTask, 'id'>): Promise<ScheduledTask> => {
-    const response = await client.post('/api/v1/tasks', task);
+    const response = await client.post('/tasks', task);
     return response.data.data;
   },
 
@@ -123,7 +123,7 @@ export const tasksApi = {
    * Validate a cron expression
    */
   validateCron: async (expression: string): Promise<CronValidationResponse> => {
-    const response = await client.post('/api/v1/tasks/validate-cron', {
+    const response = await client.post('/tasks/validate-cron', {
       expression,
     });
     return response.data.data;
