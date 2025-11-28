@@ -6,13 +6,12 @@ import FileManager from './FileManager/FileManager';
 import { NetworkManager } from './NetworkManager/NetworkManager';
 import { DockerManager } from './DockerManager/DockerManager';
 import { PluginManager } from './PluginManager/PluginManager';
-import { BackupManager } from './BackupManager/BackupManager';
 import { AuditLogs } from './AuditLogs/AuditLogs';
 import { Security } from './Security/Security';
 import { Alerts } from './Alerts/Alerts';
-import { Tasks } from './Tasks/Tasks';
 import { AppStore } from './AppStore/AppStore';
 import { Terminal } from './Terminal/Terminal';
+import { SystemManager } from './SystemManager/SystemManager';
 import type { App } from '@/types';
 
 export const registeredApps: App[] = [
@@ -73,12 +72,12 @@ export const registeredApps: App[] = [
     minSize: { width: 800, height: 600 },
   },
   {
-    id: 'tasks',
-    name: 'Scheduled Tasks',
-    icon: '📅',
-    component: Tasks,
-    defaultSize: { width: 1400, height: 800 },
-    minSize: { width: 1000, height: 600 },
+    id: 'system',
+    name: 'System',
+    icon: '🖥️',
+    component: SystemManager,
+    defaultSize: { width: 1400, height: 900 },
+    minSize: { width: 1000, height: 700 },
   },
   {
     id: 'network',
@@ -119,14 +118,6 @@ export const registeredApps: App[] = [
     component: Terminal,
     defaultSize: { width: 1000, height: 700 },
     minSize: { width: 800, height: 500 },
-  },
-  {
-    id: 'backups',
-    name: 'Backups',
-    icon: '💾',
-    component: BackupManager,
-    defaultSize: { width: 1200, height: 800 },
-    minSize: { width: 900, height: 600 },
   },
   {
     id: 'settings',

@@ -12,7 +12,8 @@
       "Bash(scp:*)",
       "Bash(git describe:*)",
       "Bash(bash scripts/build-multiarch.sh:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": [],
     "ask": []
