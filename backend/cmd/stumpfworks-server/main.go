@@ -31,6 +31,7 @@ import (
 	"github.com/Stumpf-works/stumpfworks-nas/internal/storage"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/system"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/system/filesystem"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/system/ha"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/twofa"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/updates"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/usergroups"
@@ -183,6 +184,15 @@ func main() {
 			zap.String("message", "Quota features will be disabled"))
 	} else {
 		logger.Info("Quota service initialized")
+	}
+
+	// Initialize DRBD service (non-fatal if DRBD tools not available)
+	if err := initializeDRBD(); err != nil {
+		logger.Warn("DRBD service initialization failed",
+			zap.Error(err),
+			zap.String("message", "DRBD features will be disabled"))
+	} else {
+		logger.Info("DRBD service initialized")
 	}
 
 	// Initialize Docker service (non-fatal if not available)
@@ -471,6 +481,18 @@ func initializeQuota() error {
 		return err
 	}
 	handlers.InitQuotaManager(quotaManager)
+	return nil
+}
+
+// initializeDRBD initializes the DRBD (High Availability) service
+// Returns error if DRBD tools are not installed, but this is non-fatal
+func initializeDRBD() error {
+	shell := system.MustGet().Shell
+	drbdManager, err := ha.NewDRBDManager(shell)
+	if err != nil {
+		return err
+	}
+	handlers.InitDRBDManager(drbdManager)
 	return nil
 }
 

@@ -571,6 +571,22 @@ func NewRouter(cfg *config.Config) http.Handler {
 				r.Post("/backup", dcHandler.BackupOnline)
 			})
 
+			// High Availability - DRBD routes
+			r.Route("/ha/drbd", func(r chi.Router) {
+				r.Use(mw.AdminOnly)
+				r.Get("/resources", handlers.ListDRBDResources)
+				r.Post("/resources", handlers.CreateDRBDResource)
+				r.Get("/resources/{name}", handlers.GetDRBDResourceStatus)
+				r.Delete("/resources/{name}", handlers.DeleteDRBDResource)
+				r.Post("/resources/{name}/promote", handlers.PromoteDRBDResource)
+				r.Post("/resources/{name}/demote", handlers.DemoteDRBDResource)
+				r.Post("/resources/{name}/force-primary", handlers.ForcePrimaryDRBDResource)
+				r.Post("/resources/{name}/disconnect", handlers.DisconnectDRBDResource)
+				r.Post("/resources/{name}/connect", handlers.ConnectDRBDResource)
+				r.Post("/resources/{name}/sync", handlers.StartDRBDSync)
+				r.Post("/resources/{name}/verify", handlers.VerifyDRBDData)
+			})
+
 			// Audit Log routes
 			r.Route("/audit", func(r chi.Router) {
 				auditHandler := handlers.NewAuditHandler()

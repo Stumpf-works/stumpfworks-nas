@@ -14,6 +14,7 @@ import { Alerts } from './Alerts/Alerts';
 import { AppStore } from './AppStore/AppStore';
 import { Terminal } from './Terminal/Terminal';
 import { SystemManager } from './SystemManager/SystemManager';
+import { HighAvailability } from './HighAvailability/HighAvailability';
 import type { App } from '@/types';
 
 export const registeredApps: App[] = [
@@ -62,6 +63,14 @@ export const registeredApps: App[] = [
     name: 'AD DC',
     icon: '🏰',
     component: ADDomainController,
+    defaultSize: { width: 1400, height: 900 },
+    minSize: { width: 1000, height: 700 },
+  },
+  {
+    id: 'high-availability',
+    name: 'High Availability',
+    icon: '⚡',
+    component: HighAvailability,
     defaultSize: { width: 1400, height: 900 },
     minSize: { width: 1000, height: 700 },
   },

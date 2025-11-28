@@ -163,6 +163,15 @@ func getRequiredPackages() []*Package {
 			PacmanName:   "quota-tools",
 			Description:  "Disk quota management for users and groups",
 		},
+		{
+			Name:         "drbd-utils",
+			Required:     false,
+			CheckCommand: "drbdadm",
+			AptName:      "drbd-utils",
+			YumName:      "drbd-utils",
+			PacmanName:   "drbd-utils",
+			Description:  "DRBD block-level replication for High Availability",
+		},
 	}
 }
 
