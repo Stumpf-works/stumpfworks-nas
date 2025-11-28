@@ -75,7 +75,7 @@ echo -e "${BLUE}  🔨 Building on APT Server${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 
-ssh "$APT_SERVER" bash <<'ENDSSH'
+ssh "$APT_SERVER" "export REPO_TYPE='$REPO_TYPE' REPO_PATH='$REPO_PATH' BRANCH='$BRANCH' GIT_REPO='$GIT_REPO'; bash" <<'ENDSSH'
 set -e
 
 # Colors for remote output
