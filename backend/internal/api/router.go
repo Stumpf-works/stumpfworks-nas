@@ -313,6 +313,18 @@ func NewRouter(cfg *config.Config) http.Handler {
 				})
 			})
 
+			// Filesystem ACL routes (admin only)
+			r.Route("/filesystem/acl", func(r chi.Router) {
+				r.Use(mw.AdminOnly)
+
+				r.Get("/", handlers.GetACL)                    // GET /api/v1/filesystem/acl?path=/path/to/file
+				r.Post("/", handlers.SetACL)                   // POST /api/v1/filesystem/acl
+				r.Delete("/", handlers.RemoveACL)              // DELETE /api/v1/filesystem/acl
+				r.Post("/default", handlers.SetDefaultACL)     // POST /api/v1/filesystem/acl/default
+				r.Post("/recursive", handlers.ApplyRecursive)  // POST /api/v1/filesystem/acl/recursive
+				r.Delete("/all", handlers.RemoveAllACLs)       // DELETE /api/v1/filesystem/acl/all
+			})
+
 			// Network routes
 			r.Route("/network", func(r chi.Router) {
 				netHandler := handlers.NewNetworkHandler()

@@ -13,7 +13,9 @@
       "Bash(git describe:*)",
       "Bash(bash scripts/build-multiarch.sh:*)",
       "Bash(git add:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(git checkout:*)",
+      "Bash(go build:*)"
     ],
     "deny": [],
     "ask": []

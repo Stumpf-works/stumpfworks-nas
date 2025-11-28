@@ -30,6 +30,7 @@ import (
 	"github.com/Stumpf-works/stumpfworks-nas/internal/scheduler"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/storage"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/system"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/system/filesystem"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/twofa"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/updates"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/usergroups"
@@ -165,6 +166,15 @@ func main() {
 		logger.Fatal("Failed to initialize file service", zap.Error(err))
 	}
 	logger.Info("File service initialized")
+
+	// Initialize ACL service (non-fatal if ACL tools not available)
+	if err := initializeACL(); err != nil {
+		logger.Warn("ACL service initialization failed",
+			zap.Error(err),
+			zap.String("message", "ACL features will be disabled"))
+	} else {
+		logger.Info("ACL service initialized")
+	}
 
 	// Initialize Docker service (non-fatal if not available)
 	if err := initializeDocker(); err != nil {
@@ -429,6 +439,18 @@ func initializeMetrics() error {
 		return err
 	}
 	return service.Start()
+}
+
+// initializeACL initializes the ACL (Access Control List) service
+// Returns error if ACL tools are not installed, but this is non-fatal
+func initializeACL() error {
+	shell := system.MustGet().Shell
+	aclManager, err := filesystem.NewACLManager(shell)
+	if err != nil {
+		return err
+	}
+	handlers.InitACLManager(aclManager)
+	return nil
 }
 
 // checkDependencies checks and optionally installs system dependencies

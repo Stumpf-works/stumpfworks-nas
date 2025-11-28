@@ -145,6 +145,15 @@ func getRequiredPackages() []*Package {
 			PacmanName:   "docker",
 			Description:  "Container runtime (for Docker management features)",
 		},
+		{
+			Name:         "acl",
+			Required:     false,
+			CheckCommand: "getfacl",
+			AptName:      "acl",
+			YumName:      "acl",
+			PacmanName:   "acl",
+			Description:  "POSIX ACL support for granular file permissions",
+		},
 	}
 }
 
