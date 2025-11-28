@@ -1,18 +1,19 @@
 import { Dashboard } from './Dashboard/Dashboard';
 import { UserManager } from './UserManager/UserManager';
 import { QuotaManager } from './QuotaManager/QuotaManager';
-import { ADDomainController } from './ADDomainController/ADDomainController';
 import { Settings } from './Settings/Settings';
 import { StorageManager } from './StorageManager/StorageManager';
 import FileManager from './FileManager/FileManager';
 import { NetworkManager } from './NetworkManager/NetworkManager';
 import { DockerManager } from './DockerManager/DockerManager';
 import { PluginManager } from './PluginManager/PluginManager';
-import { AuditLogs } from './AuditLogs/AuditLogs';
-import { Security } from './Security/Security';
-import { Alerts } from './Alerts/Alerts';
+import { BackupManager } from './BackupManager/BackupManager';
+import { SecurityCenter } from './SecurityCenter';
+import { Tasks } from './Tasks/Tasks';
 import { AppStore } from './AppStore/AppStore';
 import { Terminal } from './Terminal/Terminal';
+import { ADDCManager } from './ADDCManager';
+import { Monitoring } from './Monitoring';
 import { SystemManager } from './SystemManager/SystemManager';
 import { HighAvailability } from './HighAvailability/HighAvailability';
 import type { App } from '@/types';
@@ -25,6 +26,14 @@ export const registeredApps: App[] = [
     component: Dashboard,
     defaultSize: { width: 900, height: 600 },
     minSize: { width: 600, height: 400 },
+  },
+  {
+    id: 'monitoring',
+    name: 'Monitoring',
+    icon: '📈',
+    component: Monitoring,
+    defaultSize: { width: 1200, height: 800 },
+    minSize: { width: 900, height: 600 },
   },
   {
     id: 'storage',
@@ -59,44 +68,12 @@ export const registeredApps: App[] = [
     minSize: { width: 900, height: 600 },
   },
   {
-    id: 'ad-dc',
-    name: 'AD DC',
-    icon: '🏰',
-    component: ADDomainController,
-    defaultSize: { width: 1400, height: 900 },
-    minSize: { width: 1000, height: 700 },
-  },
-  {
-    id: 'high-availability',
-    name: 'High Availability',
-    icon: '⚡',
-    component: HighAvailability,
-    defaultSize: { width: 1400, height: 900 },
-    minSize: { width: 1000, height: 700 },
-  },
-  {
-    id: 'audit-logs',
-    name: 'Audit Logs',
-    icon: '🔒',
-    component: AuditLogs,
-    defaultSize: { width: 1400, height: 800 },
-    minSize: { width: 1000, height: 600 },
-  },
-  {
-    id: 'security',
-    name: 'Security',
+    id: 'security-center',
+    name: 'Security Center',
     icon: '🛡️',
-    component: Security,
-    defaultSize: { width: 1400, height: 800 },
-    minSize: { width: 1000, height: 600 },
-  },
-  {
-    id: 'alerts',
-    name: 'Alerts',
-    icon: '🔔',
-    component: Alerts,
-    defaultSize: { width: 1000, height: 800 },
-    minSize: { width: 800, height: 600 },
+    component: SecurityCenter,
+    defaultSize: { width: 1400, height: 900 },
+    minSize: { width: 1000, height: 700 },
   },
   {
     id: 'system',
@@ -113,6 +90,22 @@ export const registeredApps: App[] = [
     component: NetworkManager,
     defaultSize: { width: 1200, height: 800 },
     minSize: { width: 900, height: 600 },
+  },
+  {
+    id: 'ad-dc',
+    name: 'AD Domain Controller',
+    icon: '🏢',
+    component: ADDCManager,
+    defaultSize: { width: 1400, height: 900 },
+    minSize: { width: 1000, height: 700 },
+  },
+  {
+    id: 'high-availability',
+    name: 'High Availability',
+    icon: '⚡',
+    component: HighAvailability,
+    defaultSize: { width: 1400, height: 900 },
+    minSize: { width: 1000, height: 700 },
   },
   {
     id: 'docker',
@@ -147,6 +140,22 @@ export const registeredApps: App[] = [
     minSize: { width: 800, height: 500 },
   },
   {
+    id: 'backups',
+    name: 'Backups',
+    icon: '⏱️',
+    component: BackupManager,
+    defaultSize: { width: 1200, height: 800 },
+    minSize: { width: 900, height: 600 },
+  },
+  {
+    id: 'tasks',
+    name: 'Tasks',
+    icon: '📋',
+    component: Tasks,
+    defaultSize: { width: 1200, height: 800 },
+    minSize: { width: 900, height: 600 },
+  },
+  {
     id: 'settings',
     name: 'Settings',
     icon: '⚙️',
@@ -159,3 +168,30 @@ export const registeredApps: App[] = [
 export function getAppById(id: string): App | undefined {
   return registeredApps.find((app) => app.id === id);
 }
+
+// App categories for App Gallery
+export const appCategories = {
+  system: ['dashboard', 'monitoring', 'system', 'settings', 'terminal'],
+  management: ['users', 'quotas', 'network', 'storage', 'ad-dc', 'high-availability'],
+  security: ['security-center'],
+  tools: ['files', 'backups', 'tasks'],
+  development: ['docker', 'plugins', 'app-store'],
+} as const;
+
+export type AppCategory = keyof typeof appCategories;
+
+export const categoryNames: Record<AppCategory, string> = {
+  system: 'System',
+  management: 'Management',
+  security: 'Security',
+  tools: 'Tools',
+  development: 'Development',
+};
+
+export const categoryIcons: Record<AppCategory, string> = {
+  system: '⚙️',
+  management: '📊',
+  security: '🛡️',
+  tools: '🔧',
+  development: '💻',
+};

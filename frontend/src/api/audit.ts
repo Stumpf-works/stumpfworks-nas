@@ -63,7 +63,7 @@ export const auditApi = {
     if (params?.offset) queryParams.append('offset', params.offset.toString());
 
     const response = await client.get<ApiResponse<AuditLogListResponse>>(
-      `/api/v1/audit/logs?${queryParams.toString()}`
+      `/audit/logs?${queryParams.toString()}`
     );
     return response.data;
   },
@@ -71,7 +71,7 @@ export const auditApi = {
   // Get a specific audit log by ID
   getLog: async (id: number) => {
     const response = await client.get<ApiResponse<AuditLog>>(
-      `/api/v1/audit/logs/${id}`
+      `/audit/logs/${id}`
     );
     return response.data;
   },
@@ -80,7 +80,7 @@ export const auditApi = {
   getRecent: async (limit?: number) => {
     const queryParams = limit ? `?limit=${limit}` : '';
     const response = await client.get<ApiResponse<AuditLog[]>>(
-      `/api/v1/audit/logs/recent${queryParams}`
+      `/audit/logs/recent${queryParams}`
     );
     return response.data;
   },
@@ -88,7 +88,7 @@ export const auditApi = {
   // Get audit log statistics
   getStats: async () => {
     const response = await client.get<ApiResponse<AuditStats>>(
-      '/api/v1/audit/stats'
+      '/audit/stats'
     );
     return response.data;
   },

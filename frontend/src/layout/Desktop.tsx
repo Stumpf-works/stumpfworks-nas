@@ -1,19 +1,38 @@
 import { useEffect, useState } from 'react';
-import { useThemeStore } from '@/store';
+import { useThemeStore, useWindowStore } from '@/store';
+import { getAppById } from '@/apps';
 import TopBar from './TopBar';
 import Dock from './Dock';
 import WindowManager from './WindowManager';
 import WidgetSidebar from '@/components/WidgetSidebar';
+import { AppGallery } from '@/components/AppGallery';
 
 export default function Desktop() {
   const setTheme = useThemeStore((state) => state.setTheme);
   const isDark = useThemeStore((state) => state.isDark);
+  const openWindow = useWindowStore((state) => state.openWindow);
   const [isWidgetSidebarOpen, setIsWidgetSidebarOpen] = useState(false);
+  const [isAppGalleryOpen, setIsAppGalleryOpen] = useState(false);
 
   useEffect(() => {
     // Initialize theme
     setTheme(isDark);
   }, []);
+
+  // Expose global function to open App Gallery
+  useEffect(() => {
+    (window as any).openAppGallery = () => setIsAppGalleryOpen(true);
+    return () => {
+      delete (window as any).openAppGallery;
+    };
+  }, []);
+
+  const handleLaunchApp = (appId: string) => {
+    const app = getAppById(appId);
+    if (app) {
+      openWindow(app);
+    }
+  };
 
   return (
     <div className="relative w-full h-full overflow-hidden bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-macos-dark-50 dark:via-macos-dark-100 dark:to-macos-dark-200">
@@ -42,6 +61,13 @@ export default function Desktop() {
       <WidgetSidebar
         isOpen={isWidgetSidebarOpen}
         onToggle={() => setIsWidgetSidebarOpen(!isWidgetSidebarOpen)}
+      />
+
+      {/* App Gallery */}
+      <AppGallery
+        isOpen={isAppGalleryOpen}
+        onClose={() => setIsAppGalleryOpen(false)}
+        onLaunchApp={handleLaunchApp}
       />
     </div>
   );

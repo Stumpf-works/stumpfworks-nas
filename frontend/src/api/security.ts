@@ -47,7 +47,7 @@ export const securityApi = {
     if (offset) queryParams.append('offset', offset.toString());
 
     const response = await client.get<ApiResponse<FailedLoginListResponse>>(
-      `/api/v1/security/failed-logins?${queryParams.toString()}`
+      `/security/failed-logins?${queryParams.toString()}`
     );
     return response.data;
   },
@@ -55,7 +55,7 @@ export const securityApi = {
   // Get all blocked IPs
   getBlockedIPs: async () => {
     const response = await client.get<ApiResponse<IPBlock[]>>(
-      '/api/v1/security/blocked-ips'
+      '/security/blocked-ips'
     );
     return response.data;
   },
@@ -63,7 +63,7 @@ export const securityApi = {
   // Unblock an IP address
   unblockIP: async (ipAddress: string) => {
     const response = await client.post<ApiResponse<{ message: string }>>(
-      '/api/v1/security/unblock-ip',
+      '/security/unblock-ip',
       { ipAddress }
     );
     return response.data;
@@ -72,7 +72,7 @@ export const securityApi = {
   // Get failed login statistics
   getStats: async () => {
     const response = await client.get<ApiResponse<FailedLoginStats>>(
-      '/api/v1/security/failed-logins/stats'
+      '/security/failed-logins/stats'
     );
     return response.data;
   },

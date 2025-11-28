@@ -345,6 +345,60 @@ func GetRoutes() ([]Route, error) {
 	return routes, nil
 }
 
+// AddRoute adds a static route
+func AddRoute(destination, gateway, iface string, metric int) error {
+	args := []string{"route", "add"}
+
+	// Add destination
+	args = append(args, destination)
+
+	// Add gateway if provided
+	if gateway != "" {
+		args = append(args, "via", gateway)
+	}
+
+	// Add interface if provided
+	if iface != "" {
+		args = append(args, "dev", iface)
+	}
+
+	// Add metric if provided
+	if metric > 0 {
+		args = append(args, "metric", strconv.Itoa(metric))
+	}
+
+	cmd := exec.Command("ip", args...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to add route: %w: %s", err, string(output))
+	}
+
+	return nil
+}
+
+// DeleteRoute deletes a static route
+func DeleteRoute(destination, gateway, iface string) error {
+	args := []string{"route", "del", destination}
+
+	// Add gateway if provided (helps identify specific route)
+	if gateway != "" {
+		args = append(args, "via", gateway)
+	}
+
+	// Add interface if provided (helps identify specific route)
+	if iface != "" {
+		args = append(args, "dev", iface)
+	}
+
+	cmd := exec.Command("ip", args...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to delete route: %w: %s", err, string(output))
+	}
+
+	return nil
+}
+
 // GetDNSConfig returns DNS configuration
 func GetDNSConfig() (*DNSConfig, error) {
 	data, err := os.ReadFile("/etc/resolv.conf")

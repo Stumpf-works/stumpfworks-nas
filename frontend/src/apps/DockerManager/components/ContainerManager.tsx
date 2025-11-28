@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { dockerApi, DockerContainer } from '@/api/docker';
+import { dockerApi, DockerContainer, CreateContainerRequest } from '@/api/docker';
 import { getErrorMessage } from '@/api/client';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
+import { Play, Square, RotateCw, Trash2, FileText, Terminal, Settings, AlertTriangle, Plus, X } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 export default function ContainerManager() {
   const [containers, setContainers] = useState<DockerContainer[]>([]);
@@ -23,6 +25,21 @@ export default function ContainerManager() {
     cpuShares: '',
   });
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [createModal, setCreateModal] = useState(false);
+  const [newContainer, setNewContainer] = useState<CreateContainerRequest>({
+    name: '',
+    image: '',
+    command: [],
+    env: [],
+    ports: [],
+    volumes: [],
+    restart: 'unless-stopped',
+    network: '',
+    labels: {},
+  });
+  const [portInput, setPortInput] = useState({ container: '', host: '', protocol: 'tcp' });
+  const [volumeInput, setVolumeInput] = useState({ host: '', container: '', mode: 'rw' });
+  const [envInput, setEnvInput] = useState('');
 
   useEffect(() => {
     loadContainers();
@@ -51,12 +68,13 @@ export default function ContainerManager() {
     try {
       const response = await dockerApi.startContainer(container.id);
       if (response.success) {
+        toast.success(`Container ${container.name} started successfully`);
         loadContainers();
       } else {
-        alert(response.error?.message || 'Failed to start container');
+        toast.error(response.error?.message || 'Failed to start container');
       }
     } catch (err) {
-      alert(getErrorMessage(err));
+      toast.error(getErrorMessage(err));
     } finally {
       setActionLoading(null);
     }
@@ -67,12 +85,13 @@ export default function ContainerManager() {
     try {
       const response = await dockerApi.stopContainer(container.id);
       if (response.success) {
+        toast.success(`Container ${container.name} stopped successfully`);
         loadContainers();
       } else {
-        alert(response.error?.message || 'Failed to stop container');
+        toast.error(response.error?.message || 'Failed to stop container');
       }
     } catch (err) {
-      alert(getErrorMessage(err));
+      toast.error(getErrorMessage(err));
     } finally {
       setActionLoading(null);
     }
@@ -83,12 +102,13 @@ export default function ContainerManager() {
     try {
       const response = await dockerApi.restartContainer(container.id);
       if (response.success) {
+        toast.success(`Container ${container.name} restarted successfully`);
         loadContainers();
       } else {
-        alert(response.error?.message || 'Failed to restart container');
+        toast.error(response.error?.message || 'Failed to restart container');
       }
     } catch (err) {
-      alert(getErrorMessage(err));
+      toast.error(getErrorMessage(err));
     } finally {
       setActionLoading(null);
     }
@@ -100,12 +120,13 @@ export default function ContainerManager() {
       const response = await dockerApi.removeContainer(container.id);
       if (response.success) {
         setDeleteModal(null);
+        toast.success(`Container ${container.name} deleted successfully`);
         loadContainers();
       } else {
-        alert(response.error?.message || 'Failed to remove container');
+        toast.error(response.error?.message || 'Failed to remove container');
       }
     } catch (err) {
-      alert(getErrorMessage(err));
+      toast.error(getErrorMessage(err));
     } finally {
       setActionLoading(null);
     }
@@ -117,10 +138,10 @@ export default function ContainerManager() {
       if (response.success && response.data) {
         setLogsModal({ container, logs: response.data });
       } else {
-        alert(response.error?.message || 'Failed to load logs');
+        toast.error(response.error?.message || 'Failed to load logs');
       }
     } catch (err) {
-      alert(getErrorMessage(err));
+      toast.error(getErrorMessage(err));
     }
   };
 
@@ -143,12 +164,13 @@ export default function ContainerManager() {
       if (response.success) {
         setResourcesModal(null);
         setResourceLimits({ memory: '', cpuShares: '' });
+        toast.success(`Resources updated for ${resourcesModal.name}`);
         loadContainers();
       } else {
-        alert(response.error?.message || 'Failed to update resources');
+        toast.error(response.error?.message || 'Failed to update resources');
       }
     } catch (err) {
-      alert(getErrorMessage(err));
+      toast.error(getErrorMessage(err));
     }
   };
 
@@ -160,11 +182,124 @@ export default function ContainerManager() {
       if (response.success && response.data) {
         setExecOutput(response.data.output);
       } else {
-        alert(response.error?.message || 'Failed to execute command');
+        toast.error(response.error?.message || 'Failed to execute command');
       }
     } catch (err) {
-      alert(getErrorMessage(err));
+      toast.error(getErrorMessage(err));
     }
+  };
+
+  const handleCreateContainer = async () => {
+    if (!newContainer.name || !newContainer.image) {
+      toast.error('Container name and image are required');
+      return;
+    }
+
+    try {
+      const response = await dockerApi.createContainer(newContainer);
+      if (response.success) {
+        setCreateModal(false);
+        resetCreateForm();
+        toast.success(`Container ${newContainer.name} created successfully`);
+        loadContainers();
+      } else {
+        toast.error(response.error?.message || 'Failed to create container');
+      }
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    }
+  };
+
+  const resetCreateForm = () => {
+    setNewContainer({
+      name: '',
+      image: '',
+      command: [],
+      env: [],
+      ports: [],
+      volumes: [],
+      restart: 'unless-stopped',
+      network: '',
+      labels: {},
+    });
+    setPortInput({ container: '', host: '', protocol: 'tcp' });
+    setVolumeInput({ host: '', container: '', mode: 'rw' });
+    setEnvInput('');
+  };
+
+  const addPort = () => {
+    if (!portInput.container) {
+      toast.error('Container port is required');
+      return;
+    }
+    setNewContainer({
+      ...newContainer,
+      ports: [
+        ...(newContainer.ports || []),
+        {
+          container: parseInt(portInput.container),
+          host: portInput.host ? parseInt(portInput.host) : undefined,
+          protocol: portInput.protocol,
+        },
+      ],
+    });
+    setPortInput({ container: '', host: '', protocol: 'tcp' });
+  };
+
+  const removePort = (index: number) => {
+    setNewContainer({
+      ...newContainer,
+      ports: newContainer.ports?.filter((_, i) => i !== index) || [],
+    });
+  };
+
+  const addVolume = () => {
+    if (!volumeInput.host || !volumeInput.container) {
+      toast.error('Host and container paths are required');
+      return;
+    }
+    setNewContainer({
+      ...newContainer,
+      volumes: [
+        ...(newContainer.volumes || []),
+        {
+          host: volumeInput.host,
+          container: volumeInput.container,
+          mode: volumeInput.mode,
+        },
+      ],
+    });
+    setVolumeInput({ host: '', container: '', mode: 'rw' });
+  };
+
+  const removeVolume = (index: number) => {
+    setNewContainer({
+      ...newContainer,
+      volumes: newContainer.volumes?.filter((_, i) => i !== index) || [],
+    });
+  };
+
+  const addEnv = () => {
+    if (!envInput.trim()) {
+      toast.error('Environment variable is required');
+      return;
+    }
+    if (!envInput.includes('=')) {
+      toast.error('Environment variable must be in KEY=VALUE format');
+      return;
+    }
+    setNewContainer({
+      ...newContainer,
+      env: [...(newContainer.env || []), envInput],
+    });
+    setEnvInput('');
+  };
+
+  const removeEnv = (index: number) => {
+    setNewContainer({
+      ...newContainer,
+      env: newContainer.env?.filter((_, i) => i !== index) || [],
+    });
   };
 
   const getStatusColor = (state: string) => {
@@ -212,7 +347,7 @@ export default function ContainerManager() {
       )}
 
       {/* Controls */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowAll(true)}
@@ -235,15 +370,26 @@ export default function ContainerManager() {
             Running Only
           </button>
         </div>
-        <div className="text-sm text-gray-600 dark:text-gray-400">
-          {containers.length} container{containers.length !== 1 ? 's' : ''}
+        <div className="flex items-center gap-4">
+          <div className="text-sm text-gray-600 dark:text-gray-400">
+            {containers.length} container{containers.length !== 1 ? 's' : ''}
+          </div>
+          <Button
+            onClick={() => setCreateModal(true)}
+            className="flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Create Container
+          </Button>
         </div>
       </div>
 
       {/* Containers Grid */}
       {containers.length === 0 ? (
         <div className="text-center py-12">
-          <div className="text-6xl mb-4">📦</div>
+          <div className="flex justify-center mb-4">
+            <Settings className="w-16 h-16 text-gray-400 dark:text-gray-600" />
+          </div>
           <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
             No containers found
           </h3>
@@ -313,9 +459,10 @@ export default function ContainerManager() {
                       variant="secondary"
                       onClick={() => handleStart(container)}
                       disabled={actionLoading === container.id}
-                      className="flex-1 min-w-[80px]"
+                      className="flex-1 min-w-[80px] flex items-center justify-center gap-1"
                     >
-                      ▶️ Start
+                      <Play className="w-3 h-3" />
+                      Start
                     </Button>
                   )}
                   {container.state.toLowerCase() === 'running' && (
@@ -325,18 +472,20 @@ export default function ContainerManager() {
                         variant="secondary"
                         onClick={() => handleStop(container)}
                         disabled={actionLoading === container.id}
-                        className="flex-1 min-w-[80px]"
+                        className="flex-1 min-w-[80px] flex items-center justify-center gap-1"
                       >
-                        ⏸️ Stop
+                        <Square className="w-3 h-3" />
+                        Stop
                       </Button>
                       <Button
                         size="sm"
                         variant="secondary"
                         onClick={() => handleRestart(container)}
                         disabled={actionLoading === container.id}
-                        className="flex-1 min-w-[80px]"
+                        className="flex-1 min-w-[80px] flex items-center justify-center gap-1"
                       >
-                        🔄 Restart
+                        <RotateCw className="w-3 h-3" />
+                        Restart
                       </Button>
                     </>
                   )}
@@ -344,9 +493,10 @@ export default function ContainerManager() {
                     size="sm"
                     variant="secondary"
                     onClick={() => handleViewLogs(container)}
-                    className="flex-1 min-w-[80px]"
+                    className="flex-1 min-w-[80px] flex items-center justify-center gap-1"
                   >
-                    📄 Logs
+                    <FileText className="w-3 h-3" />
+                    Logs
                   </Button>
                   {container.state.toLowerCase() === 'running' && (
                     <Button
@@ -356,27 +506,30 @@ export default function ContainerManager() {
                         setExecModal(container);
                         setExecOutput('');
                       }}
-                      className="flex-1 min-w-[80px]"
+                      className="flex-1 min-w-[80px] flex items-center justify-center gap-1"
                     >
-                      💻 Exec
+                      <Terminal className="w-3 h-3" />
+                      Exec
                     </Button>
                   )}
                   <Button
                     size="sm"
                     variant="secondary"
                     onClick={() => setResourcesModal(container)}
-                    className="flex-1 min-w-[80px]"
+                    className="flex-1 min-w-[80px] flex items-center justify-center gap-1"
                   >
-                    ⚙️ Resources
+                    <Settings className="w-3 h-3" />
+                    Resources
                   </Button>
                   <Button
                     size="sm"
                     variant="danger"
                     onClick={() => setDeleteModal(container)}
                     disabled={actionLoading === container.id}
-                    className="flex-1 min-w-[80px]"
+                    className="flex-1 min-w-[80px] flex items-center justify-center gap-1"
                   >
-                    🗑️ Delete
+                    <Trash2 className="w-3 h-3" />
+                    Delete
                   </Button>
                 </div>
               </div>
@@ -402,7 +555,8 @@ export default function ContainerManager() {
               onClick={(e) => e.stopPropagation()}
               className="bg-white dark:bg-macos-dark-100 rounded-lg shadow-2xl w-full max-w-4xl max-h-[80vh] flex flex-col"
             >
-              <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-macos-blue" />
                 <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
                   Container Logs: {logsModal.container.name}
                 </h2>
@@ -439,13 +593,18 @@ export default function ContainerManager() {
               onClick={(e) => e.stopPropagation()}
               className="bg-white dark:bg-macos-dark-100 rounded-lg shadow-2xl p-6 w-full max-w-md"
             >
-              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-                Delete Container
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
-                Are you sure you want to delete container <strong>{deleteModal.name}</strong>? This
-                action cannot be undone.
-              </p>
+              <div className="flex items-start gap-3 mb-4">
+                <AlertTriangle className="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+                    Delete Container
+                  </h2>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Are you sure you want to delete container <strong>{deleteModal.name}</strong>? This
+                    action cannot be undone.
+                  </p>
+                </div>
+              </div>
               <div className="flex gap-3">
                 <Button
                   variant="secondary"
@@ -476,19 +635,22 @@ export default function ContainerManager() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
             onClick={() => setResourcesModal(null)}
           >
             <motion.div
               initial={{ scale: 0.95 }}
               animate={{ scale: 1 }}
               exit={{ scale: 0.95 }}
-              className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full"
+              className="bg-white dark:bg-macos-dark-100 rounded-lg p-6 max-w-md w-full"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-gray-100">
-                Update Resource Limits
-              </h3>
+              <div className="flex items-center gap-2 mb-4">
+                <Settings className="w-5 h-5 text-macos-blue" />
+                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                  Update Resource Limits
+                </h3>
+              </div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                 Container: {resourcesModal.name}
               </p>
@@ -552,19 +714,22 @@ export default function ContainerManager() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
             onClick={() => setExecModal(null)}
           >
             <motion.div
               initial={{ scale: 0.95 }}
               animate={{ scale: 1 }}
               exit={{ scale: 0.95 }}
-              className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col"
+              className="bg-white dark:bg-macos-dark-100 rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-gray-100">
-                Execute Command
-              </h3>
+              <div className="flex items-center gap-2 mb-4">
+                <Terminal className="w-5 h-5 text-macos-blue" />
+                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                  Execute Command
+                </h3>
+              </div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                 Container: {execModal.name}
               </p>
@@ -611,6 +776,283 @@ export default function ContainerManager() {
                   }}
                 >
                   Close
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Create Container Modal */}
+      <AnimatePresence>
+        {createModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto"
+            onClick={() => setCreateModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              className="bg-white dark:bg-macos-dark-100 rounded-lg p-6 max-w-3xl w-full my-8"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-2">
+                  <Plus className="w-6 h-6 text-macos-blue" />
+                  <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    Create New Container
+                  </h3>
+                </div>
+                <button
+                  onClick={() => {
+                    setCreateModal(false);
+                    resetCreateForm();
+                  }}
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="space-y-6 max-h-[calc(100vh-250px)] overflow-y-auto pr-2">
+                {/* Basic Settings */}
+                <div className="space-y-4">
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    Basic Settings
+                  </h4>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Container Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={newContainer.name}
+                      onChange={(e) => setNewContainer({ ...newContainer, name: e.target.value })}
+                      placeholder="my-container"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Image *
+                    </label>
+                    <input
+                      type="text"
+                      value={newContainer.image}
+                      onChange={(e) => setNewContainer({ ...newContainer, image: e.target.value })}
+                      placeholder="nginx:latest"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Restart Policy
+                    </label>
+                    <select
+                      value={newContainer.restart}
+                      onChange={(e) => setNewContainer({ ...newContainer, restart: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    >
+                      <option value="no">No</option>
+                      <option value="always">Always</option>
+                      <option value="unless-stopped">Unless Stopped</option>
+                      <option value="on-failure">On Failure</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Network
+                    </label>
+                    <input
+                      type="text"
+                      value={newContainer.network}
+                      onChange={(e) => setNewContainer({ ...newContainer, network: e.target.value })}
+                      placeholder="bridge"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    />
+                  </div>
+                </div>
+
+                {/* Port Mappings */}
+                <div className="space-y-4">
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    Port Mappings
+                  </h4>
+
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      value={portInput.container}
+                      onChange={(e) => setPortInput({ ...portInput, container: e.target.value })}
+                      placeholder="Container Port"
+                      className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    />
+                    <input
+                      type="number"
+                      value={portInput.host}
+                      onChange={(e) => setPortInput({ ...portInput, host: e.target.value })}
+                      placeholder="Host Port (optional)"
+                      className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    />
+                    <select
+                      value={portInput.protocol}
+                      onChange={(e) => setPortInput({ ...portInput, protocol: e.target.value })}
+                      className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    >
+                      <option value="tcp">TCP</option>
+                      <option value="udp">UDP</option>
+                    </select>
+                    <Button onClick={addPort} size="sm">
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+
+                  {newContainer.ports && newContainer.ports.length > 0 && (
+                    <div className="space-y-2">
+                      {newContainer.ports.map((port, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 p-3 rounded-md"
+                        >
+                          <span className="text-sm text-gray-900 dark:text-gray-100 font-mono">
+                            {port.host ? `${port.host}:${port.container}` : port.container}/{port.protocol}
+                          </span>
+                          <button
+                            onClick={() => removePort(index)}
+                            className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Volume Mounts */}
+                <div className="space-y-4">
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    Volume Mounts
+                  </h4>
+
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={volumeInput.host}
+                      onChange={(e) => setVolumeInput({ ...volumeInput, host: e.target.value })}
+                      placeholder="Host Path"
+                      className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    />
+                    <input
+                      type="text"
+                      value={volumeInput.container}
+                      onChange={(e) => setVolumeInput({ ...volumeInput, container: e.target.value })}
+                      placeholder="Container Path"
+                      className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    />
+                    <select
+                      value={volumeInput.mode}
+                      onChange={(e) => setVolumeInput({ ...volumeInput, mode: e.target.value })}
+                      className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    >
+                      <option value="rw">RW</option>
+                      <option value="ro">RO</option>
+                    </select>
+                    <Button onClick={addVolume} size="sm">
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+
+                  {newContainer.volumes && newContainer.volumes.length > 0 && (
+                    <div className="space-y-2">
+                      {newContainer.volumes.map((volume, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 p-3 rounded-md"
+                        >
+                          <span className="text-sm text-gray-900 dark:text-gray-100 font-mono">
+                            {volume.host}:{volume.container} ({volume.mode})
+                          </span>
+                          <button
+                            onClick={() => removeVolume(index)}
+                            className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Environment Variables */}
+                <div className="space-y-4">
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    Environment Variables
+                  </h4>
+
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={envInput}
+                      onChange={(e) => setEnvInput(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          addEnv();
+                        }
+                      }}
+                      placeholder="KEY=VALUE"
+                      className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-mono text-sm"
+                    />
+                    <Button onClick={addEnv} size="sm">
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+
+                  {newContainer.env && newContainer.env.length > 0 && (
+                    <div className="space-y-2">
+                      {newContainer.env.map((env, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 p-3 rounded-md"
+                        >
+                          <span className="text-sm text-gray-900 dark:text-gray-100 font-mono">
+                            {env}
+                          </span>
+                          <button
+                            onClick={() => removeEnv(index)}
+                            className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setCreateModal(false);
+                    resetCreateForm();
+                  }}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleCreateContainer} className="flex-1">
+                  Create Container
                 </Button>
               </div>
             </motion.div>

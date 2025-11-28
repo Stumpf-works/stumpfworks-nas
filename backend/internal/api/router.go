@@ -274,7 +274,9 @@ func NewRouter(cfg *config.Config) http.Handler {
 				// Network operations
 				r.Route("/network", func(r chi.Router) {
 					r.Post("/bond", handlers.CreateBondInterface)
+					r.Delete("/bond/{name}", handlers.DeleteBondInterface)
 					r.Post("/vlan", handlers.CreateVLANInterface)
+					r.Delete("/vlan/{parent}/{vlanid}", handlers.DeleteVLANInterface)
 				})
 			})
 
@@ -355,6 +357,8 @@ func NewRouter(cfg *config.Config) http.Handler {
 
 				// Routes and DNS
 				r.Get("/routes", netHandler.GetRoutes)
+				r.Post("/routes", netHandler.AddRoute)
+				r.Delete("/routes", netHandler.DeleteRoute)
 				r.Get("/dns", netHandler.GetDNS)
 
 				// Firewall (read-only)

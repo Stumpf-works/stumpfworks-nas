@@ -268,8 +268,18 @@ export const syslibApi = {
       return response.data;
     },
 
+    deleteBond: async (name: string) => {
+      const response = await client.delete<ApiResponse<{ message: string }>>(`/syslib/network/bond/${name}`);
+      return response.data;
+    },
+
     createVLAN: async (data: CreateVLANRequest) => {
       const response = await client.post<ApiResponse<{ message: string; vlan: string }>>('/syslib/network/vlan', data);
+      return response.data;
+    },
+
+    deleteVLAN: async (parent: string, vlanId: number) => {
+      const response = await client.delete<ApiResponse<{ message: string }>>(`/syslib/network/vlan/${parent}/${vlanId}`);
       return response.data;
     },
   },

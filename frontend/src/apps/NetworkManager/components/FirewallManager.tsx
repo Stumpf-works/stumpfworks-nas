@@ -256,7 +256,7 @@ export default function FirewallManager() {
         <div className="p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-              Firewall Rules ({status.rules.length})
+              Firewall Rules ({status.rules?.length || 0})
             </h2>
             <div className="flex gap-2">
               <Button variant="danger" onClick={handleResetFirewall}>
@@ -266,7 +266,7 @@ export default function FirewallManager() {
             </div>
           </div>
 
-          {status.rules.length > 0 ? (
+          {status.rules && status.rules.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 dark:bg-gray-800">
@@ -295,7 +295,7 @@ export default function FirewallManager() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                  {status.rules.map((rule) => (
+                  {status.rules?.map((rule) => (
                     <tr
                       key={rule.number}
                       className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"

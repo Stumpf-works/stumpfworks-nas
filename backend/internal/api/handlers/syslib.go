@@ -802,3 +802,70 @@ func CreateVLANInterface(w http.ResponseWriter, r *http.Request) {
 		"vlan":    vlanName,
 	})
 }
+
+// DeleteBondInterface deletes a bonded network interface
+func DeleteBondInterface(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+	if name == "" {
+		utils.RespondError(w, errors.BadRequest("Bond name is required", nil))
+		return
+	}
+
+	lib := getSystemLib(w)
+	if lib == nil {
+		return
+	}
+	if lib.Network == nil || lib.Network.Interfaces == nil {
+		utils.RespondError(w, errors.BadRequest("Network not available", nil))
+		return
+	}
+
+	if err := lib.Network.Interfaces.DeleteBond(name); err != nil {
+		logger.Error("Failed to delete bond interface", zap.String("name", name), zap.Error(err))
+		utils.RespondError(w, errors.InternalServerError("Failed to delete bond", err))
+		return
+	}
+
+	utils.RespondSuccess(w, map[string]string{
+		"message": "Bond interface deleted successfully",
+	})
+}
+
+// DeleteVLANInterface deletes a VLAN interface
+func DeleteVLANInterface(w http.ResponseWriter, r *http.Request) {
+	parent := chi.URLParam(r, "parent")
+	vlanIDStr := chi.URLParam(r, "vlanid")
+
+	if parent == "" || vlanIDStr == "" {
+		utils.RespondError(w, errors.BadRequest("Parent interface and VLAN ID are required", nil))
+		return
+	}
+
+	vlanID, err := strconv.Atoi(vlanIDStr)
+	if err != nil {
+		utils.RespondError(w, errors.BadRequest("Invalid VLAN ID", err))
+		return
+	}
+
+	lib := getSystemLib(w)
+	if lib == nil {
+		return
+	}
+	if lib.Network == nil || lib.Network.Interfaces == nil {
+		utils.RespondError(w, errors.BadRequest("Network not available", nil))
+		return
+	}
+
+	if err := lib.Network.Interfaces.DeleteVLAN(parent, vlanID); err != nil {
+		logger.Error("Failed to delete VLAN interface",
+			zap.String("parent", parent),
+			zap.Int("vlan_id", vlanID),
+			zap.Error(err))
+		utils.RespondError(w, errors.InternalServerError("Failed to delete VLAN", err))
+		return
+	}
+
+	utils.RespondSuccess(w, map[string]string{
+		"message": "VLAN interface deleted successfully",
+	})
+}

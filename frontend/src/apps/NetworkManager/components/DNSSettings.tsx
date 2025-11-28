@@ -17,6 +17,14 @@ export default function DNSSettings() {
     searchDomains: [''],
   });
 
+  const [showAddRoute, setShowAddRoute] = useState(false);
+  const [newRoute, setNewRoute] = useState({
+    destination: '',
+    gateway: '',
+    iface: '',
+    metric: 0,
+  });
+
   useEffect(() => {
     loadDNSConfig();
     loadRoutes();
@@ -108,6 +116,47 @@ export default function DNSSettings() {
     const updated = [...editDNS.searchDomains];
     updated[index] = value;
     setEditDNS({ ...editDNS, searchDomains: updated });
+  };
+
+  const handleAddRoute = async () => {
+    try {
+      const response = await networkApi.addRoute(
+        newRoute.destination,
+        newRoute.gateway || undefined,
+        newRoute.iface || undefined,
+        newRoute.metric || undefined
+      );
+      if (response.success) {
+        setShowAddRoute(false);
+        setNewRoute({ destination: '', gateway: '', iface: '', metric: 0 });
+        loadRoutes();
+      } else {
+        setError(response.error?.message || 'Failed to add route');
+      }
+    } catch (err) {
+      setError(getErrorMessage(err));
+    }
+  };
+
+  const handleDeleteRoute = async (route: Route) => {
+    if (!confirm(`Delete route to ${route.destination}?`)) {
+      return;
+    }
+
+    try {
+      const response = await networkApi.deleteRoute(
+        route.destination,
+        route.gateway || undefined,
+        route.iface || undefined
+      );
+      if (response.success) {
+        loadRoutes();
+      } else {
+        setError(response.error?.message || 'Failed to delete route');
+      }
+    } catch (err) {
+      setError(getErrorMessage(err));
+    }
   };
 
   if (loading) {
@@ -270,9 +319,74 @@ export default function DNSSettings() {
       {/* Routing Table */}
       <Card>
         <div className="p-6">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-            Routing Table
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+              Routing Table
+            </h2>
+            <Button size="sm" onClick={() => setShowAddRoute(true)}>
+              + Add Route
+            </Button>
+          </div>
+
+          {/* Add Route Form */}
+          {showAddRoute && (
+            <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                Add Static Route
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
+                    Destination (CIDR) *
+                  </label>
+                  <Input
+                    value={newRoute.destination}
+                    onChange={(e) => setNewRoute({ ...newRoute, destination: e.target.value })}
+                    placeholder="192.168.2.0/24 or default"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
+                    Gateway
+                  </label>
+                  <Input
+                    value={newRoute.gateway}
+                    onChange={(e) => setNewRoute({ ...newRoute, gateway: e.target.value })}
+                    placeholder="192.168.1.1"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
+                    Interface
+                  </label>
+                  <Input
+                    value={newRoute.iface}
+                    onChange={(e) => setNewRoute({ ...newRoute, iface: e.target.value })}
+                    placeholder="eth0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
+                    Metric (Priority)
+                  </label>
+                  <Input
+                    type="number"
+                    value={newRoute.metric || ''}
+                    onChange={(e) => setNewRoute({ ...newRoute, metric: parseInt(e.target.value) || 0 })}
+                    placeholder="100"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2 mt-4">
+                <Button onClick={handleAddRoute} disabled={!newRoute.destination}>
+                  Add Route
+                </Button>
+                <Button variant="secondary" onClick={() => { setShowAddRoute(false); setNewRoute({ destination: '', gateway: '', iface: '', metric: 0 }); }}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
 
           {routes.length > 0 ? (
             <div className="overflow-x-auto">
@@ -290,6 +404,9 @@ export default function DNSSettings() {
                     </th>
                     <th className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300">
                       Metric
+                    </th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300">
+                      Actions
                     </th>
                   </tr>
                 </thead>
@@ -310,6 +427,16 @@ export default function DNSSettings() {
                       </td>
                       <td className="px-4 py-3 text-gray-900 dark:text-gray-100">
                         {route.metric || '—'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          onClick={() => handleDeleteRoute(route)}
+                          disabled={route.destination === 'default' && !route.gateway}
+                        >
+                          Delete
+                        </Button>
                       </td>
                     </tr>
                   ))}

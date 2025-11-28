@@ -47,6 +47,46 @@ interface ThemeState {
   setTheme: (isDark: boolean) => void;
 }
 
+export interface DockFolder {
+  id: string;
+  name: string;
+  icon: string;
+  apps: string[]; // Array of app IDs
+}
+
+export type DockItem = string | DockFolder;
+
+export function isDockFolder(item: DockItem): item is DockFolder {
+  return typeof item === 'object' && 'apps' in item;
+}
+
+interface DockState {
+  dockItems: DockItem[]; // Array of app IDs or folders
+  addToDock: (appId: string) => void;
+  removeFromDock: (appId: string) => void;
+  reorderDock: (from: number, to: number) => void;
+  resetToDefault: () => void;
+  isInDock: (appId: string) => boolean;
+  // Folder management
+  createFolder: (name: string, icon: string, appIds: string[]) => string;
+  deleteFolder: (folderId: string) => void;
+  addAppToFolder: (folderId: string, appId: string) => void;
+  removeAppFromFolder: (folderId: string, appId: string) => void;
+  renameFolder: (folderId: string, name: string) => void;
+  getFolderById: (folderId: string) => DockFolder | undefined;
+}
+
+// Default dock apps (essential apps only)
+const DEFAULT_DOCK_APPS = [
+  'dashboard',
+  'files',
+  'storage',
+  'network',
+  'docker',
+  'terminal',
+  'settings',
+];
+
 // Auth Store
 export const useAuthStore = create<AuthState>()(
   devtools(
@@ -207,5 +247,157 @@ export const useThemeStore = create<ThemeState>()(
       { name: 'theme-storage' }
     ),
     { name: 'ThemeStore' }
+  )
+);
+
+// Dock Store
+export const useDockStore = create<DockState>()(
+  devtools(
+    persist(
+      (set, get) => ({
+        dockItems: DEFAULT_DOCK_APPS,
+
+        addToDock: (appId) => {
+          const { dockItems } = get();
+          // Check if app is already in dock (including in folders)
+          const isInDock = get().isInDock(appId);
+          if (!isInDock) {
+            set({ dockItems: [...dockItems, appId] });
+          }
+        },
+
+        removeFromDock: (appId) => {
+          const { dockItems } = get();
+          // Remove from top level or from folders
+          const newDockItems = dockItems
+            .map((item) => {
+              if (isDockFolder(item)) {
+                return {
+                  ...item,
+                  apps: item.apps.filter((id) => id !== appId),
+                };
+              }
+              return item;
+            })
+            .filter((item) => {
+              // Remove the app if it's at top level
+              if (typeof item === 'string') {
+                return item !== appId;
+              }
+              // Remove folders that become empty
+              return item.apps.length > 0;
+            });
+          set({ dockItems: newDockItems });
+        },
+
+        reorderDock: (from, to) => {
+          const { dockItems } = get();
+          const newDockItems = [...dockItems];
+          const [removed] = newDockItems.splice(from, 1);
+          newDockItems.splice(to, 0, removed);
+          set({ dockItems: newDockItems });
+        },
+
+        resetToDefault: () => {
+          set({ dockItems: DEFAULT_DOCK_APPS });
+        },
+
+        isInDock: (appId) => {
+          const { dockItems } = get();
+          return dockItems.some((item) => {
+            if (typeof item === 'string') {
+              return item === appId;
+            }
+            return item.apps.includes(appId);
+          });
+        },
+
+        // Folder management
+        createFolder: (name, icon, appIds) => {
+          const { dockItems } = get();
+          const folderId = `folder-${Date.now()}`;
+          const folder: DockFolder = {
+            id: folderId,
+            name,
+            icon,
+            apps: appIds,
+          };
+          // Remove apps from dock that are now in folder
+          const newDockItems = dockItems.filter(
+            (item) => typeof item === 'object' || !appIds.includes(item)
+          );
+          set({ dockItems: [...newDockItems, folder] });
+          return folderId;
+        },
+
+        deleteFolder: (folderId) => {
+          const { dockItems } = get();
+          const folder = get().getFolderById(folderId);
+          if (!folder) return;
+
+          // Remove folder and add its apps back to dock
+          const newDockItems = dockItems.filter(
+            (item) => !(isDockFolder(item) && item.id === folderId)
+          );
+          set({ dockItems: [...newDockItems, ...folder.apps] });
+        },
+
+        addAppToFolder: (folderId, appId) => {
+          const { dockItems } = get();
+          const newDockItems = dockItems.map((item) => {
+            if (isDockFolder(item) && item.id === folderId) {
+              if (!item.apps.includes(appId)) {
+                return { ...item, apps: [...item.apps, appId] };
+              }
+            }
+            return item;
+          });
+          set({ dockItems: newDockItems });
+        },
+
+        removeAppFromFolder: (folderId, appId) => {
+          const { dockItems } = get();
+          const newDockItems = dockItems
+            .map((item) => {
+              if (isDockFolder(item) && item.id === folderId) {
+                return {
+                  ...item,
+                  apps: item.apps.filter((id) => id !== appId),
+                };
+              }
+              return item;
+            })
+            .filter((item) => {
+              // Remove folders that become empty
+              if (isDockFolder(item)) {
+                return item.apps.length > 0;
+              }
+              return true;
+            });
+          set({ dockItems: newDockItems });
+        },
+
+        renameFolder: (folderId, name) => {
+          const { dockItems } = get();
+          const newDockItems = dockItems.map((item) => {
+            if (isDockFolder(item) && item.id === folderId) {
+              return { ...item, name };
+            }
+            return item;
+          });
+          set({ dockItems: newDockItems });
+        },
+
+        getFolderById: (folderId) => {
+          const { dockItems } = get();
+          const folder = dockItems.find(
+            (item) => isDockFolder(item) && item.id === folderId
+          );
+          return folder && isDockFolder(folder) ? folder : undefined;
+        },
+      }),
+      { name: 'dock-storage' }
+    ),
+    { name: 'DockStore' }
   )
 );

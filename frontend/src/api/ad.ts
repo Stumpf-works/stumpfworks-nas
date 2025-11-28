@@ -31,37 +31,37 @@ export interface ADGroup {
 export const adApi = {
   // Get AD configuration
   getConfig: async () => {
-    const response = await client.get<ApiResponse<ADConfig>>('/api/v1/ad/config');
+    const response = await client.get<ApiResponse<ADConfig>>('/ad/config');
     return response.data;
   },
 
   // Update AD configuration
   updateConfig: async (config: Partial<ADConfig>) => {
-    const response = await client.put<ApiResponse<ADConfig>>('/api/v1/ad/config', config);
+    const response = await client.put<ApiResponse<ADConfig>>('/ad/config', config);
     return response.data;
   },
 
   // Test AD connection
   testConnection: async () => {
-    const response = await client.post<ApiResponse<{ success: boolean; message: string }>>('/api/v1/ad/test');
+    const response = await client.post<ApiResponse<{ success: boolean; message: string }>>('/ad/test');
     return response.data;
   },
 
   // Authenticate user
   authenticate: async (username: string, password: string) => {
-    const response = await client.post<ApiResponse<ADUser>>('/api/v1/ad/authenticate', { username, password });
+    const response = await client.post<ApiResponse<ADUser>>('/ad/authenticate', { username, password });
     return response.data;
   },
 
   // List AD users
   listUsers: async () => {
-    const response = await client.get<ApiResponse<ADUser[]>>('/api/v1/ad/users');
+    const response = await client.get<ApiResponse<ADUser[]>>('/ad/users');
     return response.data;
   },
 
   // Sync specific user
   syncUser: async (username: string) => {
-    const response = await client.post<ApiResponse<ADUser>>('/api/v1/ad/users/sync', { username });
+    const response = await client.post<ApiResponse<ADUser>>('/ad/users/sync', { username });
     return response.data;
   },
 

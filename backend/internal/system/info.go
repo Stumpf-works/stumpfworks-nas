@@ -96,13 +96,13 @@ func GetRealtimeSystemMetrics() (*RealtimeSystemMetrics, error) {
 		Timestamp: time.Now().Unix(),
 	}
 
-	// CPU metrics
-	cpuPercent, err := cpu.Percent(time.Second, false)
+	// CPU metrics (use shorter interval for faster response)
+	cpuPercent, err := cpu.Percent(200*time.Millisecond, false)
 	if err == nil && len(cpuPercent) > 0 {
 		metrics.CPU.UsagePercent = cpuPercent[0]
 	}
 
-	cpuPerCore, err := cpu.Percent(time.Second, true)
+	cpuPerCore, err := cpu.Percent(200*time.Millisecond, true)
 	if err == nil {
 		metrics.CPU.PerCore = cpuPerCore
 	}

@@ -11,6 +11,7 @@ import {
   Info,
   Layers,
   Link2,
+  Trash2,
 } from 'lucide-react';
 import { networkApi, type NetworkInterface } from '@/api/network';
 import { syslibApi, type CreateBondRequest, type CreateVLANRequest } from '@/api/syslib';
@@ -100,6 +101,49 @@ export default function NetworkConfig() {
     } catch (error) {
       console.error('Failed to create VLAN:', error);
       alert('Failed to create VLAN interface');
+    }
+  };
+
+  const handleDeleteBond = async (name: string) => {
+    if (!confirm(`Are you sure you want to delete bond interface "${name}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const response = await syslibApi.network.deleteBond(name);
+      if (response.success) {
+        alert(`Bond interface "${name}" deleted successfully`);
+        fetchInterfaces();
+      }
+    } catch (error) {
+      console.error('Failed to delete bond:', error);
+      alert('Failed to delete bond interface');
+    }
+  };
+
+  const handleDeleteVLAN = async (name: string) => {
+    if (!confirm(`Are you sure you want to delete VLAN interface "${name}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      // Parse parent and VLAN ID from name (e.g., "eth0.100" -> parent: "eth0", vlanId: 100)
+      const parts = name.split('.');
+      if (parts.length !== 2) {
+        alert('Invalid VLAN interface name');
+        return;
+      }
+      const parent = parts[0];
+      const vlanId = parseInt(parts[1], 10);
+
+      const response = await syslibApi.network.deleteVLAN(parent, vlanId);
+      if (response.success) {
+        alert(`VLAN interface "${name}" deleted successfully`);
+        fetchInterfaces();
+      }
+    } catch (error) {
+      console.error('Failed to delete VLAN:', error);
+      alert('Failed to delete VLAN interface');
     }
   };
 
@@ -213,15 +257,33 @@ export default function NetworkConfig() {
                       </p>
                     </div>
                   </div>
-                  <div
-                    className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
-                      iface.isUp
-                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
-                        : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-                    }`}
-                  >
-                    <Activity className="w-3 h-3" />
-                    {iface.isUp ? 'UP' : 'DOWN'}
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
+                        iface.isUp
+                          ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                          : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                      }`}
+                    >
+                      <Activity className="w-3 h-3" />
+                      {iface.isUp ? 'UP' : 'DOWN'}
+                    </div>
+                    {/* Delete button for Bond and VLAN interfaces */}
+                    {(iface.name.startsWith('bond') || iface.name.includes('.')) && (
+                      <button
+                        onClick={() => {
+                          if (iface.name.startsWith('bond')) {
+                            handleDeleteBond(iface.name);
+                          } else if (iface.name.includes('.')) {
+                            handleDeleteVLAN(iface.name);
+                          }
+                        }}
+                        className="p-1.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
+                        title={`Delete ${getInterfaceType(iface)}`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 </div>
 
