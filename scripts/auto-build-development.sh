@@ -136,15 +136,19 @@ cd "$BUILD_DIR"
 log "${GREEN}✓ Code fetched successfully${NC}"
 log ""
 
-# Get version
-GIT_VERSION=$(git describe --tags --always 2>/dev/null || echo "dev")
-VERSION=${GIT_VERSION#v}
+# Get version - use latest tag from any branch
+git fetch --tags 2>/dev/null || true
+LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+COMMIT_SHORT=$(git rev-parse --short HEAD)
 
-# Ensure version is valid for Debian packages
-if [[ ! $VERSION =~ [.-] ]]; then
-    VERSION="0.1.0-dev-$VERSION"
-elif [[ ! $VERSION =~ ^[0-9] ]]; then
-    VERSION="0.1.0-dev-$VERSION"
+if [ -n "$LATEST_TAG" ]; then
+    # Remove 'v' prefix if present
+    BASE_VERSION=${LATEST_TAG#v}
+    # For development builds, add -dev suffix and commit hash
+    VERSION="${BASE_VERSION}-dev+${COMMIT_SHORT}"
+else
+    # Fallback if no tags exist
+    VERSION="0.1.0-dev+${COMMIT_SHORT}"
 fi
 
 log "${BLUE}📊 Build Information:${NC}"
