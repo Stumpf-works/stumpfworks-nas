@@ -108,9 +108,12 @@ echo ""
 GIT_VERSION=$(git describe --tags --always 2>/dev/null || echo "dev")
 VERSION=${GIT_VERSION#v}  # Remove leading 'v'
 
-# Ensure version starts with a digit (Debian requirement)
-# If it's a git hash (starts with letter), prepend version number
-if [[ ! $VERSION =~ ^[0-9] ]]; then
+# Ensure version is valid for Debian packages
+# If it's a bare git hash (no dots or hyphens), prepend version number
+if [[ ! $VERSION =~ [.-] ]]; then
+    VERSION="0.1.0-dev-$VERSION"
+elif [[ ! $VERSION =~ ^[0-9] ]]; then
+    # Also handle edge case where version doesn't start with digit
     VERSION="0.1.0-dev-$VERSION"
 fi
 
