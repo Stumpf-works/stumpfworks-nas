@@ -105,8 +105,14 @@ echo -e "${GREEN}   ✓ Code fetched successfully${NC}"
 echo ""
 
 # Get version (without -dirty since we're working from a clean clone)
-VERSION=$(git describe --tags --always 2>/dev/null || echo "0.1.0")
-VERSION=${VERSION#v}  # Remove leading 'v'
+GIT_VERSION=$(git describe --tags --always 2>/dev/null || echo "dev")
+VERSION=${GIT_VERSION#v}  # Remove leading 'v'
+
+# Ensure version starts with a digit (Debian requirement)
+# If it's a git hash (starts with letter), prepend version number
+if [[ ! $VERSION =~ ^[0-9] ]]; then
+    VERSION="0.1.0-dev-$VERSION"
+fi
 
 echo -e "${BLUE}📊 Build Information:${NC}"
 echo "   Version: $VERSION"
