@@ -225,7 +225,11 @@ EOF
 # Generate checksums
 cd dists/$REPO_TYPE
 for HASH in MD5Sum SHA1 SHA256; do
-    HASH_CMD=$(echo $HASH | tr '[:upper:]' '[:lower:]' | sed 's/sum$/sum/')
+    # Convert hash name to command (e.g., "SHA1" -> "sha1sum")
+    HASH_CMD=$(echo $HASH | tr '[:upper:]' '[:lower:]')
+    # Ensure it ends with 'sum'
+    [[ ! $HASH_CMD =~ sum$ ]] && HASH_CMD="${HASH_CMD}sum"
+
     echo "${HASH}:" >> Release
     find main -type f | while read file; do
         HASH_VALUE=$($HASH_CMD "$file" | cut -d' ' -f1)
