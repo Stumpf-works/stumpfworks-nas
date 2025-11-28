@@ -115,7 +115,19 @@ echo "   Target Repo: $REPO_TYPE"
 echo "   Commit: $(git rev-parse --short HEAD)"
 echo ""
 
-# Build backend
+# Build frontend FIRST (backend embeds frontend dist/)
+echo -e "${YELLOW}🎨 Building frontend...${NC}"
+cd frontend
+echo "   Running npm ci..."
+npm ci --silent
+
+echo "   Running build..."
+npm run build
+cd ..
+echo -e "${GREEN}   ✓ Frontend built successfully${NC}"
+echo ""
+
+# Build backend (embeds frontend dist/)
 echo -e "${YELLOW}🔨 Building backend...${NC}"
 cd backend
 echo "   Running go mod download..."
@@ -135,18 +147,6 @@ CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build \
 
 cd ..
 echo -e "${GREEN}   ✓ Backend built successfully${NC}"
-echo ""
-
-# Build frontend
-echo -e "${YELLOW}🎨 Building frontend...${NC}"
-cd frontend
-echo "   Running npm ci..."
-npm ci --silent
-
-echo "   Running build..."
-npm run build
-cd ..
-echo -e "${GREEN}   ✓ Frontend built successfully${NC}"
 echo ""
 
 # Create Debian packages
