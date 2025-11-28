@@ -1,6 +1,5 @@
 #!/bin/bash
 # auto-build-development.sh - Automatically build and deploy development versions
-set -e
 
 # Configuration
 REPO_URL="https://github.com/Stumpf-works/stumpfworks-nas.git"
@@ -10,6 +9,7 @@ REPO_TYPE="development"
 REPO_PATH="${REPO_BASE}/dists/development"
 STATE_FILE="/var/lib/stumpfworks-nas/last-build-commit"
 LOG_FILE="/var/log/stumpfworks-nas/auto-build.log"
+DISCORD_WEBHOOK="https://discord.com/api/webhooks/1444087366410305739/j4dYH00dtK0fAgnAD4U2PgeXZKVcqnvDYzW4I6h1-EoBJXhtOUX2H8yo6nyAvwegf3GG"
 
 # Colors for output
 RED='\033[0;31m'
@@ -26,6 +26,55 @@ mkdir -p "$(dirname $LOG_FILE)"
 log() {
     echo -e "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
 }
+
+# Discord notification function
+send_discord() {
+    local title="$1"
+    local description="$2"
+    local color="$3"  # Decimal color code
+    local fields="$4"  # JSON array of fields
+
+    local json_payload=$(cat <<EOF
+{
+  "embeds": [{
+    "title": "$title",
+    "description": "$description",
+    "color": $color,
+    "fields": $fields,
+    "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)",
+    "footer": {
+      "text": "StumpfWorks NAS Auto-Build"
+    }
+  }]
+}
+EOF
+)
+
+    curl -H "Content-Type: application/json" \
+         -d "$json_payload" \
+         "$DISCORD_WEBHOOK" \
+         -s -o /dev/null
+}
+
+# Error handler
+handle_error() {
+    local exit_code=$?
+    local line_number=$1
+
+    log "${RED}❌ Build failed at line $line_number with exit code $exit_code${NC}"
+
+    # Send Discord notification - Build failed
+    send_discord \
+        "❌ Build Failed" \
+        "Build process failed at line $line_number" \
+        15158332 \
+        "[{\"name\":\"Exit Code\",\"value\":\"\`$exit_code\`\",\"inline\":true},{\"name\":\"Log\",\"value\":\"Check \`$LOG_FILE\`\",\"inline\":true}]"
+
+    exit $exit_code
+}
+
+trap 'handle_error $LINENO' ERR
+set -e
 
 log "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 log "${BLUE}  StumpfWorks NAS - Auto Build (Development)${NC}"
@@ -60,6 +109,14 @@ fi
 
 log "${YELLOW}New commits detected - starting build...${NC}"
 log ""
+
+# Send Discord notification - Build started
+COMMIT_SHORT=$(echo $LATEST_COMMIT | cut -c1-7)
+send_discord \
+    "🔨 Build Started" \
+    "New commits detected in development branch" \
+    15844367 \
+    "[{\"name\":\"Commit\",\"value\":\"\`$COMMIT_SHORT\`\",\"inline\":true},{\"name\":\"Branch\",\"value\":\"\`$BRANCH\`\",\"inline\":true}]"
 
 # Build using the existing script
 BUILD_DIR="/tmp/stumpfworks-nas-build"
@@ -221,3 +278,11 @@ log ""
 log "${GREEN}🌐 Available at:${NC}"
 log "   http://apt.stumpfworks.de/dists/$REPO_TYPE/"
 log ""
+
+# Send Discord notification - Build successful
+COMMIT_SHORT=$(echo $LATEST_COMMIT | cut -c1-7)
+send_discord \
+    "✅ Build Successful" \
+    "New version deployed to development repository" \
+    3066993 \
+    "[{\"name\":\"Version\",\"value\":\"\`$VERSION\`\",\"inline\":true},{\"name\":\"Commit\",\"value\":\"\`$COMMIT_SHORT\`\",\"inline\":true},{\"name\":\"Repository\",\"value\":\"[Development](http://apt.stumpfworks.de/dists/$REPO_TYPE/)\",\"inline\":false}]"
