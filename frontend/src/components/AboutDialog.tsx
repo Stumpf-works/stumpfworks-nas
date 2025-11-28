@@ -447,23 +447,23 @@ export default function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
+          {/* Backdrop with centered layout */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/30 dark:bg-black/50 backdrop-blur-sm z-[100]"
-          />
-
-          {/* Dialog */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="fixed left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[101]"
+            className="fixed inset-0 bg-black/30 dark:bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center"
           >
+            {/* Dialog */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              onClick={(e) => e.stopPropagation()}
+              className="z-[101]"
+            >
             <div className="w-[550px] bg-white dark:bg-macos-dark-100 rounded-2xl shadow-macos-xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
               {/* Header */}
               <div className="relative h-40 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center">
@@ -522,6 +522,7 @@ export default function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
                 {renderTabContent()}
               </div>
             </div>
+            </motion.div>
           </motion.div>
         </>
       )}
