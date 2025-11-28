@@ -136,7 +136,7 @@ cd "$BUILD_DIR"
 log "${GREEN}✓ Code fetched successfully${NC}"
 log ""
 
-# Get version - use latest tag from any branch
+# Get version - use latest tag and increment patch number for dev builds
 git fetch --tags 2>/dev/null || true
 LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
 COMMIT_SHORT=$(git rev-parse --short HEAD)
@@ -144,8 +144,18 @@ COMMIT_SHORT=$(git rev-parse --short HEAD)
 if [ -n "$LATEST_TAG" ]; then
     # Remove 'v' prefix if present
     BASE_VERSION=${LATEST_TAG#v}
-    # For development builds, add -dev suffix and commit hash
-    VERSION="${BASE_VERSION}-dev+${COMMIT_SHORT}"
+
+    # Parse version (e.g., "1.3.2" -> major=1, minor=3, patch=2)
+    IFS='.' read -r MAJOR MINOR PATCH <<< "$BASE_VERSION"
+
+    # Count commits since last tag
+    COMMITS_SINCE_TAG=$(git rev-list ${LATEST_TAG}..HEAD --count)
+
+    # Calculate new patch version (base patch + commits since tag)
+    NEW_PATCH=$((PATCH + COMMITS_SINCE_TAG))
+
+    # For development builds: major.minor.new_patch-dev+commit_hash
+    VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}-dev+${COMMIT_SHORT}"
 else
     # Fallback if no tags exist
     VERSION="0.1.0-dev+${COMMIT_SHORT}"
