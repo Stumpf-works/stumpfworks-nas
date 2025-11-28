@@ -1,6 +1,7 @@
 import { Dashboard } from './Dashboard/Dashboard';
 import { UserManager } from './UserManager/UserManager';
 import { QuotaManager } from './QuotaManager/QuotaManager';
+import { ADDomainController } from './ADDomainController/ADDomainController';
 import { Settings } from './Settings/Settings';
 import { StorageManager } from './StorageManager/StorageManager';
 import FileManager from './FileManager/FileManager';
@@ -55,6 +56,14 @@ export const registeredApps: App[] = [
     component: QuotaManager,
     defaultSize: { width: 1200, height: 800 },
     minSize: { width: 900, height: 600 },
+  },
+  {
+    id: 'ad-dc',
+    name: 'AD DC',
+    icon: '🏰',
+    component: ADDomainController,
+    defaultSize: { width: 1400, height: 900 },
+    minSize: { width: 1000, height: 700 },
   },
   {
     id: 'audit-logs',
