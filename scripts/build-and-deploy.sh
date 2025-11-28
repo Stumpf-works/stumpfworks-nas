@@ -127,6 +127,14 @@ cd ..
 echo -e "${GREEN}   ✓ Frontend built successfully${NC}"
 echo ""
 
+# Copy frontend dist to backend/embedfs/dist
+echo -e "${YELLOW}📁 Copying frontend to backend embed directory...${NC}"
+rm -rf backend/embedfs/dist
+mkdir -p backend/embedfs
+cp -r frontend/dist backend/embedfs/
+echo -e "${GREEN}   ✓ Frontend copied${NC}"
+echo ""
+
 # Build backend (embeds frontend dist/)
 echo -e "${YELLOW}🔨 Building backend...${NC}"
 cd backend
