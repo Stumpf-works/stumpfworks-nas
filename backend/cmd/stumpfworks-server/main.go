@@ -176,6 +176,15 @@ func main() {
 		logger.Info("ACL service initialized")
 	}
 
+	// Initialize Quota service (non-fatal if quota tools not available)
+	if err := initializeQuota(); err != nil {
+		logger.Warn("Quota service initialization failed",
+			zap.Error(err),
+			zap.String("message", "Quota features will be disabled"))
+	} else {
+		logger.Info("Quota service initialized")
+	}
+
 	// Initialize Docker service (non-fatal if not available)
 	if err := initializeDocker(); err != nil {
 		logger.Warn("Docker not available",
@@ -450,6 +459,18 @@ func initializeACL() error {
 		return err
 	}
 	handlers.InitACLManager(aclManager)
+	return nil
+}
+
+// initializeQuota initializes the Disk Quota service
+// Returns error if quota tools are not installed, but this is non-fatal
+func initializeQuota() error {
+	shell := system.MustGet().Shell
+	quotaManager, err := filesystem.NewQuotaManager(shell)
+	if err != nil {
+		return err
+	}
+	handlers.InitQuotaManager(quotaManager)
 	return nil
 }
 

@@ -325,6 +325,26 @@ func NewRouter(cfg *config.Config) http.Handler {
 				r.Delete("/all", handlers.RemoveAllACLs)       // DELETE /api/v1/filesystem/acl/all
 			})
 
+			// Disk Quota routes (admin only)
+			r.Route("/quotas", func(r chi.Router) {
+				r.Use(mw.AdminOnly)
+
+				// User quotas
+				r.Get("/user", handlers.GetUserQuota)           // GET /api/v1/quotas/user?name=user&filesystem=/path
+				r.Post("/user", handlers.SetUserQuota)          // POST /api/v1/quotas/user
+				r.Delete("/user", handlers.RemoveUserQuota)     // DELETE /api/v1/quotas/user
+				r.Get("/users", handlers.ListUserQuotas)        // GET /api/v1/quotas/users?filesystem=/path
+
+				// Group quotas
+				r.Get("/group", handlers.GetGroupQuota)         // GET /api/v1/quotas/group?name=group&filesystem=/path
+				r.Post("/group", handlers.SetGroupQuota)        // POST /api/v1/quotas/group
+				r.Delete("/group", handlers.RemoveGroupQuota)   // DELETE /api/v1/quotas/group
+				r.Get("/groups", handlers.ListGroupQuotas)      // GET /api/v1/quotas/groups?filesystem=/path
+
+				// Filesystem status
+				r.Get("/status", handlers.GetFilesystemQuotaStatus) // GET /api/v1/quotas/status?filesystem=/path
+			})
+
 			// Network routes
 			r.Route("/network", func(r chi.Router) {
 				netHandler := handlers.NewNetworkHandler()

@@ -1,5 +1,6 @@
 import { Dashboard } from './Dashboard/Dashboard';
 import { UserManager } from './UserManager/UserManager';
+import { QuotaManager } from './QuotaManager/QuotaManager';
 import { Settings } from './Settings/Settings';
 import { StorageManager } from './StorageManager/StorageManager';
 import FileManager from './FileManager/FileManager';
@@ -46,6 +47,14 @@ export const registeredApps: App[] = [
     component: UserManager,
     defaultSize: { width: 1000, height: 700 },
     minSize: { width: 800, height: 600 },
+  },
+  {
+    id: 'quotas',
+    name: 'Quotas',
+    icon: '📊',
+    component: QuotaManager,
+    defaultSize: { width: 1200, height: 800 },
+    minSize: { width: 900, height: 600 },
   },
   {
     id: 'audit-logs',
