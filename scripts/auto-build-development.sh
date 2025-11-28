@@ -137,6 +137,8 @@ log "${GREEN}✓ Code fetched successfully${NC}"
 log ""
 
 # Get version - use latest tag and increment patch number for dev builds
+# Unshallow the repo to get all tags
+git fetch --unshallow 2>/dev/null || true
 git fetch --tags 2>/dev/null || true
 LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
 COMMIT_SHORT=$(git rev-parse --short HEAD)
