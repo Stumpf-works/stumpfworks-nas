@@ -28,6 +28,7 @@ func NewRouter(cfg *config.Config) http.Handler {
 	r.Use(mw.RevisionMiddleware) // Add version headers to all responses
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
+	r.Use(middleware.Compress(5)) // Gzip compression (level 5 = balanced speed/compression)
 
 	// CORS middleware - auto-detect origins in development
 	var corsHandler *cors.Cors
