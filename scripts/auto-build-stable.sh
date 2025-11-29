@@ -16,7 +16,7 @@ BRANCH="main"
 BUILD_DIR="/tmp/stumpfworks-nas-build-stable"
 STATE_FILE="/var/lib/stumpfworks-nas/auto-build-stable-state"
 LOG_FILE="/var/log/stumpfworks-nas/auto-build-stable.log"
-DISCORD_WEBHOOK="https://discord.com/api/webhooks/1444087366410305739/j4dYH00dtK0fAgnAD4U2PgeXZKVcqnvDYzW4I6h1-EoBJXhtOUX2H8yo6nyAvwegf3GG"
+DISCORD_WEBHOOK="https://discord.com/api/webhooks/1444309433826938923/qfiaZnJqhvjYzOGLOpH-VewdRSUrAti13CXTx0hvhqyQ-DBKbDc-5jMZLnz-EW6qQ0o9"
 
 # Colors for output
 RED='\033[0;31m'
