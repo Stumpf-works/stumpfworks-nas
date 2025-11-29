@@ -116,6 +116,23 @@ func NewRouter(cfg *config.Config) http.Handler {
 			// r.Post("/auth/register", handlers.Register) // Will implement later
 		})
 
+		// Addon routes (public viewing, auth required for modifications)
+		r.Route("/addons", func(r chi.Router) {
+			// Public endpoints - anyone can view available addons
+			r.Get("/", handlers.ListAddons)
+			r.Get("/{id}", handlers.GetAddon)
+			r.Get("/{id}/status", handlers.GetAddonStatus)
+
+			// Admin-only endpoints - only admins can install/uninstall
+			r.Group(func(r chi.Router) {
+				r.Use(mw.SetupRequired)
+				r.Use(mw.AuthMiddleware)
+				r.Use(mw.AdminOnly)
+				r.Post("/{id}/install", handlers.InstallAddon)
+				r.Post("/{id}/uninstall", handlers.UninstallAddon)
+			})
+		})
+
 		// Protected routes (auth required + setup check)
 		r.Group(func(r chi.Router) {
 			r.Use(mw.SetupRequired)
@@ -616,18 +633,6 @@ func NewRouter(cfg *config.Config) http.Handler {
 				r.Delete("/{id}", handlers.DeleteVIP)
 				r.Post("/{id}/promote", handlers.PromoteVIPToMaster)
 				r.Post("/{id}/demote", handlers.DemoteVIPToBackup)
-			})
-
-			// Addon Management routes
-			r.Route("/addons", func(r chi.Router) {
-				// Public endpoints - anyone can view available addons
-				r.Get("/", handlers.ListAddons)
-				r.Get("/{id}", handlers.GetAddon)
-				r.Get("/{id}/status", handlers.GetAddonStatus)
-
-				// Admin-only endpoints - only admins can install/uninstall
-				r.With(mw.AdminOnly).Post("/{id}/install", handlers.InstallAddon)
-				r.With(mw.AdminOnly).Post("/{id}/uninstall", handlers.UninstallAddon)
 			})
 
 			// Audit Log routes
