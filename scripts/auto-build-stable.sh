@@ -201,11 +201,11 @@ cp dist/*.deb /var/www/apt-repo/pool/main/
 
 # Update stable repository metadata
 cd /var/www/apt-repo/dists/stable/main/binary-amd64
-dpkg-scanpackages --multiversion . > Packages
+dpkg-scanpackages --multiversion ../../../../pool/main > Packages
 gzip -k -f Packages
 
 cd /var/www/apt-repo/dists/stable/main/binary-arm64
-dpkg-scanpackages --multiversion . > Packages
+dpkg-scanpackages --multiversion ../../../../pool/main > Packages
 gzip -k -f Packages
 
 # Generate Release file for stable
