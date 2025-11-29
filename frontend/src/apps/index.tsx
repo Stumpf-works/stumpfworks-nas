@@ -7,13 +7,10 @@ import FileManager from './FileManager/FileManager';
 import { NetworkManager } from './NetworkManager/NetworkManager';
 import { DockerManager } from './DockerManager/DockerManager';
 import { PluginManager } from './PluginManager/PluginManager';
-import { BackupManager } from './BackupManager/BackupManager';
 import { SecurityCenter } from './SecurityCenter';
-import { Tasks } from './Tasks/Tasks';
 import { AppStore } from './AppStore/AppStore';
 import { Terminal } from './Terminal/Terminal';
 import { ADDCManager } from './ADDCManager';
-import { Monitoring } from './Monitoring';
 import { SystemManager } from './SystemManager/SystemManager';
 import { HighAvailability } from './HighAvailability/HighAvailability';
 import type { App } from '@/types';
@@ -26,14 +23,6 @@ export const registeredApps: App[] = [
     component: Dashboard,
     defaultSize: { width: 900, height: 600 },
     minSize: { width: 600, height: 400 },
-  },
-  {
-    id: 'monitoring',
-    name: 'Monitoring',
-    icon: '📈',
-    component: Monitoring,
-    defaultSize: { width: 1200, height: 800 },
-    minSize: { width: 900, height: 600 },
   },
   {
     id: 'storage',
@@ -140,22 +129,6 @@ export const registeredApps: App[] = [
     minSize: { width: 800, height: 500 },
   },
   {
-    id: 'backups',
-    name: 'Backups',
-    icon: '⏱️',
-    component: BackupManager,
-    defaultSize: { width: 1200, height: 800 },
-    minSize: { width: 900, height: 600 },
-  },
-  {
-    id: 'tasks',
-    name: 'Tasks',
-    icon: '📋',
-    component: Tasks,
-    defaultSize: { width: 1200, height: 800 },
-    minSize: { width: 900, height: 600 },
-  },
-  {
     id: 'settings',
     name: 'Settings',
     icon: '⚙️',
@@ -171,10 +144,10 @@ export function getAppById(id: string): App | undefined {
 
 // App categories for App Gallery
 export const appCategories = {
-  system: ['dashboard', 'monitoring', 'system', 'settings', 'terminal'],
+  system: ['dashboard', 'system', 'settings', 'terminal'],
   management: ['users', 'quotas', 'network', 'storage', 'ad-dc', 'high-availability'],
   security: ['security-center'],
-  tools: ['files', 'backups', 'tasks'],
+  tools: ['files'],
   development: ['docker', 'plugins', 'app-store'],
 } as const;
 
