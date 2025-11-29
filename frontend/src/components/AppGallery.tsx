@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Search } from 'lucide-react';
 import { registeredApps, appCategories, categoryNames, categoryIcons, type AppCategory } from '../apps';
@@ -10,7 +10,7 @@ interface AppGalleryProps {
   onLaunchApp: (appId: string) => void;
 }
 
-export function AppGallery({ isOpen, onClose, onLaunchApp }: AppGalleryProps) {
+export const AppGallery = memo(function AppGallery({ isOpen, onClose, onLaunchApp }: AppGalleryProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<AppCategory | 'all'>('all');
 
@@ -192,14 +192,14 @@ export function AppGallery({ isOpen, onClose, onLaunchApp }: AppGalleryProps) {
       </motion.div>
     </AnimatePresence>
   );
-}
+});
 
 interface AppIconProps {
   app: App;
   onClick: () => void;
 }
 
-function AppIcon({ app, onClick }: AppIconProps) {
+const AppIcon = memo(function AppIcon({ app, onClick }: AppIconProps) {
   return (
     <motion.button
       whileHover={{ scale: 1.05 }}
@@ -213,4 +213,4 @@ function AppIcon({ app, onClick }: AppIconProps) {
       </span>
     </motion.button>
   );
-}
+});

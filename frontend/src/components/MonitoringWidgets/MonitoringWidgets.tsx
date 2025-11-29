@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, memo } from 'react';
 import {
   LineChart,
   Line,
@@ -18,7 +18,7 @@ interface MonitoringWidgetsProps {
   timeRange?: '24h' | '7d' | '30d';
 }
 
-export function MonitoringWidgets({ timeRange = '24h' }: MonitoringWidgetsProps) {
+export const MonitoringWidgets = memo(function MonitoringWidgets({ timeRange = '24h' }: MonitoringWidgetsProps) {
   const [metrics, setMetrics] = useState<SystemMetric[]>([]);
   const [healthScore, setHealthScore] = useState<HealthScore | null>(null);
   const [trends, setTrends] = useState<MetricsTrend[]>([]);
@@ -562,4 +562,4 @@ export function MonitoringWidgets({ timeRange = '24h' }: MonitoringWidgetsProps)
       </Card>
     </div>
   );
-}
+});
