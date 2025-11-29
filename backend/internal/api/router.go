@@ -620,12 +620,14 @@ func NewRouter(cfg *config.Config) http.Handler {
 
 			// Addon Management routes
 			r.Route("/addons", func(r chi.Router) {
-				r.Use(mw.AdminOnly)
+				// Public endpoints - anyone can view available addons
 				r.Get("/", handlers.ListAddons)
 				r.Get("/{id}", handlers.GetAddon)
 				r.Get("/{id}/status", handlers.GetAddonStatus)
-				r.Post("/{id}/install", handlers.InstallAddon)
-				r.Post("/{id}/uninstall", handlers.UninstallAddon)
+
+				// Admin-only endpoints - only admins can install/uninstall
+				r.With(mw.AdminOnly).Post("/{id}/install", handlers.InstallAddon)
+				r.With(mw.AdminOnly).Post("/{id}/uninstall", handlers.UninstallAddon)
 			})
 
 			// Audit Log routes
