@@ -647,6 +647,30 @@ func NewRouter(cfg *config.Config) http.Handler {
 				r.Get("/stats", auditHandler.GetAuditStats)
 			})
 
+			// VM Management routes (requires VM Manager addon installed)
+			r.Route("/vms", func(r chi.Router) {
+				r.Use(mw.AdminOnly)
+				r.Get("/", handlers.ListVMs)
+				r.Post("/", handlers.CreateVM)
+				r.Get("/{id}", handlers.GetVM)
+				r.Post("/{id}/start", handlers.StartVM)
+				r.Post("/{id}/stop", handlers.StopVM)
+				r.Delete("/{id}", handlers.DeleteVM)
+				r.Get("/{id}/vnc", handlers.GetVMVNCPort)
+			})
+
+			// LXC Container Management routes (requires LXC Manager addon installed)
+			r.Route("/lxc", func(r chi.Router) {
+				r.Use(mw.AdminOnly)
+				r.Get("/containers", handlers.ListContainers)
+				r.Post("/containers", handlers.CreateContainer)
+				r.Get("/containers/{name}", handlers.GetContainer)
+				r.Post("/containers/{name}/start", handlers.StartContainer)
+				r.Post("/containers/{name}/stop", handlers.StopContainer)
+				r.Delete("/containers/{name}", handlers.DeleteContainer)
+				r.Get("/templates", handlers.ListLXCTemplates)
+			})
+
 			// Failed Login Tracking routes
 			r.Route("/security", func(r chi.Router) {
 				failedLoginHandler := handlers.NewFailedLoginHandler()

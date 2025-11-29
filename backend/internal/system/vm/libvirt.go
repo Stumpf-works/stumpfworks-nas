@@ -335,7 +335,7 @@ func (lm *LibvirtManager) StopVM(nameOrUUID string, force bool) error {
 		return fmt.Errorf("libvirt is not enabled")
 	}
 
-	var result *executor.ExecResult
+	var result *executor.CommandResult
 	var err error
 
 	if force {
@@ -398,7 +398,7 @@ func (lm *LibvirtManager) SetAutostart(nameOrUUID string, enabled bool) error {
 		return fmt.Errorf("libvirt is not enabled")
 	}
 
-	var result *executor.ExecResult
+	var result *executor.CommandResult
 	var err error
 
 	if enabled {

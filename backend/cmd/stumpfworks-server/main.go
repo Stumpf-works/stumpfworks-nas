@@ -33,6 +33,8 @@ import (
 	"github.com/Stumpf-works/stumpfworks-nas/internal/system"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/system/filesystem"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/system/ha"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/system/lxc"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/system/vm"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/twofa"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/updates"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/usergroups"
@@ -216,6 +218,24 @@ func main() {
 
 	// Initialize Addon Manager (always enabled)
 	initializeAddonManager()
+
+	// Initialize VM Manager (non-fatal, requires VM Manager addon)
+	if err := initializeVMManager(); err != nil {
+		logger.Warn("VM Manager initialization failed",
+			zap.Error(err),
+			zap.String("message", "VM management features will be disabled. Install VM Manager addon to enable."))
+	} else {
+		logger.Info("VM Manager initialized")
+	}
+
+	// Initialize LXC Manager (non-fatal, requires LXC Manager addon)
+	if err := initializeLXCManager(); err != nil {
+		logger.Warn("LXC Manager initialization failed",
+			zap.Error(err),
+			zap.String("message", "LXC management features will be disabled. Install LXC Manager addon to enable."))
+	} else {
+		logger.Info("LXC Manager initialized")
+	}
 
 	// Initialize Docker service (non-fatal if not available)
 	if err := initializeDocker(); err != nil {
@@ -549,6 +569,30 @@ func initializeAddonManager() {
 	addonManager := addons.NewManager(shell)
 	handlers.InitAddonManager(addonManager)
 	logger.Info("Addon manager initialized")
+}
+
+// initializeVMManager initializes the VM Manager
+// Returns error if libvirt is not installed, but this is non-fatal
+func initializeVMManager() error {
+	shell := system.MustGet().Shell
+	vmManager, err := vm.NewLibvirtManager(shell)
+	if err != nil {
+		return err
+	}
+	handlers.InitVMManager(vmManager)
+	return nil
+}
+
+// initializeLXCManager initializes the LXC Manager
+// Returns error if LXC is not installed, but this is non-fatal
+func initializeLXCManager() error {
+	shell := system.MustGet().Shell
+	lxcManager, err := lxc.NewLXCManager(shell)
+	if err != nil {
+		return err
+	}
+	handlers.InitLXCManager(lxcManager)
+	return nil
 }
 
 // checkDependencies checks and optionally installs system dependencies

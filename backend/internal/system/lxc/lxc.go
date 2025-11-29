@@ -4,7 +4,6 @@ package lxc
 import (
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/Stumpf-works/stumpfworks-nas/internal/system/executor"
@@ -293,7 +292,7 @@ func (lm *LXCManager) StopContainer(name string, force bool) error {
 		return fmt.Errorf("LXC is not enabled")
 	}
 
-	var result *executor.ExecResult
+	var result *executor.CommandResult
 	var err error
 
 	if force {
