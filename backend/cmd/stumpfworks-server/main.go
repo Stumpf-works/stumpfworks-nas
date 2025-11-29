@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/Stumpf-works/stumpfworks-nas/internal/ad"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/addons"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/alerts"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/api"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/api/handlers"
@@ -194,6 +195,27 @@ func main() {
 	} else {
 		logger.Info("DRBD service initialized")
 	}
+
+	// Initialize Pacemaker/Corosync service (non-fatal if not available)
+	if err := initializePacemaker(); err != nil {
+		logger.Warn("Pacemaker service initialization failed",
+			zap.Error(err),
+			zap.String("message", "Pacemaker/Corosync features will be disabled"))
+	} else {
+		logger.Info("Pacemaker/Corosync service initialized")
+	}
+
+	// Initialize Keepalived service (non-fatal if not available)
+	if err := initializeKeepalived(); err != nil {
+		logger.Warn("Keepalived service initialization failed",
+			zap.Error(err),
+			zap.String("message", "Virtual IP (Keepalived) features will be disabled"))
+	} else {
+		logger.Info("Keepalived service initialized")
+	}
+
+	// Initialize Addon Manager (always enabled)
+	initializeAddonManager()
 
 	// Initialize Docker service (non-fatal if not available)
 	if err := initializeDocker(); err != nil {
@@ -494,6 +516,39 @@ func initializeDRBD() error {
 	}
 	handlers.InitDRBDManager(drbdManager)
 	return nil
+}
+
+// initializePacemaker initializes the Pacemaker/Corosync (Cluster HA) service
+// Returns error if Pacemaker tools are not installed, but this is non-fatal
+func initializePacemaker() error {
+	shell := system.MustGet().Shell
+	pacemakerManager, err := ha.NewPacemakerManager(shell)
+	if err != nil {
+		return err
+	}
+	handlers.InitPacemakerManager(pacemakerManager)
+	return nil
+}
+
+// initializeKeepalived initializes the Keepalived (VIP Management) service
+// Returns error if Keepalived is not installed, but this is non-fatal
+func initializeKeepalived() error {
+	shell := system.MustGet().Shell
+	keepalivedManager, err := ha.NewKeepalivedManager(shell)
+	if err != nil {
+		return err
+	}
+	handlers.InitKeepalivedManager(keepalivedManager)
+	return nil
+}
+
+// initializeAddonManager initializes the Addon Manager
+// This is always enabled and manages installable addons
+func initializeAddonManager() {
+	shell := system.MustGet().Shell
+	addonManager := addons.NewManager(shell)
+	handlers.InitAddonManager(addonManager)
+	logger.Info("Addon manager initialized")
 }
 
 // checkDependencies checks and optionally installs system dependencies

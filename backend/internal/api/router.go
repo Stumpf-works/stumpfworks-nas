@@ -592,6 +592,42 @@ func NewRouter(cfg *config.Config) http.Handler {
 				r.Post("/resources/{name}/verify", handlers.VerifyDRBDData)
 			})
 
+			// High Availability - Pacemaker/Corosync routes
+			r.Route("/ha/cluster", func(r chi.Router) {
+				r.Use(mw.AdminOnly)
+				r.Get("/status", handlers.GetClusterStatus)
+				r.Post("/resources", handlers.CreateClusterResource)
+				r.Delete("/resources/{id}", handlers.DeleteClusterResource)
+				r.Post("/resources/{id}/enable", handlers.EnableClusterResource)
+				r.Post("/resources/{id}/disable", handlers.DisableClusterResource)
+				r.Post("/resources/{id}/move", handlers.MoveClusterResource)
+				r.Post("/resources/{id}/clear", handlers.ClearClusterResource)
+				r.Post("/maintenance", handlers.SetMaintenanceMode)
+				r.Post("/nodes/{name}/standby", handlers.StandbyNode)
+				r.Post("/nodes/{name}/unstandby", handlers.UnstandbyNode)
+			})
+
+			// High Availability - Keepalived (VIP) routes
+			r.Route("/ha/vip", func(r chi.Router) {
+				r.Use(mw.AdminOnly)
+				r.Get("/", handlers.ListVIPs)
+				r.Post("/", handlers.CreateVIP)
+				r.Get("/{id}", handlers.GetVIPStatus)
+				r.Delete("/{id}", handlers.DeleteVIP)
+				r.Post("/{id}/promote", handlers.PromoteVIPToMaster)
+				r.Post("/{id}/demote", handlers.DemoteVIPToBackup)
+			})
+
+			// Addon Management routes
+			r.Route("/addons", func(r chi.Router) {
+				r.Use(mw.AdminOnly)
+				r.Get("/", handlers.ListAddons)
+				r.Get("/{id}", handlers.GetAddon)
+				r.Get("/{id}/status", handlers.GetAddonStatus)
+				r.Post("/{id}/install", handlers.InstallAddon)
+				r.Post("/{id}/uninstall", handlers.UninstallAddon)
+			})
+
 			// Audit Log routes
 			r.Route("/audit", func(r chi.Router) {
 				auditHandler := handlers.NewAuditHandler()

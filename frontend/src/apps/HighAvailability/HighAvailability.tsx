@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import DRBDPanel from './tabs/DRBDPanel';
+import ClusterPanel from './tabs/ClusterPanel';
+import VIPPanel from './tabs/VIPPanel';
 
 type HATab = 'drbd' | 'cluster' | 'vip';
 
@@ -9,8 +11,8 @@ export function HighAvailability() {
 
   const tabs = [
     { id: 'drbd' as HATab, name: 'DRBD Replication', icon: '💿', enabled: true },
-    { id: 'cluster' as HATab, name: 'Cluster (Pacemaker)', icon: '🔗', enabled: false },
-    { id: 'vip' as HATab, name: 'Virtual IP (Keepalived)', icon: '🌐', enabled: false },
+    { id: 'cluster' as HATab, name: 'Cluster (Pacemaker)', icon: '🔗', enabled: true },
+    { id: 'vip' as HATab, name: 'Virtual IP (Keepalived)', icon: '🌐', enabled: true },
   ];
 
   return (
@@ -61,16 +63,8 @@ export function HighAvailability() {
       {/* Tab Content */}
       <div className="flex-1 overflow-auto">
         {activeTab === 'drbd' && <DRBDPanel />}
-        {activeTab === 'cluster' && (
-          <div className="p-6 text-center text-gray-500 dark:text-gray-400">
-            Pacemaker/Corosync cluster management coming soon...
-          </div>
-        )}
-        {activeTab === 'vip' && (
-          <div className="p-6 text-center text-gray-500 dark:text-gray-400">
-            Keepalived virtual IP management coming soon...
-          </div>
-        )}
+        {activeTab === 'cluster' && <ClusterPanel />}
+        {activeTab === 'vip' && <VIPPanel />}
       </div>
     </div>
   );

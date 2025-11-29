@@ -30,6 +30,7 @@ func RunMigrations() error {
 		&models.SystemMetric{},
 		&models.HealthScore{},
 		&models.MonitoringConfig{},
+		&models.AddonInstallation{},
 		// Add more models here as they are created
 	); err != nil {
 		return err
