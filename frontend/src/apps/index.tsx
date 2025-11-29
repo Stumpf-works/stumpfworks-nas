@@ -1,19 +1,22 @@
-import { Dashboard } from './Dashboard/Dashboard';
-import { UserManager } from './UserManager/UserManager';
-import { QuotaManager } from './QuotaManager/QuotaManager';
-import { Settings } from './Settings/Settings';
-import { StorageManager } from './StorageManager/StorageManager';
-import FileManager from './FileManager/FileManager';
-import { NetworkManager } from './NetworkManager/NetworkManager';
-import { DockerManager } from './DockerManager/DockerManager';
-import { PluginManager } from './PluginManager/PluginManager';
-import { SecurityCenter } from './SecurityCenter';
-import { AppStore } from './AppStore/AppStore';
-import { Terminal } from './Terminal/Terminal';
-import { ADDCManager } from './ADDCManager';
-import { SystemManager } from './SystemManager/SystemManager';
-import { HighAvailability } from './HighAvailability/HighAvailability';
+import { lazy } from 'react';
 import type { App } from '@/types';
+
+// Lazy load all apps for better initial load performance
+const Dashboard = lazy(() => import('./Dashboard/Dashboard').then(m => ({ default: m.Dashboard })));
+const UserManager = lazy(() => import('./UserManager/UserManager').then(m => ({ default: m.UserManager })));
+const QuotaManager = lazy(() => import('./QuotaManager/QuotaManager').then(m => ({ default: m.QuotaManager })));
+const Settings = lazy(() => import('./Settings/Settings').then(m => ({ default: m.Settings })));
+const StorageManager = lazy(() => import('./StorageManager/StorageManager').then(m => ({ default: m.StorageManager })));
+const FileManager = lazy(() => import('./FileManager/FileManager'));
+const NetworkManager = lazy(() => import('./NetworkManager/NetworkManager').then(m => ({ default: m.NetworkManager })));
+const DockerManager = lazy(() => import('./DockerManager/DockerManager').then(m => ({ default: m.DockerManager })));
+const PluginManager = lazy(() => import('./PluginManager/PluginManager').then(m => ({ default: m.PluginManager })));
+const SecurityCenter = lazy(() => import('./SecurityCenter').then(m => ({ default: m.SecurityCenter })));
+const AppStore = lazy(() => import('./AppStore/AppStore').then(m => ({ default: m.AppStore })));
+const Terminal = lazy(() => import('./Terminal/Terminal').then(m => ({ default: m.Terminal })));
+const ADDCManager = lazy(() => import('./ADDCManager').then(m => ({ default: m.ADDCManager })));
+const SystemManager = lazy(() => import('./SystemManager/SystemManager').then(m => ({ default: m.SystemManager })));
+const HighAvailability = lazy(() => import('./HighAvailability/HighAvailability').then(m => ({ default: m.HighAvailability })));
 
 export const registeredApps: App[] = [
   {
