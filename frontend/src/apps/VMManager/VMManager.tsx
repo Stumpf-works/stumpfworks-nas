@@ -14,9 +14,11 @@ import {
   Cpu,
   HardDrive,
   Calendar,
-  Power
+  Power,
+  Monitor
 } from 'lucide-react';
 import { CreateVMModal } from './components/CreateVMModal';
+import { VNCModal } from './components/VNCModal';
 
 export function VMManager() {
   const [vms, setVms] = useState<VM[]>([]);
@@ -24,6 +26,7 @@ export function VMManager() {
   const [error, setError] = useState<string>('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [vncVM, setVncVM] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     loadVMs();
@@ -259,6 +262,15 @@ export function VMManager() {
                           )}
                         </button>
                       )}
+                      {vm.state.toLowerCase() === 'running' && (
+                        <button
+                          onClick={() => setVncVM({ id: vm.uuid, name: vm.name })}
+                          className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                          title="VNC Console"
+                        >
+                          <Monitor className="w-5 h-5" />
+                        </button>
+                      )}
                       <button
                         onClick={() => handleDelete(vm.uuid, vm.name)}
                         disabled={actionLoading === vm.uuid}
@@ -282,6 +294,16 @@ export function VMManager() {
         onClose={() => setIsCreateModalOpen(false)}
         onSuccess={loadVMs}
       />
+
+      {/* VNC Modal */}
+      {vncVM && (
+        <VNCModal
+          isOpen={!!vncVM}
+          onClose={() => setVncVM(null)}
+          vmId={vncVM.id}
+          vmName={vncVM.name}
+        />
+      )}
     </div>
   );
 }

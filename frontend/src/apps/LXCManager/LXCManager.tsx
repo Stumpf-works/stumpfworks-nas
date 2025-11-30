@@ -13,9 +13,11 @@ import {
   AlertCircle,
   Network,
   Activity,
-  Power
+  Power,
+  Terminal
 } from 'lucide-react';
 import { CreateContainerModal } from './components/CreateContainerModal';
+import { ConsoleModal } from './components/ConsoleModal';
 
 export function LXCManager() {
   const [containers, setContainers] = useState<Container[]>([]);
@@ -23,6 +25,7 @@ export function LXCManager() {
   const [error, setError] = useState<string>('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [consoleContainer, setConsoleContainer] = useState<string | null>(null);
 
   useEffect(() => {
     loadContainers();
@@ -265,6 +268,15 @@ export function LXCManager() {
                           )}
                         </button>
                       )}
+                      {container.state.toLowerCase() === 'running' && (
+                        <button
+                          onClick={() => setConsoleContainer(container.name)}
+                          className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                          title="Open Console"
+                        >
+                          <Terminal className="w-5 h-5" />
+                        </button>
+                      )}
                       <button
                         onClick={() => handleDelete(container.name)}
                         disabled={actionLoading === container.name}
@@ -288,6 +300,15 @@ export function LXCManager() {
         onClose={() => setIsCreateModalOpen(false)}
         onSuccess={loadContainers}
       />
+
+      {/* Console Modal */}
+      {consoleContainer && (
+        <ConsoleModal
+          isOpen={!!consoleContainer}
+          onClose={() => setConsoleContainer(null)}
+          containerName={consoleContainer}
+        />
+      )}
     </div>
   );
 }
