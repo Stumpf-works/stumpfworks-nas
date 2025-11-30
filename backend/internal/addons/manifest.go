@@ -27,6 +27,9 @@ type Manifest struct {
 	MinimumMemory int64 `json:"minimum_memory"` // MB
 	MinimumDisk   int64 `json:"minimum_disk"`   // GB
 	Architecture  []string `json:"architecture"` // amd64, arm64
+
+	// Service Management
+	RequiresRestart bool `json:"requires_restart"` // Whether service restart is needed after installation
 }
 
 // Installation status
@@ -66,6 +69,7 @@ var BuiltinAddons = []Manifest{
 		MinimumMemory: 4096, // 4GB
 		MinimumDisk:   50,   // 50GB
 		Architecture:  []string{"amd64", "arm64"},
+		RequiresRestart: true, // Requires restart to initialize VM manager
 	},
 	{
 		ID:          "lxc-manager",
@@ -85,6 +89,7 @@ var BuiltinAddons = []Manifest{
 		MinimumMemory: 1024, // 1GB
 		MinimumDisk:   10,   // 10GB
 		Architecture:  []string{"amd64", "arm64"},
+		RequiresRestart: true, // Requires restart to initialize LXC manager
 	},
 	{
 		ID:          "minio",

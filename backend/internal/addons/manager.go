@@ -2,6 +2,7 @@ package addons
 
 import (
 	"fmt"
+	"os/exec"
 	"time"
 
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database"
@@ -217,4 +218,21 @@ func (m *Manager) GetAllAddonsWithStatus() ([]map[string]interface{}, error) {
 	}
 
 	return result, nil
+}
+
+// ScheduleServiceRestart schedules a service restart after a brief delay
+// This allows the current API response to complete before restarting
+func (m *Manager) ScheduleServiceRestart() {
+	logger.Info("Scheduling service restart in 3 seconds to initialize new addon")
+
+	go func() {
+		time.Sleep(3 * time.Second)
+		logger.Info("Restarting stumpfworks-nas service to initialize addon managers")
+
+		// Use systemctl to restart the service
+		cmd := exec.Command("systemctl", "restart", "stumpfworks-nas")
+		if err := cmd.Run(); err != nil {
+			logger.Error("Failed to restart service", zap.Error(err))
+		}
+	}()
 }

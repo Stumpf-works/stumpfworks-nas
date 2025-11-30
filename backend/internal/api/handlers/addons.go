@@ -112,6 +112,14 @@ func InstallAddon(w http.ResponseWriter, r *http.Request) {
 
 	logger.Info("Installing addon via API", zap.String("addon_id", addonID))
 
+	// Get addon manifest to check if restart is required
+	addon, err := addonManager.GetAddon(addonID)
+	if err != nil {
+		logger.Error("Failed to get addon", zap.Error(err), zap.String("addon_id", addonID))
+		utils.RespondError(w, errors.InternalServerError("Failed to get addon", err))
+		return
+	}
+
 	if err := addonManager.InstallAddon(addonID); err != nil {
 		logger.Error("Failed to install addon", zap.Error(err), zap.String("addon_id", addonID))
 		utils.RespondError(w, errors.InternalServerError("Failed to install addon", err))
@@ -119,10 +127,23 @@ func InstallAddon(w http.ResponseWriter, r *http.Request) {
 	}
 
 	logger.Info("Addon installed successfully via API", zap.String("addon_id", addonID))
-	utils.RespondSuccess(w, map[string]string{
-		"message":  "Addon installed successfully",
-		"addon_id": addonID,
-	})
+
+	// Schedule service restart if addon requires it
+	if addon.RequiresRestart {
+		logger.Info("Addon requires service restart, scheduling restart", zap.String("addon_id", addonID))
+		addonManager.ScheduleServiceRestart()
+
+		utils.RespondSuccess(w, map[string]string{
+			"message":           "Addon installed successfully. Service will restart in 3 seconds to initialize addon.",
+			"addon_id":          addonID,
+			"restart_scheduled": "true",
+		})
+	} else {
+		utils.RespondSuccess(w, map[string]string{
+			"message":  "Addon installed successfully",
+			"addon_id": addonID,
+		})
+	}
 }
 
 // UninstallAddon uninstalls an addon
