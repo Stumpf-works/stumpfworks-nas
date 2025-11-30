@@ -625,6 +625,12 @@ func CreateBridge(name string, ports []string) error {
 		exec.Command("ip", "link", "set", port, "up").Run()
 	}
 
+	// Step 6: Add iptables rules to allow forwarding through the bridge
+	// This is essential for containers/VMs to communicate with the external network
+	exec.Command("iptables", "-I", "FORWARD", "-i", name, "-o", name, "-j", "ACCEPT").Run()
+	exec.Command("iptables", "-I", "FORWARD", "-i", name, "-j", "ACCEPT").Run()
+	exec.Command("iptables", "-I", "FORWARD", "-o", name, "-j", "ACCEPT").Run()
+
 	return nil
 }
 
