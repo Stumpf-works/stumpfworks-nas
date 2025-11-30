@@ -11,11 +11,8 @@ interface WebTerminalProps {
 
 export function WebTerminal({ containerName }: WebTerminalProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
-  const [terminal, setTerminal] = useState<Terminal | null>(null);
-  const [fitAddon, setFitAddon] = useState<FitAddon | null>(null);
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
-  const currentCommand = useRef('');
 
   useEffect(() => {
     if (!terminalRef.current) return;
@@ -72,9 +69,6 @@ export function WebTerminal({ containerName }: WebTerminalProps) {
 
     // Show prompt
     term.write(`\x1b[1;32mroot@${containerName}\x1b[0m:\x1b[1;34m~\x1b[0m# `);
-
-    setTerminal(term);
-    setFitAddon(fit);
 
     // Handle resize
     const handleResize = () => {
