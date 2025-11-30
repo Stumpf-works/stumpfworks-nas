@@ -106,7 +106,7 @@ export default function InterfaceManager() {
     setConfiguring(iface);
     setConfigMode('dhcp');
     setStaticConfig({
-      address: iface.addresses[0]?.split('/')[0] || '',
+      address: (iface.addresses && iface.addresses[0]?.split('/')[0]) || '',
       netmask: '255.255.255.0',
       gateway: '',
     });
@@ -310,7 +310,7 @@ export default function InterfaceManager() {
               </div>
 
               {/* IP Addresses */}
-              {iface.addresses.length > 0 && (
+              {iface.addresses && iface.addresses.length > 0 && (
                 <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                   <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
                     IP Addresses:
@@ -327,7 +327,7 @@ export default function InterfaceManager() {
               )}
 
               {/* Flags */}
-              {iface.flags.length > 0 && (
+              {iface.flags && iface.flags.length > 0 && (
                 <div className="mb-4">
                   <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                     Flags:
