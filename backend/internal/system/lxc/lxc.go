@@ -41,6 +41,7 @@ type ContainerCreateRequest struct {
 	MemoryLimit int64  `json:"memory_limit"` // MB
 	CPULimit    int    `json:"cpu_limit"`    // Number of CPUs
 	Autostart   bool   `json:"autostart"`
+	NetworkMode string `json:"network_mode"` // "internal" (lxcbr0) or "bridged" (br0)
 }
 
 // Template represents an LXC template
@@ -249,6 +250,30 @@ func (lm *LXCManager) CreateContainer(req ContainerCreateRequest) error {
 	// Set autostart if requested
 	if req.Autostart {
 		lm.shell.Execute("sh", "-c", fmt.Sprintf("echo 'lxc.start.auto = 1' >> %s", configPath))
+	}
+
+	// Configure network mode
+	if req.NetworkMode == "" {
+		req.NetworkMode = "internal"
+	}
+
+	// Remove default network configuration and add custom one
+	lm.shell.Execute("sh", "-c", fmt.Sprintf("sed -i '/lxc.net.0/d' %s", configPath))
+
+	if req.NetworkMode == "bridged" {
+		// Configure bridged network (br0) for DHCP from router
+		lm.shell.Execute("sh", "-c", fmt.Sprintf("echo 'lxc.net.0.type = veth' >> %s", configPath))
+		lm.shell.Execute("sh", "-c", fmt.Sprintf("echo 'lxc.net.0.link = br0' >> %s", configPath))
+		lm.shell.Execute("sh", "-c", fmt.Sprintf("echo 'lxc.net.0.flags = up' >> %s", configPath))
+		lm.shell.Execute("sh", "-c", fmt.Sprintf("echo 'lxc.net.0.hwaddr = 00:16:3e:xx:xx:xx' >> %s", configPath))
+		logger.Info("Container configured with bridged network", zap.String("name", req.Name))
+	} else {
+		// Configure internal network (lxcbr0)
+		lm.shell.Execute("sh", "-c", fmt.Sprintf("echo 'lxc.net.0.type = veth' >> %s", configPath))
+		lm.shell.Execute("sh", "-c", fmt.Sprintf("echo 'lxc.net.0.link = lxcbr0' >> %s", configPath))
+		lm.shell.Execute("sh", "-c", fmt.Sprintf("echo 'lxc.net.0.flags = up' >> %s", configPath))
+		lm.shell.Execute("sh", "-c", fmt.Sprintf("echo 'lxc.net.0.hwaddr = 00:16:3e:xx:xx:xx' >> %s", configPath))
+		logger.Info("Container configured with internal network", zap.String("name", req.Name))
 	}
 
 	logger.Info("Container created", zap.String("name", req.Name))

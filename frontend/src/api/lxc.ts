@@ -21,6 +21,7 @@ export interface ContainerCreateRequest {
   memory_limit?: number; // MB
   cpu_limit?: number; // Number of CPUs
   autostart?: boolean;
+  network_mode?: string; // "internal" or "bridged"
 }
 
 export interface LXCTemplate {

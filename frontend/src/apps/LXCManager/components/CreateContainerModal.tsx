@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Box, AlertCircle } from 'lucide-react';
+import { X, Box, AlertCircle, Network } from 'lucide-react';
 import { lxcApi, type ContainerCreateRequest } from '@/api/lxc';
 import { getErrorMessage } from '@/api/client';
 
@@ -19,6 +19,7 @@ export function CreateContainerModal({ isOpen, onClose, onSuccess }: CreateConta
     memory_limit: 512,
     cpu_limit: 1,
     autostart: false,
+    network_mode: 'internal',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
@@ -48,6 +49,7 @@ export function CreateContainerModal({ isOpen, onClose, onSuccess }: CreateConta
           memory_limit: 512,
           cpu_limit: 1,
           autostart: false,
+          network_mode: 'internal',
         });
       } else {
         setError(response.error?.message || 'Failed to create container');
@@ -235,6 +237,48 @@ export function CreateContainerModal({ isOpen, onClose, onSuccess }: CreateConta
                     <span className="text-sm text-gray-600 dark:text-gray-400">Cores</span>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Network Section */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <Network className="w-5 h-5 text-macos-blue" />
+                Network
+              </h3>
+              <div className="space-y-3">
+                <label className="flex items-start p-3 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-macos-dark-50 transition-colors">
+                  <input
+                    type="radio"
+                    name="network_mode"
+                    value="internal"
+                    checked={formData.network_mode === 'internal'}
+                    onChange={(e) => setFormData({ ...formData, network_mode: e.target.value })}
+                    className="w-4 h-4 text-macos-blue bg-white dark:bg-macos-dark-50 border-gray-300 dark:border-gray-600 mt-0.5"
+                  />
+                  <div className="ml-3 flex-1">
+                    <div className="font-medium text-gray-900 dark:text-white">Internal Network (lxcbr0)</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      Container gets an IP from the internal network (10.0.3.x)
+                    </div>
+                  </div>
+                </label>
+                <label className="flex items-start p-3 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-macos-dark-50 transition-colors">
+                  <input
+                    type="radio"
+                    name="network_mode"
+                    value="bridged"
+                    checked={formData.network_mode === 'bridged'}
+                    onChange={(e) => setFormData({ ...formData, network_mode: e.target.value })}
+                    className="w-4 h-4 text-macos-blue bg-white dark:bg-macos-dark-50 border-gray-300 dark:border-gray-600 mt-0.5"
+                  />
+                  <div className="ml-3 flex-1">
+                    <div className="font-medium text-gray-900 dark:text-white">Bridged Network (br0)</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      Container gets an IP via DHCP from your router (192.168.178.x)
+                    </div>
+                  </div>
+                </label>
               </div>
             </div>
 
