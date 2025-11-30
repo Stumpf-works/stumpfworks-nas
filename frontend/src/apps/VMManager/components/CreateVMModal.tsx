@@ -34,7 +34,7 @@ export function CreateVMModal({ isOpen, onClose, onSuccess }: CreateVMModalProps
         const response = await networkApi.listBridges();
         if (response.success && response.data && response.data.length > 0) {
           // Include 'default' and available bridges
-          const availableBridges = ['default', ...response.data];
+          const availableBridges = ['default', ...response.data!];
           setBridges(availableBridges);
         }
       } catch (err) {

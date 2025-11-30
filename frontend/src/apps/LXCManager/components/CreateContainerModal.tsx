@@ -35,8 +35,8 @@ export function CreateContainerModal({ isOpen, onClose, onSuccess }: CreateConta
         if (response.success && response.data && response.data.length > 0) {
           setBridges(response.data);
           // Set first bridge as default if current default not in list
-          if (!response.data.includes(formData.bridge || 'br0')) {
-            setFormData((prev) => ({ ...prev, bridge: response.data[0] }));
+          if (response.data && !response.data.includes(formData.bridge || 'br0')) {
+            setFormData((prev) => ({ ...prev, bridge: response.data![0] }));
           }
         }
       } catch (err) {
