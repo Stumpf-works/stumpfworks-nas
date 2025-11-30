@@ -359,7 +359,7 @@ export function CreateVMWizard({ isOpen, onClose, onSuccess }: CreateVMWizardPro
           </AnimatePresence>
 
           {/* Step Content */}
-          <div className="p-6 min-h-[400px]">
+          <div className="p-6 min-h-[400px] max-h-[60vh] overflow-y-auto">
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentStep}

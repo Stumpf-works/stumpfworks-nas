@@ -356,7 +356,7 @@ export function CreateContainerWizard({ isOpen, onClose, onSuccess }: CreateCont
           </AnimatePresence>
 
           {/* Step Content */}
-          <div className="p-6 min-h-[400px]">
+          <div className="p-6 min-h-[400px] max-h-[60vh] overflow-y-auto">
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentStep}
