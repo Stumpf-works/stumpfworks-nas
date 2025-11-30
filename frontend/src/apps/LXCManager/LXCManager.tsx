@@ -11,7 +11,7 @@ import {
   ChevronRight,
   Server
 } from 'lucide-react';
-import { CreateContainerModal } from './components/CreateContainerModal';
+import { CreateContainerWizard } from './components/CreateContainerWizard';
 import { ContainerDetailView } from './components/ContainerDetailView';
 
 export function LXCManager() {
@@ -282,8 +282,8 @@ export function LXCManager() {
         </AnimatePresence>
       </div>
 
-      {/* Create Container Modal */}
-      <CreateContainerModal
+      {/* Create Container Wizard */}
+      <CreateContainerWizard
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSuccess={loadContainers}

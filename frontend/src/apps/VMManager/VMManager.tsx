@@ -17,7 +17,7 @@ import {
   Power,
   Monitor
 } from 'lucide-react';
-import { CreateVMModal } from './components/CreateVMModal';
+import { CreateVMWizard } from './components/CreateVMWizard';
 import { VNCModal } from './components/VNCModal';
 
 export function VMManager() {
@@ -288,8 +288,8 @@ export function VMManager() {
         )}
       </div>
 
-      {/* Create VM Modal */}
-      <CreateVMModal
+      {/* Create VM Wizard */}
+      <CreateVMWizard
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSuccess={loadVMs}

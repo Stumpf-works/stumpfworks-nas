@@ -23,6 +23,8 @@ export interface ContainerCreateRequest {
   autostart?: boolean;
   network_mode?: string; // "internal" or "bridged"
   bridge?: string; // Bridge name when network_mode is "bridged" (e.g., br0, vmbr0, vmbr1)
+  password?: string; // Root password for SSH access
+  ssh_key?: string; // SSH public key for passwordless authentication
 }
 
 export interface LXCTemplate {

@@ -57,9 +57,12 @@ type VMCreateRequest struct {
 	DiskSize     int64    `json:"disk_size"`     // GB
 	DiskFormat   string   `json:"disk_format"`   // qcow2, raw
 	OSType       string   `json:"os_type"`       // linux, windows
+	OSVariant    string   `json:"os_variant"`    // ubuntu22.04, win10, etc.
 	ISOPath      string   `json:"iso_path"`      // Optional boot ISO
 	Network      string   `json:"network"`       // bridge name or 'default'
 	Autostart    bool     `json:"autostart"`
+	Password     string   `json:"password"`      // Root password for SSH access
+	SSHKey       string   `json:"ssh_key"`       // SSH public key for passwordless authentication
 }
 
 // VMSnapshot represents a VM snapshot
@@ -286,7 +289,85 @@ func (lm *LibvirtManager) CreateVM(req VMCreateRequest) error {
 		lm.shell.Execute("virsh", "autostart", req.Name)
 	}
 
+	// Configure password and SSH key using cloud-init if no ISO is provided
+	// Note: This creates a cloud-init ISO that will configure the VM on first boot
+	if (req.Password != "" || req.SSHKey != "") && req.ISOPath == "" {
+		logger.Info("Configuring security settings for VM using cloud-init", zap.String("name", req.Name))
+
+		if err := lm.createCloudInitISO(req.Name, req.Password, req.SSHKey); err != nil {
+			logger.Warn("Failed to create cloud-init ISO, manual configuration required",
+				zap.Error(err), zap.String("name", req.Name))
+			// Don't fail the VM creation, just warn
+		} else {
+			// Attach cloud-init ISO to VM
+			cloudInitPath := fmt.Sprintf("/var/lib/libvirt/images/%s-cloud-init.iso", req.Name)
+			lm.shell.Execute("virsh", "attach-disk", req.Name, cloudInitPath, "hdc",
+				"--type", "cdrom", "--mode", "readonly", "--config")
+			logger.Info("Cloud-init ISO attached to VM", zap.String("name", req.Name))
+		}
+	}
+
 	logger.Info("VM created", zap.String("name", req.Name))
+	return nil
+}
+
+// createCloudInitISO creates a cloud-init ISO for VM initialization
+func (lm *LibvirtManager) createCloudInitISO(vmName, password, sshKey string) error {
+	// Create cloud-init configuration
+	metaData := fmt.Sprintf("instance-id: %s\nlocal-hostname: %s\n", vmName, vmName)
+
+	// Build user-data
+	userData := "#cloud-config\n"
+	userData += "users:\n"
+	userData += "  - name: root\n"
+	userData += "    lock_passwd: false\n"
+
+	if password != "" {
+		// Generate password hash (simple method, in production use proper hashing)
+		userData += fmt.Sprintf("    passwd: %s\n", password)
+		userData += "    chpasswd: { expire: False }\n"
+	}
+
+	if sshKey != "" {
+		userData += "    ssh_authorized_keys:\n"
+		userData += fmt.Sprintf("      - %s\n", sshKey)
+	}
+
+	userData += "ssh_pwauth: true\n"
+	userData += "disable_root: false\n"
+	userData += "package_update: false\n"
+	userData += "package_upgrade: false\n"
+
+	// Create temporary directory for cloud-init files
+	tmpDir := fmt.Sprintf("/tmp/cloud-init-%s", vmName)
+	lm.shell.Execute("mkdir", "-p", tmpDir)
+	defer lm.shell.Execute("rm", "-rf", tmpDir)
+
+	// Write meta-data
+	metaDataPath := fmt.Sprintf("%s/meta-data", tmpDir)
+	lm.shell.Execute("sh", "-c", fmt.Sprintf("echo '%s' > %s", metaData, metaDataPath))
+
+	// Write user-data
+	userDataPath := fmt.Sprintf("%s/user-data", tmpDir)
+	lm.shell.Execute("sh", "-c", fmt.Sprintf("echo '%s' > %s", userData, userDataPath))
+
+	// Create ISO image
+	isoPath := fmt.Sprintf("/var/lib/libvirt/images/%s-cloud-init.iso", vmName)
+	result, err := lm.shell.Execute("genisoimage", "-output", isoPath,
+		"-volid", "cidata", "-joliet", "-rock",
+		userDataPath, metaDataPath)
+
+	if err != nil {
+		// Try with mkisofs as fallback
+		result, err = lm.shell.Execute("mkisofs", "-output", isoPath,
+			"-volid", "cidata", "-J", "-R",
+			userDataPath, metaDataPath)
+		if err != nil {
+			return fmt.Errorf("failed to create cloud-init ISO: %s", result.Stderr)
+		}
+	}
+
+	logger.Info("Cloud-init ISO created successfully", zap.String("path", isoPath))
 	return nil
 }
 

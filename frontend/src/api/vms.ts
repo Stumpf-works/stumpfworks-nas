@@ -22,6 +22,8 @@ export interface VMCreateRequest {
   iso_path?: string;
   network?: string;
   autostart?: boolean;
+  password?: string; // Root password for SSH access
+  ssh_key?: string; // SSH public key for passwordless authentication
 }
 
 export const vmsApi = {

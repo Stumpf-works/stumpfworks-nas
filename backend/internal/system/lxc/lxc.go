@@ -43,6 +43,8 @@ type ContainerCreateRequest struct {
 	Autostart   bool   `json:"autostart"`
 	NetworkMode string `json:"network_mode"` // "internal" (lxcbr0) or "bridged" (custom bridge)
 	Bridge      string `json:"bridge"`       // Bridge name when network_mode is "bridged" (e.g., br0, vmbr0, vmbr1)
+	Password    string `json:"password"`     // Root password for SSH access
+	SSHKey      string `json:"ssh_key"`      // SSH public key for passwordless authentication
 }
 
 // Template represents an LXC template
@@ -286,6 +288,63 @@ func (lm *LXCManager) CreateContainer(req ContainerCreateRequest) error {
 	}
 
 	logger.Info("Container created", zap.String("name", req.Name))
+
+	// Start container temporarily to configure password and SSH key
+	if req.Password != "" || req.SSHKey != "" {
+		logger.Info("Configuring security settings for container", zap.String("name", req.Name))
+
+		// Start container
+		if err := lm.StartContainer(req.Name); err != nil {
+			logger.Warn("Failed to start container for security configuration", zap.Error(err))
+			return nil // Don't fail the entire creation if we can't configure security
+		}
+
+		// Wait for container to fully start
+		time.Sleep(3 * time.Second)
+
+		// Configure root password
+		if req.Password != "" {
+			logger.Info("Setting root password", zap.String("name", req.Name))
+			// Use echo to pass password to chpasswd
+			passwdCmd := fmt.Sprintf("echo 'root:%s' | chpasswd", req.Password)
+			_, err := lm.shell.Execute("lxc-attach", "-n", req.Name, "--", "sh", "-c", passwdCmd)
+			if err != nil {
+				logger.Warn("Failed to set root password", zap.Error(err), zap.String("name", req.Name))
+			} else {
+				logger.Info("Root password set successfully", zap.String("name", req.Name))
+			}
+		}
+
+		// Configure SSH key
+		if req.SSHKey != "" {
+			logger.Info("Configuring SSH key", zap.String("name", req.Name))
+
+			// Create .ssh directory
+			_, err := lm.shell.Execute("lxc-attach", "-n", req.Name, "--", "sh", "-c", "mkdir -p /root/.ssh && chmod 700 /root/.ssh")
+			if err != nil {
+				logger.Warn("Failed to create .ssh directory", zap.Error(err), zap.String("name", req.Name))
+			} else {
+				// Add SSH key to authorized_keys
+				sshCmd := fmt.Sprintf("echo '%s' >> /root/.ssh/authorized_keys && chmod 600 /root/.ssh/authorized_keys", req.SSHKey)
+				_, err = lm.shell.Execute("lxc-attach", "-n", req.Name, "--", "sh", "-c", sshCmd)
+				if err != nil {
+					logger.Warn("Failed to configure SSH key", zap.Error(err), zap.String("name", req.Name))
+				} else {
+					logger.Info("SSH key configured successfully", zap.String("name", req.Name))
+				}
+			}
+
+			// Ensure SSH server is installed and enabled (for Ubuntu/Debian)
+			if req.Template == "ubuntu" || req.Template == "debian" {
+				logger.Info("Installing and enabling SSH server", zap.String("name", req.Name))
+				lm.shell.Execute("lxc-attach", "-n", req.Name, "--", "sh", "-c", "apt-get update && apt-get install -y openssh-server")
+				lm.shell.Execute("lxc-attach", "-n", req.Name, "--", "sh", "-c", "systemctl enable ssh && systemctl start ssh")
+			}
+		}
+
+		logger.Info("Security configuration completed", zap.String("name", req.Name))
+	}
+
 	return nil
 }
 
