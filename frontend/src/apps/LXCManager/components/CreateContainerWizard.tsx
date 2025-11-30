@@ -58,7 +58,6 @@ export function CreateContainerWizard({ isOpen, onClose, onSuccess }: CreateCont
     password_confirm: '',
     ssh_key: '',
   });
-  const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string>('');
   const [bridges, setBridges] = useState<string[]>(['br0']);
@@ -372,7 +371,7 @@ export function CreateContainerWizard({ isOpen, onClose, onSuccess }: CreateCont
                   />
                 )}
                 {currentStep === 'review' && (
-                  <ReviewStep formData={formData} bridges={bridges} />
+                  <ReviewStep formData={formData} />
                 )}
               </motion.div>
             </AnimatePresence>
@@ -674,7 +673,7 @@ function GeneralStep({ formData, setFormData, errors }: StepProps) {
   );
 }
 
-function ResourcesStep({ formData, setFormData, errors }: StepProps) {
+function ResourcesStep({ formData, setFormData }: StepProps) {
   const getMemoryRecommendation = (mb: number) => {
     if (mb < 512) return '⚠️ Very low - may cause issues';
     if (mb < 1024) return '✓ Minimal - for lightweight services';
@@ -952,10 +951,9 @@ function NetworkStep({ formData, setFormData, bridges, errors }: NetworkStepProp
 
 interface ReviewStepProps {
   formData: ContainerCreateRequest & { password?: string; ssh_key?: string };
-  bridges: string[];
 }
 
-function ReviewStep({ formData, bridges }: ReviewStepProps) {
+function ReviewStep({ formData }: ReviewStepProps) {
   const sections = [
     {
       title: 'General',

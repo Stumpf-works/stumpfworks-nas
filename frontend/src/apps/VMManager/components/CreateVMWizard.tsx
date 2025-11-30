@@ -59,7 +59,6 @@ export function CreateVMWizard({ isOpen, onClose, onSuccess }: CreateVMWizardPro
     password_confirm: '',
     ssh_key: '',
   });
-  const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string>('');
   const [bridges, setBridges] = useState<string[]>(['default', 'br0']);
@@ -680,7 +679,7 @@ function GeneralStep({ formData, setFormData, errors }: StepProps) {
   );
 }
 
-function ResourcesStep({ formData, setFormData, errors }: StepProps) {
+function ResourcesStep({ formData, setFormData }: StepProps) {
   const getMemoryRecommendation = (mb: number) => {
     if (mb < 1024) return '⚠️ Very low - may cause issues';
     if (mb < 2048) return '⚠️ Low - minimal for modern OS';
