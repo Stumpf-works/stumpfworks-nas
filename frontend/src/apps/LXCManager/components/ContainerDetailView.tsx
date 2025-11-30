@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { type Container } from '@/api/lxc';
 import Card from '@/components/ui/Card';
+import { WebTerminal } from './WebTerminal';
 
 interface ContainerDetailViewProps {
   container: Container;
@@ -32,7 +33,6 @@ type TabType = 'summary' | 'console' | 'resources' | 'options' | 'snapshots' | '
 
 export function ContainerDetailView({ container, onAction, onClose, loading }: ContainerDetailViewProps) {
   const [activeTab, setActiveTab] = useState<TabType>('summary');
-  const [terminalHistory, setTerminalHistory] = useState<string[]>([]);
 
   const isRunning = container.state.toLowerCase() === 'running';
 
@@ -168,44 +168,19 @@ export function ContainerDetailView({ container, onAction, onClose, loading }: C
   );
 
   const renderConsoleTab = () => (
-    <Card>
-      <div className="p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Console</h3>
-        {isRunning ? (
-          <div className="bg-gray-900 rounded-lg p-4 font-mono text-sm text-green-400 min-h-[400px]">
-            <div className="mb-4">
-              <div className="text-gray-500">## Console access for {container.name}</div>
-              <div className="text-gray-500">## Use the command input below to execute commands</div>
-              <div className="text-gray-500">##</div>
-            </div>
-            {terminalHistory.map((line, idx) => (
-              <div key={idx}>{line}</div>
-            ))}
-            <div className="flex items-center gap-2 mt-4">
-              <span className="text-blue-400">root@{container.name}:~#</span>
-              <input
-                type="text"
-                placeholder="Enter command..."
-                className="flex-1 bg-transparent border-none outline-none text-green-400"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    const cmd = e.currentTarget.value;
-                    if (cmd.trim()) {
-                      setTerminalHistory([...terminalHistory, `$ ${cmd}`, '(Command execution coming soon)']);
-                      e.currentTarget.value = '';
-                    }
-                  }
-                }}
-              />
-            </div>
-          </div>
-        ) : (
-          <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+    <div className="h-full flex flex-col">
+      {isRunning ? (
+        <div className="flex-1 min-h-[500px]">
+          <WebTerminal containerName={container.name} />
+        </div>
+      ) : (
+        <Card>
+          <div className="p-6 text-center py-12 text-gray-500 dark:text-gray-400">
             Container must be running to access console
           </div>
-        )}
-      </div>
-    </Card>
+        </Card>
+      )}
+    </div>
   );
 
   const renderResourcesTab = () => (
