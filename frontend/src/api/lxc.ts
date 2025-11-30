@@ -17,9 +17,9 @@ export interface ContainerCreateRequest {
   name: string;
   template: string;
   release?: string;
-  arch?: string;
-  storage?: string;
-  network?: string;
+  architecture?: string;
+  memory_limit?: number; // MB
+  cpu_limit?: number; // Number of CPUs
   autostart?: boolean;
 }
 

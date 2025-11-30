@@ -15,9 +15,9 @@ export function CreateContainerModal({ isOpen, onClose, onSuccess }: CreateConta
     name: '',
     template: 'ubuntu',
     release: 'jammy',
-    arch: 'amd64',
-    storage: 'default',
-    network: 'default',
+    architecture: 'amd64',
+    memory_limit: 512,
+    cpu_limit: 1,
     autostart: false,
   });
   const [loading, setLoading] = useState(false);
@@ -44,9 +44,9 @@ export function CreateContainerModal({ isOpen, onClose, onSuccess }: CreateConta
           name: '',
           template: 'ubuntu',
           release: 'jammy',
-          arch: 'amd64',
-          storage: 'default',
-          network: 'default',
+          architecture: 'amd64',
+          memory_limit: 512,
+          cpu_limit: 1,
           autostart: false,
         });
       } else {
@@ -103,115 +103,156 @@ export function CreateContainerModal({ isOpen, onClose, onSuccess }: CreateConta
           )}
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="p-6 space-y-4">
-            {/* Container Name */}
+          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+            {/* General Section */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Container Name *
-              </label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="my-container"
-                className="w-full px-4 py-2 bg-white dark:bg-macos-dark-50 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-macos-blue focus:border-transparent text-gray-900 dark:text-white"
-                required
-              />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">General</h3>
+              <div className="space-y-4">
+                {/* Container Name */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Container Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="my-container"
+                    className="w-full px-4 py-2 bg-white dark:bg-macos-dark-50 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-macos-blue focus:border-transparent text-gray-900 dark:text-white"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Template */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Template
+                    </label>
+                    <select
+                      value={formData.template}
+                      onChange={(e) => setFormData({ ...formData, template: e.target.value })}
+                      className="w-full px-4 py-2 bg-white dark:bg-macos-dark-50 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-macos-blue focus:border-transparent text-gray-900 dark:text-white"
+                    >
+                      <option value="ubuntu">Ubuntu</option>
+                      <option value="debian">Debian</option>
+                      <option value="alpine">Alpine</option>
+                      <option value="centos">CentOS</option>
+                      <option value="fedora">Fedora</option>
+                    </select>
+                  </div>
+
+                  {/* Release */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Release
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.release}
+                      onChange={(e) => setFormData({ ...formData, release: e.target.value })}
+                      placeholder="jammy, bookworm"
+                      className="w-full px-4 py-2 bg-white dark:bg-macos-dark-50 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-macos-blue focus:border-transparent text-gray-900 dark:text-white"
+                    />
+                  </div>
+                </div>
+
+                {/* Architecture */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Architecture
+                  </label>
+                  <select
+                    value={formData.architecture}
+                    onChange={(e) => setFormData({ ...formData, architecture: e.target.value })}
+                    className="w-full px-4 py-2 bg-white dark:bg-macos-dark-50 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-macos-blue focus:border-transparent text-gray-900 dark:text-white"
+                  >
+                    <option value="amd64">amd64 (x86_64)</option>
+                    <option value="arm64">arm64 (aarch64)</option>
+                    <option value="armhf">armhf</option>
+                  </select>
+                </div>
+              </div>
             </div>
 
-            {/* Template */}
+            {/* Resources Section */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Template
-              </label>
-              <select
-                value={formData.template}
-                onChange={(e) => setFormData({ ...formData, template: e.target.value })}
-                className="w-full px-4 py-2 bg-white dark:bg-macos-dark-50 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-macos-blue focus:border-transparent text-gray-900 dark:text-white"
-              >
-                <option value="ubuntu">Ubuntu</option>
-                <option value="debian">Debian</option>
-                <option value="alpine">Alpine</option>
-                <option value="centos">CentOS</option>
-                <option value="fedora">Fedora</option>
-                <option value="archlinux">Arch Linux</option>
-              </select>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Resources</h3>
+              <div className="space-y-4">
+                {/* Memory */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Memory (MB)
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <input
+                      type="range"
+                      min="128"
+                      max="16384"
+                      step="128"
+                      value={formData.memory_limit}
+                      onChange={(e) => setFormData({ ...formData, memory_limit: parseInt(e.target.value) })}
+                      className="flex-1"
+                    />
+                    <input
+                      type="number"
+                      value={formData.memory_limit}
+                      onChange={(e) => setFormData({ ...formData, memory_limit: parseInt(e.target.value) || 512 })}
+                      className="w-24 px-3 py-2 bg-white dark:bg-macos-dark-50 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
+                      min="128"
+                      max="16384"
+                    />
+                    <span className="text-sm text-gray-600 dark:text-gray-400">MB</span>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Recommended: 512 MB minimum, 2048 MB for typical workloads
+                  </p>
+                </div>
+
+                {/* CPU */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    CPU Cores
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <input
+                      type="range"
+                      min="1"
+                      max="16"
+                      step="1"
+                      value={formData.cpu_limit}
+                      onChange={(e) => setFormData({ ...formData, cpu_limit: parseInt(e.target.value) })}
+                      className="flex-1"
+                    />
+                    <input
+                      type="number"
+                      value={formData.cpu_limit}
+                      onChange={(e) => setFormData({ ...formData, cpu_limit: parseInt(e.target.value) || 1 })}
+                      className="w-24 px-3 py-2 bg-white dark:bg-macos-dark-50 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
+                      min="1"
+                      max="16"
+                    />
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Cores</span>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* Release */}
+            {/* Options Section */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Release
-              </label>
-              <input
-                type="text"
-                value={formData.release}
-                onChange={(e) => setFormData({ ...formData, release: e.target.value })}
-                placeholder="jammy, bookworm, 3.18, etc."
-                className="w-full px-4 py-2 bg-white dark:bg-macos-dark-50 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-macos-blue focus:border-transparent text-gray-900 dark:text-white"
-              />
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Ubuntu: jammy, focal, bionic | Debian: bookworm, bullseye | Alpine: 3.18, 3.17
-              </p>
-            </div>
-
-            {/* Architecture */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Architecture
-              </label>
-              <select
-                value={formData.arch}
-                onChange={(e) => setFormData({ ...formData, arch: e.target.value })}
-                className="w-full px-4 py-2 bg-white dark:bg-macos-dark-50 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-macos-blue focus:border-transparent text-gray-900 dark:text-white"
-              >
-                <option value="amd64">amd64 (x86_64)</option>
-                <option value="arm64">arm64 (aarch64)</option>
-                <option value="i386">i386 (x86)</option>
-                <option value="armhf">armhf</option>
-              </select>
-            </div>
-
-            {/* Storage */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Storage Backend
-              </label>
-              <input
-                type="text"
-                value={formData.storage}
-                onChange={(e) => setFormData({ ...formData, storage: e.target.value })}
-                placeholder="default, dir, zfs, btrfs, lvm"
-                className="w-full px-4 py-2 bg-white dark:bg-macos-dark-50 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-macos-blue focus:border-transparent text-gray-900 dark:text-white"
-              />
-            </div>
-
-            {/* Network */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Network
-              </label>
-              <input
-                type="text"
-                value={formData.network}
-                onChange={(e) => setFormData({ ...formData, network: e.target.value })}
-                placeholder="default"
-                className="w-full px-4 py-2 bg-white dark:bg-macos-dark-50 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-macos-blue focus:border-transparent text-gray-900 dark:text-white"
-              />
-            </div>
-
-            {/* Autostart */}
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="autostart"
-                checked={formData.autostart}
-                onChange={(e) => setFormData({ ...formData, autostart: e.target.checked })}
-                className="w-4 h-4 text-macos-blue bg-white dark:bg-macos-dark-50 border-gray-300 dark:border-gray-600 rounded focus:ring-macos-blue"
-              />
-              <label htmlFor="autostart" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-                Start container automatically on boot
-              </label>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Options</h3>
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="autostart"
+                  checked={formData.autostart}
+                  onChange={(e) => setFormData({ ...formData, autostart: e.target.checked })}
+                  className="w-4 h-4 text-macos-blue bg-white dark:bg-macos-dark-50 border-gray-300 dark:border-gray-600 rounded focus:ring-macos-blue"
+                />
+                <label htmlFor="autostart" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                  Start container automatically on boot
+                </label>
+              </div>
             </div>
 
             {/* Buttons */}

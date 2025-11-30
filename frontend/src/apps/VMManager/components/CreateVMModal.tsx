@@ -107,141 +107,202 @@ export function CreateVMModal({ isOpen, onClose, onSuccess }: CreateVMModalProps
           )}
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="p-6 space-y-4">
-            {/* VM Name */}
+          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+            {/* General Section */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                VM Name *
-              </label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="my-vm"
-                className="w-full px-4 py-2 bg-white dark:bg-macos-dark-50 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-macos-blue focus:border-transparent text-gray-900 dark:text-white"
-                required
-              />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">General</h3>
+              <div className="space-y-4">
+                {/* VM Name */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    VM Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="my-vm"
+                    className="w-full px-4 py-2 bg-white dark:bg-macos-dark-50 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-macos-blue focus:border-transparent text-gray-900 dark:text-white"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  {/* OS Type */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      OS Type
+                    </label>
+                    <select
+                      value={formData.os_type}
+                      onChange={(e) => setFormData({ ...formData, os_type: e.target.value })}
+                      className="w-full px-4 py-2 bg-white dark:bg-macos-dark-50 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-macos-blue focus:border-transparent text-gray-900 dark:text-white"
+                    >
+                      <option value="linux">Linux</option>
+                      <option value="windows">Windows</option>
+                      <option value="unix">Unix</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+
+                  {/* OS Variant */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      OS Variant
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.os_variant}
+                      onChange={(e) => setFormData({ ...formData, os_variant: e.target.value })}
+                      placeholder="ubuntu22.04, win10"
+                      className="w-full px-4 py-2 bg-white dark:bg-macos-dark-50 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-macos-blue focus:border-transparent text-gray-900 dark:text-white"
+                    />
+                  </div>
+                </div>
+
+                {/* ISO Path */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    ISO Path (optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.iso_path}
+                    onChange={(e) => setFormData({ ...formData, iso_path: e.target.value })}
+                    placeholder="/path/to/iso/file.iso"
+                    className="w-full px-4 py-2 bg-white dark:bg-macos-dark-50 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-macos-blue focus:border-transparent text-gray-900 dark:text-white"
+                  />
+                </div>
+              </div>
             </div>
 
-            {/* Memory */}
+            {/* Resources Section */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Memory (MB)
-              </label>
-              <input
-                type="number"
-                value={formData.memory}
-                onChange={(e) => setFormData({ ...formData, memory: parseInt(e.target.value) || 0 })}
-                min="512"
-                step="512"
-                className="w-full px-4 py-2 bg-white dark:bg-macos-dark-50 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-macos-blue focus:border-transparent text-gray-900 dark:text-white"
-              />
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                {(formData.memory / 1024).toFixed(1)} GB
-              </p>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Resources</h3>
+              <div className="space-y-4">
+                {/* Memory */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Memory (MB)
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <input
+                      type="range"
+                      min="512"
+                      max="32768"
+                      step="512"
+                      value={formData.memory}
+                      onChange={(e) => setFormData({ ...formData, memory: parseInt(e.target.value) })}
+                      className="flex-1"
+                    />
+                    <input
+                      type="number"
+                      value={formData.memory}
+                      onChange={(e) => setFormData({ ...formData, memory: parseInt(e.target.value) || 2048 })}
+                      className="w-24 px-3 py-2 bg-white dark:bg-macos-dark-50 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
+                      min="512"
+                      max="32768"
+                      step="512"
+                    />
+                    <span className="text-sm text-gray-600 dark:text-gray-400">MB</span>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    {(formData.memory / 1024).toFixed(1)} GB - Recommended: 2048 MB minimum for modern OS
+                  </p>
+                </div>
+
+                {/* vCPUs */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Virtual CPUs
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <input
+                      type="range"
+                      min="1"
+                      max="16"
+                      step="1"
+                      value={formData.vcpus}
+                      onChange={(e) => setFormData({ ...formData, vcpus: parseInt(e.target.value) })}
+                      className="flex-1"
+                    />
+                    <input
+                      type="number"
+                      value={formData.vcpus}
+                      onChange={(e) => setFormData({ ...formData, vcpus: parseInt(e.target.value) || 1 })}
+                      className="w-24 px-3 py-2 bg-white dark:bg-macos-dark-50 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
+                      min="1"
+                      max="16"
+                    />
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Cores</span>
+                  </div>
+                </div>
+
+                {/* Disk Size */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Disk Size (GB)
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <input
+                      type="range"
+                      min="10"
+                      max="500"
+                      step="10"
+                      value={formData.disk_size}
+                      onChange={(e) => setFormData({ ...formData, disk_size: parseInt(e.target.value) })}
+                      className="flex-1"
+                    />
+                    <input
+                      type="number"
+                      value={formData.disk_size}
+                      onChange={(e) => setFormData({ ...formData, disk_size: parseInt(e.target.value) || 20 })}
+                      className="w-24 px-3 py-2 bg-white dark:bg-macos-dark-50 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
+                      min="10"
+                      max="500"
+                      step="5"
+                    />
+                    <span className="text-sm text-gray-600 dark:text-gray-400">GB</span>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Recommended: 20 GB minimum for Linux, 40 GB+ for Windows
+                  </p>
+                </div>
+              </div>
             </div>
 
-            {/* vCPUs */}
+            {/* Network Section */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Virtual CPUs
-              </label>
-              <input
-                type="number"
-                value={formData.vcpus}
-                onChange={(e) => setFormData({ ...formData, vcpus: parseInt(e.target.value) || 1 })}
-                min="1"
-                max="32"
-                className="w-full px-4 py-2 bg-white dark:bg-macos-dark-50 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-macos-blue focus:border-transparent text-gray-900 dark:text-white"
-              />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Network</h3>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Network Bridge
+                </label>
+                <input
+                  type="text"
+                  value={formData.network}
+                  onChange={(e) => setFormData({ ...formData, network: e.target.value })}
+                  placeholder="default"
+                  className="w-full px-4 py-2 bg-white dark:bg-macos-dark-50 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-macos-blue focus:border-transparent text-gray-900 dark:text-white"
+                />
+              </div>
             </div>
 
-            {/* Disk Size */}
+            {/* Options Section */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Disk Size (GB)
-              </label>
-              <input
-                type="number"
-                value={formData.disk_size}
-                onChange={(e) => setFormData({ ...formData, disk_size: parseInt(e.target.value) || 0 })}
-                min="5"
-                step="5"
-                className="w-full px-4 py-2 bg-white dark:bg-macos-dark-50 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-macos-blue focus:border-transparent text-gray-900 dark:text-white"
-              />
-            </div>
-
-            {/* OS Type */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                OS Type
-              </label>
-              <select
-                value={formData.os_type}
-                onChange={(e) => setFormData({ ...formData, os_type: e.target.value })}
-                className="w-full px-4 py-2 bg-white dark:bg-macos-dark-50 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-macos-blue focus:border-transparent text-gray-900 dark:text-white"
-              >
-                <option value="linux">Linux</option>
-                <option value="windows">Windows</option>
-                <option value="unix">Unix</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-
-            {/* OS Variant */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                OS Variant
-              </label>
-              <input
-                type="text"
-                value={formData.os_variant}
-                onChange={(e) => setFormData({ ...formData, os_variant: e.target.value })}
-                placeholder="ubuntu22.04, debian11, win10, etc."
-                className="w-full px-4 py-2 bg-white dark:bg-macos-dark-50 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-macos-blue focus:border-transparent text-gray-900 dark:text-white"
-              />
-            </div>
-
-            {/* ISO Path */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                ISO Path (optional)
-              </label>
-              <input
-                type="text"
-                value={formData.iso_path}
-                onChange={(e) => setFormData({ ...formData, iso_path: e.target.value })}
-                placeholder="/path/to/iso/file.iso"
-                className="w-full px-4 py-2 bg-white dark:bg-macos-dark-50 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-macos-blue focus:border-transparent text-gray-900 dark:text-white"
-              />
-            </div>
-
-            {/* Network */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Network
-              </label>
-              <input
-                type="text"
-                value={formData.network}
-                onChange={(e) => setFormData({ ...formData, network: e.target.value })}
-                placeholder="default"
-                className="w-full px-4 py-2 bg-white dark:bg-macos-dark-50 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-macos-blue focus:border-transparent text-gray-900 dark:text-white"
-              />
-            </div>
-
-            {/* Autostart */}
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="autostart"
-                checked={formData.autostart}
-                onChange={(e) => setFormData({ ...formData, autostart: e.target.checked })}
-                className="w-4 h-4 text-macos-blue bg-white dark:bg-macos-dark-50 border-gray-300 dark:border-gray-600 rounded focus:ring-macos-blue"
-              />
-              <label htmlFor="autostart" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-                Start VM automatically on boot
-              </label>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Options</h3>
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="autostart"
+                  checked={formData.autostart}
+                  onChange={(e) => setFormData({ ...formData, autostart: e.target.checked })}
+                  className="w-4 h-4 text-macos-blue bg-white dark:bg-macos-dark-50 border-gray-300 dark:border-gray-600 rounded focus:ring-macos-blue"
+                />
+                <label htmlFor="autostart" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                  Start VM automatically on boot
+                </label>
+              </div>
             </div>
 
             {/* Buttons */}

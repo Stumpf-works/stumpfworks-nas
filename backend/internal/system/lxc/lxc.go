@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/Stumpf-works/stumpfworks-nas/internal/system/executor"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
@@ -225,7 +226,9 @@ func (lm *LXCManager) CreateContainer(req ContainerCreateRequest) error {
 		"-a", req.Architecture,
 	}
 
-	result, err := lm.shell.Execute(args[0], args[1:]...)
+	// Container creation can take several minutes (downloading packages, etc.)
+	// Use a 10-minute timeout instead of the default 30 seconds
+	result, err := lm.shell.ExecuteWithTimeout(10*time.Minute, args[0], args[1:]...)
 	if err != nil {
 		return fmt.Errorf("failed to create container: %s: %w", result.Stderr, err)
 	}

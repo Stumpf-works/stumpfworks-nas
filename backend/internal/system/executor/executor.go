@@ -23,6 +23,9 @@ type ShellExecutor interface {
 	// Execute runs a command and returns the result
 	Execute(command string, args ...string) (*CommandResult, error)
 
+	// ExecuteWithTimeout runs a command with a specific timeout
+	ExecuteWithTimeout(timeout time.Duration, command string, args ...string) (*CommandResult, error)
+
 	// CommandExists checks if a command exists in PATH
 	CommandExists(command string) bool
 
