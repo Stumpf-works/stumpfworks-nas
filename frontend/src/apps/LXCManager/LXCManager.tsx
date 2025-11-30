@@ -15,12 +15,14 @@ import {
   Activity,
   Power
 } from 'lucide-react';
+import { CreateContainerModal } from './components/CreateContainerModal';
 
 export function LXCManager() {
   const [containers, setContainers] = useState<Container[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   useEffect(() => {
     loadContainers();
@@ -143,7 +145,10 @@ export function LXCManager() {
               <RefreshCw className="w-4 h-4" />
               Refresh
             </button>
-            <button className="px-4 py-2 bg-macos-blue text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2">
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="px-4 py-2 bg-macos-blue text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2"
+            >
               <Plus className="w-4 h-4" />
               Create Container
             </button>
@@ -172,7 +177,10 @@ export function LXCManager() {
             <Box className="w-16 h-16 text-gray-400 dark:text-gray-600 mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Containers</h3>
             <p className="text-gray-600 dark:text-gray-400 mb-6">Get started by creating your first container</p>
-            <button className="px-4 py-2 bg-macos-blue text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2">
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="px-4 py-2 bg-macos-blue text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2"
+            >
               <Plus className="w-4 h-4" />
               Create Container
             </button>
@@ -273,6 +281,13 @@ export function LXCManager() {
           </div>
         )}
       </div>
+
+      {/* Create Container Modal */}
+      <CreateContainerModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={loadContainers}
+      />
     </div>
   );
 }
