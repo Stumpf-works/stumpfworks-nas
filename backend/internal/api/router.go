@@ -668,6 +668,8 @@ func NewRouter(cfg *config.Config) http.Handler {
 				r.Post("/containers/{name}/start", handlers.StartContainer)
 				r.Post("/containers/{name}/stop", handlers.StopContainer)
 				r.Delete("/containers/{name}", handlers.DeleteContainer)
+				r.Post("/containers/{name}/exec", handlers.ExecContainerCommand)
+				r.Get("/containers/{name}/console", handlers.GetContainerConsole)
 				r.Get("/templates", handlers.ListLXCTemplates)
 			})
 

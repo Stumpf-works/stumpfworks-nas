@@ -191,3 +191,71 @@ func ListLXCTemplates(w http.ResponseWriter, r *http.Request) {
 
 	utils.RespondSuccess(w, templates)
 }
+
+// ExecContainerCommand executes a command in a container
+func ExecContainerCommand(w http.ResponseWriter, r *http.Request) {
+	if lxcManager == nil {
+		utils.RespondError(w, errors.InternalServerError("LXC manager not initialized", nil))
+		return
+	}
+
+	containerName := chi.URLParam(r, "name")
+	if containerName == "" {
+		utils.RespondError(w, errors.BadRequest("Container name is required", nil))
+		return
+	}
+
+	var req struct {
+		Command string `json:"command"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.RespondError(w, errors.BadRequest("Invalid request body", err))
+		return
+	}
+
+	if req.Command == "" {
+		utils.RespondError(w, errors.BadRequest("Command is required", nil))
+		return
+	}
+
+	logger.Info("Executing command in container", zap.String("container", containerName), zap.String("command", req.Command))
+
+	result, err := lxcManager.ExecCommand(containerName, req.Command)
+	if err != nil {
+		logger.Error("Failed to execute command", zap.Error(err), zap.String("container", containerName))
+		utils.RespondError(w, errors.InternalServerError("Failed to execute command", err))
+		return
+	}
+
+	utils.RespondSuccess(w, map[string]interface{}{
+		"stdout":    result.Stdout,
+		"stderr":    result.Stderr,
+		"exit_code": result.ExitCode,
+	})
+}
+
+// GetContainerConsole gets console access information for a container
+func GetContainerConsole(w http.ResponseWriter, r *http.Request) {
+	if lxcManager == nil {
+		utils.RespondError(w, errors.InternalServerError("LXC manager not initialized", nil))
+		return
+	}
+
+	containerName := chi.URLParam(r, "name")
+	if containerName == "" {
+		utils.RespondError(w, errors.BadRequest("Container name is required", nil))
+		return
+	}
+
+	consoleCmd, err := lxcManager.GetConsoleURL(containerName)
+	if err != nil {
+		logger.Error("Failed to get console access", zap.Error(err), zap.String("container", containerName))
+		utils.RespondError(w, errors.InternalServerError("Failed to get console access", err))
+		return
+	}
+
+	utils.RespondSuccess(w, map[string]string{
+		"console_command": consoleCmd,
+		"container_name":  containerName,
+	})
+}

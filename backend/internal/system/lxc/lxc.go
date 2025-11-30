@@ -403,3 +403,41 @@ func (lm *LXCManager) AttachConsole(name string) (string, error) {
 	// Return the command that can be executed via terminal
 	return fmt.Sprintf("lxc-attach -n %s", name), nil
 }
+
+// ExecCommand executes a command in a container and returns the result
+func (lm *LXCManager) ExecCommand(name string, command string) (*executor.CommandResult, error) {
+	if !lm.enabled {
+		return nil, fmt.Errorf("LXC is not enabled")
+	}
+
+	// Execute command in container
+	result, err := lm.shell.Execute("lxc-attach", "-n", name, "--", "sh", "-c", command)
+	if err != nil {
+		return result, fmt.Errorf("failed to execute command in container: %w", err)
+	}
+
+	logger.Info("Command executed in container",
+		zap.String("name", name),
+		zap.String("command", command))
+	return result, nil
+}
+
+// GetConsoleURL returns the console access URL/command for a container
+func (lm *LXCManager) GetConsoleURL(name string) (string, error) {
+	if !lm.enabled {
+		return "", fmt.Errorf("LXC is not enabled")
+	}
+
+	// Check if container is running
+	container, err := lm.GetContainer(name)
+	if err != nil {
+		return "", err
+	}
+
+	if container.State != "RUNNING" {
+		return "", fmt.Errorf("container must be running to access console")
+	}
+
+	// Return terminal command for shell access
+	return fmt.Sprintf("lxc-attach -n %s", name), nil
+}

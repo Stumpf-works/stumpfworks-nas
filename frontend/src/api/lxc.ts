@@ -70,4 +70,16 @@ export const lxcApi = {
     const response = await client.get<ApiResponse<LXCTemplate[]>>('/lxc/templates');
     return response.data;
   },
+
+  // Execute command in container
+  execCommand: async (name: string, command: string): Promise<ApiResponse<{ stdout: string; stderr: string; exit_code: number }>> => {
+    const response = await client.post<ApiResponse<{ stdout: string; stderr: string; exit_code: number }>>(`/lxc/containers/${encodeURIComponent(name)}/exec`, { command });
+    return response.data;
+  },
+
+  // Get console access information
+  getConsole: async (name: string): Promise<ApiResponse<{ console_command: string; container_name: string }>> => {
+    const response = await client.get<ApiResponse<{ console_command: string; container_name: string }>>(`/lxc/containers/${encodeURIComponent(name)}/console`);
+    return response.data;
+  },
 };
