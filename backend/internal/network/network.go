@@ -551,12 +551,20 @@ func WakeOnLAN(macAddress string) error {
 	return nil
 }
 
-// CreateBridge creates a new bridge interface
+// CreateBridge creates a new bridge interface with Proxmox-style IP migration
+// This safely migrates IP addresses from physical interfaces to the bridge
 func CreateBridge(name string, ports []string) error {
 	// Create the bridge
 	cmd := exec.Command("ip", "link", "add", name, "type", "bridge")
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to create bridge: %s", string(output))
+	}
+
+	// Bring the bridge up immediately
+	cmd = exec.Command("ip", "link", "set", name, "up")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		exec.Command("ip", "link", "delete", name, "type", "bridge").Run()
+		return fmt.Errorf("failed to bring bridge up: %s", string(output))
 	}
 
 	// Add ports to the bridge if specified
@@ -565,28 +573,107 @@ func CreateBridge(name string, ports []string) error {
 			continue
 		}
 
-		// Bring the port down first
-		exec.Command("ip", "link", "set", port, "down").Run()
+		// Get current IP addresses and routes from the port
+		portAddrs, err := getInterfaceAddresses(port)
+		if err != nil {
+			continue // Skip if we can't get addresses
+		}
 
-		// Attach port to bridge
+		// Get default gateway if this interface has one
+		gateway, _ := getDefaultGatewayForInterface(port)
+
+		// If the port has IP addresses, this is a Proxmox-style migration
+		if len(portAddrs) > 0 {
+			// Step 1: Assign IP addresses to the bridge
+			for _, addr := range portAddrs {
+				cmd = exec.Command("ip", "addr", "add", addr, "dev", name)
+				cmd.CombinedOutput() // Ignore errors, address might already exist
+			}
+
+			// Step 2: If there's a default gateway, add it via the bridge
+			if gateway != "" {
+				// Remove old default route
+				exec.Command("ip", "route", "del", "default").Run()
+
+				// Add new default route via bridge
+				cmd = exec.Command("ip", "route", "add", "default", "via", gateway, "dev", name)
+				cmd.CombinedOutput()
+			}
+
+			// Step 3: Now it's safe to remove IPs from the port (before attaching to bridge)
+			cmd = exec.Command("ip", "addr", "flush", "dev", port)
+			cmd.Run()
+		}
+
+		// Step 4: Attach port to bridge (port can stay UP)
 		cmd = exec.Command("ip", "link", "set", port, "master", name)
 		if output, err := cmd.CombinedOutput(); err != nil {
-			// Try to clean up the bridge if we can't add a port
+			// If attachment fails, try to restore IPs to the port
+			for _, addr := range portAddrs {
+				exec.Command("ip", "addr", "add", addr, "dev", port).Run()
+			}
+			if gateway != "" {
+				exec.Command("ip", "route", "del", "default").Run()
+				exec.Command("ip", "route", "add", "default", "via", gateway, "dev", port).Run()
+			}
+			// Clean up the bridge
 			exec.Command("ip", "link", "delete", name, "type", "bridge").Run()
 			return fmt.Errorf("failed to attach port %s to bridge: %s", port, string(output))
 		}
 
-		// Bring the port back up
+		// Step 5: Ensure port is up as a bridge port
 		exec.Command("ip", "link", "set", port, "up").Run()
 	}
 
-	// Bring the bridge up
-	cmd = exec.Command("ip", "link", "set", name, "up")
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to bring bridge up: %s", string(output))
+	return nil
+}
+
+// getInterfaceAddresses retrieves IP addresses configured on an interface
+func getInterfaceAddresses(ifaceName string) ([]string, error) {
+	cmd := exec.Command("ip", "-o", "addr", "show", ifaceName)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, err
 	}
 
-	return nil
+	var addresses []string
+	scanner := bufio.NewScanner(bytes.NewReader(output))
+	for scanner.Scan() {
+		line := scanner.Text()
+		fields := strings.Fields(line)
+
+		// Format: index: ifacename inet|inet6 addr/prefix ...
+		for i, field := range fields {
+			if (field == "inet" || field == "inet6") && i+1 < len(fields) {
+				addr := fields[i+1]
+				// Skip link-local IPv6 addresses
+				if !strings.HasPrefix(addr, "fe80:") {
+					addresses = append(addresses, addr)
+				}
+			}
+		}
+	}
+
+	return addresses, nil
+}
+
+// getDefaultGatewayForInterface finds the default gateway for a specific interface
+func getDefaultGatewayForInterface(ifaceName string) (string, error) {
+	cmd := exec.Command("ip", "route", "show", "default", "dev", ifaceName)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", err
+	}
+
+	// Parse: default via <gateway> dev <iface> ...
+	fields := strings.Fields(string(output))
+	for i, field := range fields {
+		if field == "via" && i+1 < len(fields) {
+			return fields[i+1], nil
+		}
+	}
+
+	return "", nil
 }
 
 // DeleteBridge deletes a bridge interface
@@ -623,18 +710,55 @@ func DeleteBridge(name string) error {
 	return nil
 }
 
-// AttachPortToBridge attaches an interface to a bridge
+// AttachPortToBridge attaches an interface to a bridge with IP migration
 func AttachPortToBridge(bridgeName string, portName string) error {
-	// Bring the port down first
-	exec.Command("ip", "link", "set", portName, "down").Run()
+	// Get current IP addresses and routes from the port
+	portAddrs, err := getInterfaceAddresses(portName)
+	if err != nil {
+		portAddrs = []string{} // Continue with empty list if error
+	}
 
-	// Attach port to bridge
+	// Get default gateway if this interface has one
+	gateway, _ := getDefaultGatewayForInterface(portName)
+
+	// If the port has IP addresses, migrate them to the bridge first
+	if len(portAddrs) > 0 {
+		// Step 1: Assign IP addresses to the bridge
+		for _, addr := range portAddrs {
+			cmd := exec.Command("ip", "addr", "add", addr, "dev", bridgeName)
+			cmd.CombinedOutput() // Ignore errors, address might already exist
+		}
+
+		// Step 2: If there's a default gateway, migrate it to the bridge
+		if gateway != "" {
+			// Remove old default route
+			exec.Command("ip", "route", "del", "default").Run()
+
+			// Add new default route via bridge
+			cmd := exec.Command("ip", "route", "add", "default", "via", gateway, "dev", bridgeName)
+			cmd.CombinedOutput()
+		}
+
+		// Step 3: Now it's safe to remove IPs from the port
+		cmd := exec.Command("ip", "addr", "flush", "dev", portName)
+		cmd.Run()
+	}
+
+	// Step 4: Attach port to bridge (port can stay UP)
 	cmd := exec.Command("ip", "link", "set", portName, "master", bridgeName)
 	if output, err := cmd.CombinedOutput(); err != nil {
+		// If attachment fails, try to restore IPs to the port
+		for _, addr := range portAddrs {
+			exec.Command("ip", "addr", "add", addr, "dev", portName).Run()
+		}
+		if gateway != "" {
+			exec.Command("ip", "route", "del", "default").Run()
+			exec.Command("ip", "route", "add", "default", "via", gateway, "dev", portName).Run()
+		}
 		return fmt.Errorf("failed to attach port to bridge: %s", string(output))
 	}
 
-	// Bring the port back up
+	// Step 5: Ensure port is up as a bridge port
 	cmd = exec.Command("ip", "link", "set", portName, "up")
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to bring port up: %s", string(output))

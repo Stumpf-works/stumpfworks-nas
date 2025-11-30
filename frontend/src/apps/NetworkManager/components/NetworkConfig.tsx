@@ -765,17 +765,37 @@ export default function NetworkConfig() {
                 <div className="flex gap-2">
                   <Info className="w-5 h-5 text-cyan-600 dark:text-cyan-400 flex-shrink-0" />
                   <div className="text-sm text-gray-700 dark:text-gray-300">
-                    <p className="font-medium mb-1">Bridge Interface Notes:</p>
+                    <p className="font-medium mb-1">Proxmox-Style Bridge Configuration:</p>
                     <ul className="list-disc list-inside space-y-1 text-xs">
-                      <li>Bridges connect multiple network segments at Layer 2</li>
-                      <li>Perfect for VMs and containers to share the same network</li>
-                      <li>Empty bridges are useful for isolated VM networks (like OPNsense)</li>
-                      <li>Use names like br0, br1, vmbr0, vmbr1, etc.</li>
-                      <li>Bridges with ports act as network switches</li>
+                      <li><strong>Automatic IP Migration:</strong> IP addresses from selected ports will be transferred to the bridge</li>
+                      <li><strong>Safe Operation:</strong> Network connectivity is maintained during bridge creation</li>
+                      <li>Perfect for VMs and containers to share the same network as the host</li>
+                      <li>Empty bridges are useful for isolated VM networks (like OPNsense WAN/LAN)</li>
+                      <li>Use names like br0, br1, vmbr0, vmbr1 for compatibility</li>
+                      <li>Example: Adding ens18 to br0 → br0 gets ens18's IP, ens18 becomes a bridge port</li>
                     </ul>
                   </div>
                 </div>
               </div>
+
+              {/* Warning for interfaces with IP addresses */}
+              {bridgeFormData.ports.some((portName) => {
+                const iface = interfaces.find((i) => i.name === portName);
+                return iface && iface.addresses && iface.addresses.length > 0;
+              }) && (
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 border border-yellow-200 dark:border-yellow-800">
+                  <div className="flex gap-2">
+                    <Info className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0" />
+                    <div className="text-sm text-gray-700 dark:text-gray-300">
+                      <p className="font-medium mb-1 text-yellow-800 dark:text-yellow-300">IP Migration Active:</p>
+                      <p className="text-xs">
+                        One or more selected ports have IP addresses. These will be automatically migrated to the bridge "{bridgeFormData.name}".
+                        The physical interfaces will become bridge ports without IP addresses. This is the Proxmox-style configuration.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="mt-6 flex justify-end gap-2">
