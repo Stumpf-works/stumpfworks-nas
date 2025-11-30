@@ -2,18 +2,12 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { lxcApi, type Container } from '@/api/lxc';
 import { getErrorMessage } from '@/api/client';
-import Card from '@/components/ui/Card';
 import {
   Box,
-  Play,
-  Square,
-  Trash2,
   Plus,
   RefreshCw,
   AlertCircle,
   Network,
-  Activity,
-  Power,
   ChevronRight,
   Server
 } from 'lucide-react';

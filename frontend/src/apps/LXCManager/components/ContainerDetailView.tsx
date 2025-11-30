@@ -1,10 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Activity,
   Terminal,
   Settings,
-  HardDrive,
   Camera,
   Database,
   Play,
@@ -142,10 +141,12 @@ export function ContainerDetailView({ container, onAction, onClose, loading }: C
                 {container.state}
               </span>
             </div>
-            <div className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700">
-              <span className="text-sm text-gray-600 dark:text-gray-400">Template</span>
-              <span className="text-sm font-medium text-gray-900 dark:text-white">{container.template || 'N/A'}</span>
-            </div>
+            {('template' in container) && (
+              <div className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Template</span>
+                <span className="text-sm font-medium text-gray-900 dark:text-white">{(container as any).template || 'N/A'}</span>
+              </div>
+            )}
             <div className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700">
               <span className="text-sm text-gray-600 dark:text-gray-400">IPv4 Address</span>
               <span className="text-sm font-medium text-gray-900 dark:text-white">{container.ipv4 || 'N/A'}</span>
@@ -293,13 +294,15 @@ export function ContainerDetailView({ container, onAction, onClose, loading }: C
             </div>
             <div className="text-sm font-medium text-gray-900 dark:text-white">{container.memory_limit || 'Unlimited'}</div>
           </div>
-          <div className="flex items-center justify-between py-3">
-            <div>
-              <div className="font-medium text-gray-900 dark:text-white">Template</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">OS template used</div>
+          {('template' in container) && (
+            <div className="flex items-center justify-between py-3">
+              <div>
+                <div className="font-medium text-gray-900 dark:text-white">Template</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">OS template used</div>
+              </div>
+              <div className="text-sm font-medium text-gray-900 dark:text-white">{(container as any).template || 'N/A'}</div>
             </div>
-            <div className="text-sm font-medium text-gray-900 dark:text-white">{container.template || 'N/A'}</div>
-          </div>
+          )}
         </div>
       </div>
     </Card>
