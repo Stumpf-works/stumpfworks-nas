@@ -252,7 +252,7 @@ export function CreateContainerModal({ isOpen, onClose, onSuccess }: CreateConta
                     type="radio"
                     name="network_mode"
                     value="internal"
-                    checked={formData.network_mode === 'internal'}
+                    checked={(formData.network_mode || 'internal') === 'internal'}
                     onChange={(e) => setFormData({ ...formData, network_mode: e.target.value })}
                     className="w-4 h-4 text-macos-blue bg-white dark:bg-macos-dark-50 border-gray-300 dark:border-gray-600 mt-0.5"
                   />
@@ -268,7 +268,7 @@ export function CreateContainerModal({ isOpen, onClose, onSuccess }: CreateConta
                     type="radio"
                     name="network_mode"
                     value="bridged"
-                    checked={formData.network_mode === 'bridged'}
+                    checked={(formData.network_mode || 'internal') === 'bridged'}
                     onChange={(e) => setFormData({ ...formData, network_mode: e.target.value })}
                     className="w-4 h-4 text-macos-blue bg-white dark:bg-macos-dark-50 border-gray-300 dark:border-gray-600 mt-0.5"
                   />
