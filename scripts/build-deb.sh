@@ -37,6 +37,7 @@ fi
 echo "📁 Creating package structure..."
 mkdir -p "$DEB_DIR/DEBIAN"
 mkdir -p "$DEB_DIR/usr/bin"
+mkdir -p "$DEB_DIR/usr/local/bin"
 mkdir -p "$DEB_DIR/etc/stumpfworks-nas"
 mkdir -p "$DEB_DIR/etc/systemd/system"
 mkdir -p "$DEB_DIR/usr/share/doc/stumpfworks-nas"
