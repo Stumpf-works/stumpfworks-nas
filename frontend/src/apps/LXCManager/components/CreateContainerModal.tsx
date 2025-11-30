@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Box, AlertCircle, Network } from 'lucide-react';
 import { lxcApi, type ContainerCreateRequest } from '@/api/lxc';
+import { networkApi } from '@/api/network';
 import { getErrorMessage } from '@/api/client';
 
 interface CreateContainerModalProps {
@@ -20,9 +21,34 @@ export function CreateContainerModal({ isOpen, onClose, onSuccess }: CreateConta
     cpu_limit: 1,
     autostart: false,
     network_mode: 'internal',
+    bridge: 'br0', // Default bridge
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
+  const [bridges, setBridges] = useState<string[]>(['br0']); // Default to br0
+
+  // Fetch available bridges when component mounts
+  useEffect(() => {
+    const fetchBridges = async () => {
+      try {
+        const response = await networkApi.listBridges();
+        if (response.success && response.data && response.data.length > 0) {
+          setBridges(response.data);
+          // Set first bridge as default if current default not in list
+          if (!response.data.includes(formData.bridge || 'br0')) {
+            setFormData((prev) => ({ ...prev, bridge: response.data[0] }));
+          }
+        }
+      } catch (err) {
+        // If fetching bridges fails, keep the default br0
+        console.error('Failed to fetch bridges:', err);
+      }
+    };
+
+    if (isOpen) {
+      fetchBridges();
+    }
+  }, [isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,6 +76,7 @@ export function CreateContainerModal({ isOpen, onClose, onSuccess }: CreateConta
           cpu_limit: 1,
           autostart: false,
           network_mode: 'internal',
+          bridge: bridges[0] || 'br0',
         });
       } else {
         setError(response.error?.message || 'Failed to create container');
@@ -246,7 +273,7 @@ export function CreateContainerModal({ isOpen, onClose, onSuccess }: CreateConta
                 <Network className="w-4 h-4 text-macos-blue" />
                 Network
               </h3>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <label className="flex items-start p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-macos-dark-50 transition-colors">
                   <input
                     type="radio"
@@ -273,12 +300,35 @@ export function CreateContainerModal({ isOpen, onClose, onSuccess }: CreateConta
                     className="w-4 h-4 text-macos-blue bg-white dark:bg-macos-dark-50 border-gray-300 dark:border-gray-600 mt-0.5"
                   />
                   <div className="ml-2.5 flex-1">
-                    <div className="text-sm font-medium text-gray-900 dark:text-white">Bridged Network (br0)</div>
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">Bridged Network</div>
                     <div className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
-                      Container gets an IP via DHCP from your router (192.168.178.x)
+                      Container gets an IP via DHCP from your router
                     </div>
                   </div>
                 </label>
+
+                {/* Bridge Selector - shown only when bridged mode is selected */}
+                {formData.network_mode === 'bridged' && (
+                  <div className="pl-7">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Select Bridge
+                    </label>
+                    <select
+                      value={formData.bridge || 'br0'}
+                      onChange={(e) => setFormData({ ...formData, bridge: e.target.value })}
+                      className="w-full px-4 py-2 bg-white dark:bg-macos-dark-50 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-macos-blue focus:border-transparent text-gray-900 dark:text-white"
+                    >
+                      {bridges.map((bridge) => (
+                        <option key={bridge} value={bridge}>
+                          {bridge}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Available bridges: {bridges.join(', ')}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 

@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Server, AlertCircle } from 'lucide-react';
 import { vmsApi, type VMCreateRequest } from '@/api/vms';
+import { networkApi } from '@/api/network';
 import { getErrorMessage } from '@/api/client';
 
 interface CreateVMModalProps {
@@ -24,6 +25,28 @@ export function CreateVMModal({ isOpen, onClose, onSuccess }: CreateVMModalProps
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
+  const [bridges, setBridges] = useState<string[]>(['default', 'br0']); // Default options
+
+  // Fetch available bridges when component mounts
+  useEffect(() => {
+    const fetchBridges = async () => {
+      try {
+        const response = await networkApi.listBridges();
+        if (response.success && response.data && response.data.length > 0) {
+          // Include 'default' and available bridges
+          const availableBridges = ['default', ...response.data];
+          setBridges(availableBridges);
+        }
+      } catch (err) {
+        // If fetching bridges fails, keep the default options
+        console.error('Failed to fetch bridges:', err);
+      }
+    };
+
+    if (isOpen) {
+      fetchBridges();
+    }
+  }, [isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -278,13 +301,20 @@ export function CreateVMModal({ isOpen, onClose, onSuccess }: CreateVMModalProps
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Network Bridge
                 </label>
-                <input
-                  type="text"
+                <select
                   value={formData.network}
                   onChange={(e) => setFormData({ ...formData, network: e.target.value })}
-                  placeholder="default"
                   className="w-full px-4 py-2 bg-white dark:bg-macos-dark-50 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-macos-blue focus:border-transparent text-gray-900 dark:text-white"
-                />
+                >
+                  {bridges.map((bridge) => (
+                    <option key={bridge} value={bridge}>
+                      {bridge}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Available bridges: {bridges.join(', ')}
+                </p>
               </div>
             </div>
 

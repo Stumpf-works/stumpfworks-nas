@@ -22,6 +22,7 @@ export interface ContainerCreateRequest {
   cpu_limit?: number; // Number of CPUs
   autostart?: boolean;
   network_mode?: string; // "internal" or "bridged"
+  bridge?: string; // Bridge name when network_mode is "bridged" (e.g., br0, vmbr0, vmbr1)
 }
 
 export interface LXCTemplate {

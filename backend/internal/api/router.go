@@ -406,6 +406,7 @@ func NewRouter(cfg *config.Config) http.Handler {
 					r.Post("/firewall/reset", netHandler.ResetFirewall)
 
 					// Bridge management
+					r.Get("/bridges", netHandler.ListBridges)
 					r.Post("/bridges", netHandler.CreateBridge)
 					r.Delete("/bridges/{name}", netHandler.DeleteBridge)
 					r.Post("/bridges/{name}/attach", netHandler.AttachPortToBridge)

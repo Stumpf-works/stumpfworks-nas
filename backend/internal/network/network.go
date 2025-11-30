@@ -777,3 +777,28 @@ func DetachPortFromBridge(portName string) error {
 
 	return nil
 }
+
+// ListBridges returns a list of all bridge interfaces
+func ListBridges() ([]string, error) {
+	cmd := exec.Command("ip", "-o", "link", "show", "type", "bridge")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		// If no bridges exist, this is not an error
+		return []string{}, nil
+	}
+
+	var bridges []string
+	scanner := bufio.NewScanner(bytes.NewReader(output))
+	for scanner.Scan() {
+		line := scanner.Text()
+		// Format: index: bridge_name: <BROADCAST,MULTICAST,UP,LOWER_UP> ...
+		fields := strings.Fields(line)
+		if len(fields) >= 2 {
+			// Remove the trailing colon from the bridge name
+			bridgeName := strings.TrimSuffix(fields[1], ":")
+			bridges = append(bridges, bridgeName)
+		}
+	}
+
+	return bridges, nil
+}

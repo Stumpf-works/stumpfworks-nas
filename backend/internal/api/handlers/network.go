@@ -497,3 +497,14 @@ func (h *NetworkHandler) DetachPortFromBridge(w http.ResponseWriter, r *http.Req
 
 	utils.RespondSuccess(w, map[string]string{"message": "Port detached from bridge successfully"})
 }
+
+// ListBridges handles GET /api/network/bridges
+func (h *NetworkHandler) ListBridges(w http.ResponseWriter, r *http.Request) {
+	bridges, err := network.ListBridges()
+	if err != nil {
+		utils.RespondError(w, errors.InternalServerError("Failed to list bridges", err))
+		return
+	}
+
+	utils.RespondSuccess(w, bridges)
+}
