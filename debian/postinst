@@ -224,6 +224,11 @@ SMBCONF
         echo "🔄 Reloading systemd..."
         systemctl daemon-reload
 
+        # Enable bridge firewall service (for container/VM networking)
+        echo "🌉 Enabling bridge firewall service..."
+        systemctl enable bridge-firewall.service 2>/dev/null || true
+        systemctl start bridge-firewall.service 2>/dev/null || true
+
         # Enable service
         echo "✅ Enabling service..."
         systemctl enable stumpfworks-nas.service
