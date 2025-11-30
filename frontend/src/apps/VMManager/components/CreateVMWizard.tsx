@@ -246,7 +246,7 @@ export function CreateVMWizard({ isOpen, onClose, onSuccess }: CreateVMWizardPro
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.95, opacity: 0, y: 20 }}
           transition={{ type: 'spring', duration: 0.5 }}
-          className="bg-white/90 dark:bg-macos-dark-100/90 backdrop-blur-xl rounded-2xl shadow-2xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-hidden border border-gray-200/50 dark:border-gray-700/50"
+          className="bg-white/90 dark:bg-macos-dark-100/90 backdrop-blur-xl rounded-2xl shadow-2xl max-w-3xl w-full mx-4 h-[85vh] flex flex-col overflow-hidden border border-gray-200/50 dark:border-gray-700/50"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
@@ -359,7 +359,7 @@ export function CreateVMWizard({ isOpen, onClose, onSuccess }: CreateVMWizardPro
           </AnimatePresence>
 
           {/* Step Content */}
-          <div className="p-6 min-h-[400px] max-h-[60vh] overflow-y-auto">
+          <div className="flex-1 p-6 overflow-y-auto">
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentStep}
