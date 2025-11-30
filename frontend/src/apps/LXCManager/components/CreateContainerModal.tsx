@@ -76,7 +76,7 @@ export function CreateContainerModal({ isOpen, onClose, onSuccess }: CreateConta
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
-          className="bg-white dark:bg-macos-dark-100 rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-auto"
+          className="bg-white dark:bg-macos-dark-100 rounded-xl shadow-2xl max-w-xl w-full mx-4 max-h-[85vh] overflow-auto"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
@@ -105,10 +105,10 @@ export function CreateContainerModal({ isOpen, onClose, onSuccess }: CreateConta
           )}
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          <form onSubmit={handleSubmit} className="p-6 space-y-4">
             {/* General Section */}
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">General</h3>
+              <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-3">General</h3>
               <div className="space-y-4">
                 {/* Container Name */}
                 <div>
@@ -179,7 +179,7 @@ export function CreateContainerModal({ isOpen, onClose, onSuccess }: CreateConta
 
             {/* Resources Section */}
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Resources</h3>
+              <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-3">Resources</h3>
               <div className="space-y-4">
                 {/* Memory */}
                 <div>
@@ -242,12 +242,12 @@ export function CreateContainerModal({ isOpen, onClose, onSuccess }: CreateConta
 
             {/* Network Section */}
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                <Network className="w-5 h-5 text-macos-blue" />
+              <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                <Network className="w-4 h-4 text-macos-blue" />
                 Network
               </h3>
-              <div className="space-y-3">
-                <label className="flex items-start p-3 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-macos-dark-50 transition-colors">
+              <div className="space-y-2">
+                <label className="flex items-start p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-macos-dark-50 transition-colors">
                   <input
                     type="radio"
                     name="network_mode"
@@ -256,14 +256,14 @@ export function CreateContainerModal({ isOpen, onClose, onSuccess }: CreateConta
                     onChange={(e) => setFormData({ ...formData, network_mode: e.target.value })}
                     className="w-4 h-4 text-macos-blue bg-white dark:bg-macos-dark-50 border-gray-300 dark:border-gray-600 mt-0.5"
                   />
-                  <div className="ml-3 flex-1">
-                    <div className="font-medium text-gray-900 dark:text-white">Internal Network (lxcbr0)</div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  <div className="ml-2.5 flex-1">
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">Internal Network (lxcbr0)</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
                       Container gets an IP from the internal network (10.0.3.x)
                     </div>
                   </div>
                 </label>
-                <label className="flex items-start p-3 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-macos-dark-50 transition-colors">
+                <label className="flex items-start p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-macos-dark-50 transition-colors">
                   <input
                     type="radio"
                     name="network_mode"
@@ -272,9 +272,9 @@ export function CreateContainerModal({ isOpen, onClose, onSuccess }: CreateConta
                     onChange={(e) => setFormData({ ...formData, network_mode: e.target.value })}
                     className="w-4 h-4 text-macos-blue bg-white dark:bg-macos-dark-50 border-gray-300 dark:border-gray-600 mt-0.5"
                   />
-                  <div className="ml-3 flex-1">
-                    <div className="font-medium text-gray-900 dark:text-white">Bridged Network (br0)</div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  <div className="ml-2.5 flex-1">
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">Bridged Network (br0)</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
                       Container gets an IP via DHCP from your router (192.168.178.x)
                     </div>
                   </div>
@@ -284,7 +284,7 @@ export function CreateContainerModal({ isOpen, onClose, onSuccess }: CreateConta
 
             {/* Options Section */}
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Options</h3>
+              <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-3">Options</h3>
               <div className="flex items-center">
                 <input
                   type="checkbox"
