@@ -4,18 +4,18 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Stumpf-works/stumpfworks-nas/internal/system/executor"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/system"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
 	"go.uber.org/zap"
 )
 
 // PackageInstaller handles system package installation via apt/dpkg
 type PackageInstaller struct {
-	shell executor.ShellExecutor
+	shell *system.ShellExecutor
 }
 
 // NewPackageInstaller creates a new package installer
-func NewPackageInstaller(shell executor.ShellExecutor) *PackageInstaller {
+func NewPackageInstaller(shell *system.ShellExecutor) *PackageInstaller {
 	return &PackageInstaller{
 		shell: shell,
 	}
@@ -30,17 +30,20 @@ func (pi *PackageInstaller) InstallPackages(packages []string) error {
 	logger.Info("Installing packages", zap.Strings("packages", packages))
 
 	// Update package lists first
-	result, err := pi.shell.Execute("apt-get", "update")
+	opts := &system.CommandOptions{
+		Env: []string{"DEBIAN_FRONTEND=noninteractive"},
+	}
+	result, err := pi.shell.ExecuteWithOptions("apt-get", opts, "update")
 	if err != nil {
 		logger.Error("Failed to update package lists", zap.Error(err), zap.String("stderr", result.Stderr))
 		return fmt.Errorf("failed to update package lists: %w", err)
 	}
 
-	// Install packages
-	args := []string{"apt-get", "install", "-y"}
+	// Install packages with proper options
+	args := []string{"install", "-y", "--no-install-recommends"}
 	args = append(args, packages...)
 
-	result, err = pi.shell.Execute(args[0], args[1:]...)
+	result, err = pi.shell.ExecuteWithOptions("apt-get", opts, args...)
 	if err != nil {
 		logger.Error("Failed to install packages", zap.Error(err), zap.String("stderr", result.Stderr))
 		return fmt.Errorf("failed to install packages: %s: %w", result.Stderr, err)

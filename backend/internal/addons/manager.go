@@ -6,7 +6,7 @@ import (
 
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database/models"
-	"github.com/Stumpf-works/stumpfworks-nas/internal/system/executor"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/system"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
 	"go.uber.org/zap"
 )
@@ -17,7 +17,7 @@ type Manager struct {
 }
 
 // NewManager creates a new addon manager
-func NewManager(shell executor.ShellExecutor) *Manager {
+func NewManager(shell *system.ShellExecutor) *Manager {
 	return &Manager{
 		packageInstaller: NewPackageInstaller(shell),
 	}
