@@ -17,6 +17,8 @@ const Terminal = lazy(() => import('./Terminal/Terminal').then(m => ({ default: 
 const ADDCManager = lazy(() => import('./ADDCManager').then(m => ({ default: m.ADDCManager })));
 const SystemManager = lazy(() => import('./SystemManager/SystemManager').then(m => ({ default: m.SystemManager })));
 const HighAvailability = lazy(() => import('./HighAvailability/HighAvailability').then(m => ({ default: m.HighAvailability })));
+const VMManager = lazy(() => import('./VMManager').then(m => ({ default: m.VMManager })));
+const LXCManager = lazy(() => import('./LXCManager').then(m => ({ default: m.LXCManager })));
 
 export const registeredApps: App[] = [
   {
@@ -139,6 +141,22 @@ export const registeredApps: App[] = [
     defaultSize: { width: 800, height: 700 },
     minSize: { width: 600, height: 500 },
   },
+  {
+    id: 'vm-manager',
+    name: 'VM Manager',
+    icon: '🖥️',
+    component: VMManager,
+    defaultSize: { width: 1200, height: 800 },
+    minSize: { width: 900, height: 600 },
+  },
+  {
+    id: 'lxc-manager',
+    name: 'LXC Manager',
+    icon: '📦',
+    component: LXCManager,
+    defaultSize: { width: 1200, height: 800 },
+    minSize: { width: 900, height: 600 },
+  },
 ];
 
 export function getAppById(id: string): App | undefined {
@@ -148,7 +166,7 @@ export function getAppById(id: string): App | undefined {
 // App categories for App Gallery
 export const appCategories = {
   system: ['dashboard', 'system', 'settings', 'terminal'],
-  management: ['users', 'quotas', 'network', 'storage', 'ad-dc', 'high-availability'],
+  management: ['users', 'quotas', 'network', 'storage', 'ad-dc', 'high-availability', 'vm-manager', 'lxc-manager'],
   security: ['security-center'],
   tools: ['files'],
   development: ['docker', 'plugins', 'app-store'],

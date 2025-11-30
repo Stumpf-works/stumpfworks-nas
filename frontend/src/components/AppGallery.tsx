@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Search } from 'lucide-react';
 import { registeredApps, appCategories, categoryNames, categoryIcons, type AppCategory } from '../apps';
 import type { App } from '../types';
+import { useAddonApps } from '../hooks/useAddonApps';
 
 interface AppGalleryProps {
   isOpen: boolean;
@@ -10,13 +11,25 @@ interface AppGalleryProps {
   onLaunchApp: (appId: string) => void;
 }
 
+// Apps that require addon installation
+const ADDON_APPS = ['vm-manager', 'lxc-manager'];
+
 export const AppGallery = memo(function AppGallery({ isOpen, onClose, onLaunchApp }: AppGalleryProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<AppCategory | 'all'>('all');
+  const { installedAddonAppIds } = useAddonApps();
 
-  // Filter apps based on search and category
+  // Filter apps based on search, category, and addon installation
   const filteredApps = useMemo(() => {
-    let apps = registeredApps;
+    // First, filter out addon apps that aren't installed
+    let apps = registeredApps.filter((app) => {
+      // If it's an addon app, only show it if the addon is installed
+      if (ADDON_APPS.includes(app.id)) {
+        return installedAddonAppIds.includes(app.id);
+      }
+      // Non-addon apps are always shown
+      return true;
+    });
 
     // Filter by category
     if (selectedCategory !== 'all') {
@@ -35,7 +48,7 @@ export const AppGallery = memo(function AppGallery({ isOpen, onClose, onLaunchAp
     }
 
     return apps;
-  }, [searchQuery, selectedCategory]);
+  }, [searchQuery, selectedCategory, installedAddonAppIds]);
 
   // Group apps by category for display
   const appsByCategory = useMemo(() => {

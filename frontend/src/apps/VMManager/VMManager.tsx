@@ -1,193 +1,269 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { vmsApi, type VM } from '../../api/vms';
-import { Play, Square, Trash2, Plus, Monitor, RefreshCw } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { vmsApi, type VM } from '@/api/vms';
+import { getErrorMessage } from '@/api/client';
+import Card from '@/components/ui/Card';
+import {
+  Server,
+  Play,
+  Square,
+  Trash2,
+  Plus,
+  RefreshCw,
+  AlertCircle,
+  Cpu,
+  HardDrive,
+  Calendar,
+  Power
+} from 'lucide-react';
 
 export function VMManager() {
-  const [vms, setVMs] = useState<VM[]>([]);
+  const [vms, setVms] = useState<VM[]>([]);
   const [loading, setLoading] = useState(true);
-  const [actionInProgress, setActionInProgress] = useState<string | null>(null);
+  const [error, setError] = useState<string>('');
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
     loadVMs();
-    const interval = setInterval(loadVMs, 5000);
-    return () => clearInterval(interval);
   }, []);
 
   const loadVMs = async () => {
     try {
+      setLoading(true);
+      setError('');
       const response = await vmsApi.listVMs();
       if (response.success && response.data) {
-        setVMs(response.data);
+        setVms(response.data);
+      } else {
+        setError(response.error?.message || 'Failed to load VMs');
       }
-    } catch (error) {
-      console.error('Failed to load VMs:', error);
+    } catch (err) {
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleStart = async (vm: VM) => {
-    setActionInProgress(vm.uuid);
+  const handleStart = async (vmId: string) => {
     try {
-      const response = await vmsApi.startVM(vm.uuid);
+      setActionLoading(vmId);
+      const response = await vmsApi.startVM(vmId);
       if (response.success) {
-        toast.success(`VM ${vm.name} started`);
         await loadVMs();
       } else {
-        toast.error(response.error?.message || 'Failed to start VM');
+        setError(response.error?.message || 'Failed to start VM');
       }
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to start VM');
+    } catch (err) {
+      setError(getErrorMessage(err));
     } finally {
-      setActionInProgress(null);
+      setActionLoading(null);
     }
   };
 
-  const handleStop = async (vm: VM, force: boolean = false) => {
-    setActionInProgress(vm.uuid);
+  const handleStop = async (vmId: string) => {
     try {
-      const response = await vmsApi.stopVM(vm.uuid, force);
+      setActionLoading(vmId);
+      const response = await vmsApi.stopVM(vmId);
       if (response.success) {
-        toast.success(`VM ${vm.name} stopped`);
         await loadVMs();
       } else {
-        toast.error(response.error?.message || 'Failed to stop VM');
+        setError(response.error?.message || 'Failed to stop VM');
       }
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to stop VM');
+    } catch (err) {
+      setError(getErrorMessage(err));
     } finally {
-      setActionInProgress(null);
+      setActionLoading(null);
     }
   };
 
-  const handleDelete = async (vm: VM) => {
-    if (!confirm(`Delete VM "${vm.name}"? This cannot be undone.`)) return;
+  const handleDelete = async (vmId: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete VM "${name}"? This cannot be undone.`)) {
+      return;
+    }
 
-    setActionInProgress(vm.uuid);
     try {
-      const response = await vmsApi.deleteVM(vm.uuid, true);
+      setActionLoading(vmId);
+      const response = await vmsApi.deleteVM(vmId, true);
       if (response.success) {
-        toast.success(`VM ${vm.name} deleted`);
         await loadVMs();
       } else {
-        toast.error(response.error?.message || 'Failed to delete VM');
+        setError(response.error?.message || 'Failed to delete VM');
       }
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to delete VM');
+    } catch (err) {
+      setError(getErrorMessage(err));
     } finally {
-      setActionInProgress(null);
+      setActionLoading(null);
+    }
+  };
+
+  const getStateColor = (state: string) => {
+    switch (state.toLowerCase()) {
+      case 'running': return 'text-green-600 dark:text-green-400';
+      case 'stopped': return 'text-gray-600 dark:text-gray-400';
+      case 'paused': return 'text-yellow-600 dark:text-yellow-400';
+      default: return 'text-gray-600 dark:text-gray-400';
+    }
+  };
+
+  const getStateBadge = (state: string) => {
+    const baseClasses = 'px-2 py-1 rounded-full text-xs font-semibold';
+    switch (state.toLowerCase()) {
+      case 'running': return `${baseClasses} bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300`;
+      case 'stopped': return `${baseClasses} bg-gray-100 dark:bg-gray-800/30 text-gray-700 dark:text-gray-300`;
+      case 'paused': return `${baseClasses} bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300`;
+      default: return `${baseClasses} bg-gray-100 dark:bg-gray-800/30 text-gray-700 dark:text-gray-300`;
     }
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <RefreshCw className="w-8 h-8 animate-spin text-macos-blue mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-400">Loading VMs...</p>
-        </div>
+      <div className="flex flex-col items-center justify-center h-full bg-gray-50 dark:bg-macos-dark-50">
+        <RefreshCw className="w-12 h-12 text-macos-blue animate-spin" />
+        <p className="mt-4 text-gray-600 dark:text-gray-400">Loading VMs...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-macos-dark-50">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-macos-dark-50">
       {/* Header */}
-      <div className="px-6 pt-8 pb-6 bg-white dark:bg-macos-dark-100">
+      <div className="p-6 bg-white dark:bg-macos-dark-100 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">VM Manager</h1>
-            <p className="text-gray-500 dark:text-gray-400 mt-1">Manage virtual machines with KVM/QEMU</p>
+          <div className="flex items-center gap-3">
+            <Server className="w-8 h-8 text-macos-blue" />
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">VM Manager</h1>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Manage virtual machines</p>
+            </div>
           </div>
-          <button className="px-4 py-2 bg-macos-blue text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2">
-            <Plus className="w-5 h-5" />
-            Create VM
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={loadVMs}
+              className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center gap-2"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Refresh
+            </button>
+            <button className="px-4 py-2 bg-macos-blue text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              Create VM
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* VM List */}
-      <div className="flex-1 overflow-auto px-6 py-4">
+      {/* Error Display */}
+      {error && (
+        <div className="mx-6 mt-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <h3 className="font-semibold text-red-900 dark:text-red-200">Error</h3>
+            <p className="text-sm text-red-700 dark:text-red-300 mt-1">{error}</p>
+          </div>
+          <button onClick={() => setError('')} className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200">
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* VMs List */}
+      <div className="flex-1 overflow-auto p-6">
         {vms.length === 0 ? (
-          <div className="text-center py-12">
-            <Monitor className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No VMs Found</h3>
-            <p className="text-gray-500 dark:text-gray-400">Create your first virtual machine to get started</p>
+          <div className="flex flex-col items-center justify-center h-full">
+            <Server className="w-16 h-16 text-gray-400 dark:text-gray-600 mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Virtual Machines</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">Get started by creating your first VM</p>
+            <button className="px-4 py-2 bg-macos-blue text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              Create VM
+            </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-            {vms.map((vm) => {
-              const isRunning = vm.state === 'running';
-              const isInProgress = actionInProgress === vm.uuid;
-
-              return (
-                <motion.div
-                  key={vm.uuid}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-gray-50 dark:bg-macos-dark-100 rounded-xl p-6 hover:shadow-md transition-shadow"
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{vm.name}</h3>
-                      <span className={`inline-block px-2 py-1 text-xs font-medium rounded mt-2 ${
-                        isRunning
-                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                          : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
-                      }`}>
-                        {vm.state}
-                      </span>
+          <div className="grid gap-4">
+            {vms.map((vm) => (
+              <motion.div
+                key={vm.uuid}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <Card>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className={`p-3 rounded-lg ${vm.state.toLowerCase() === 'running' ? 'bg-green-100 dark:bg-green-900/30' : 'bg-gray-100 dark:bg-gray-800/30'}`}>
+                        <Server className={`w-6 h-6 ${getStateColor(vm.state)}`} />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-3">
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{vm.name}</h3>
+                          <span className={getStateBadge(vm.state)}>{vm.state}</span>
+                        </div>
+                        <div className="flex items-center gap-4 mt-2 text-sm text-gray-600 dark:text-gray-400">
+                          <div className="flex items-center gap-1">
+                            <Cpu className="w-4 h-4" />
+                            {vm.vcpus} vCPUs
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <HardDrive className="w-4 h-4" />
+                            {(vm.memory / 1024).toFixed(1)} GB RAM
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <HardDrive className="w-4 h-4" />
+                            {vm.disk_size} GB Disk
+                          </div>
+                          {vm.autostart && (
+                            <div className="flex items-center gap-1 text-macos-blue">
+                              <Power className="w-4 h-4" />
+                              Autostart
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 mt-1 text-xs text-gray-500 dark:text-gray-500">
+                          <Calendar className="w-3 h-3" />
+                          Created {new Date(vm.created_at).toLocaleDateString()}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-
-                  <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400 mb-4">
-                    <div className="flex justify-between">
-                      <span>CPUs:</span>
-                      <span className="font-medium">{vm.vcpus}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Memory:</span>
-                      <span className="font-medium">{(vm.memory / 1024).toFixed(1)} GB</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Disk:</span>
-                      <span className="font-medium">{(vm.disk_size / 1024).toFixed(1)} GB</span>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2">
-                    {!isRunning ? (
+                    <div className="flex gap-2">
+                      {vm.state.toLowerCase() === 'running' ? (
+                        <button
+                          onClick={() => handleStop(vm.uuid)}
+                          disabled={actionLoading === vm.uuid}
+                          className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50"
+                          title="Stop VM"
+                        >
+                          {actionLoading === vm.uuid ? (
+                            <RefreshCw className="w-5 h-5 animate-spin" />
+                          ) : (
+                            <Square className="w-5 h-5" />
+                          )}
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleStart(vm.uuid)}
+                          disabled={actionLoading === vm.uuid}
+                          className="p-2 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors disabled:opacity-50"
+                          title="Start VM"
+                        >
+                          {actionLoading === vm.uuid ? (
+                            <RefreshCw className="w-5 h-5 animate-spin" />
+                          ) : (
+                            <Play className="w-5 h-5" />
+                          )}
+                        </button>
+                      )}
                       <button
-                        onClick={() => handleStart(vm)}
-                        disabled={isInProgress}
-                        className="flex-1 px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                        onClick={() => handleDelete(vm.uuid, vm.name)}
+                        disabled={actionLoading === vm.uuid}
+                        className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50"
+                        title="Delete VM"
                       >
-                        <Play className="w-4 h-4" />
-                        Start
+                        <Trash2 className="w-5 h-5" />
                       </button>
-                    ) : (
-                      <button
-                        onClick={() => handleStop(vm)}
-                        disabled={isInProgress}
-                        className="flex-1 px-3 py-2 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                      >
-                        <Square className="w-4 h-4" />
-                        Stop
-                      </button>
-                    )}
-                    <button
-                      onClick={() => handleDelete(vm)}
-                      disabled={isInProgress || isRunning}
-                      className="px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    </div>
                   </div>
-                </motion.div>
-              );
-            })}
+                </Card>
+              </motion.div>
+            ))}
           </div>
         )}
       </div>
