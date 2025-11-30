@@ -219,13 +219,15 @@ func (lm *LXCManager) CreateContainer(req ContainerCreateRequest) error {
 	}
 
 	// Build lxc-create command
+	// Modern LXC uses the "download" template
 	args := []string{
 		"lxc-create",
 		"-n", req.Name,
-		"-t", req.Template,
+		"-t", "download",
 		"--",
-		"-r", req.Release,
-		"-a", req.Architecture,
+		"--dist", req.Template,
+		"--release", req.Release,
+		"--arch", req.Architecture,
 	}
 
 	// Container creation can take several minutes (downloading packages, etc.)
