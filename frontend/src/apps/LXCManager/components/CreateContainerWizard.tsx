@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -208,7 +208,24 @@ export function CreateContainerWizard({ isOpen, onClose, onSuccess }: CreateCont
   };
 
   const getCurrentStepIndex = () => STEPS.findIndex((s) => s.id === currentStep);
-  const canGoNext = validateStep(currentStep);
+
+  // Check if current step is valid (without updating validation errors state)
+  const canGoNext = useMemo(() => {
+    if (currentStep === 'general') {
+      if (!formData.name.trim()) return false;
+      if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(formData.name)) return false;
+      if (!formData.template) return false;
+      if (formData.password && formData.password.length < 8) return false;
+      if (formData.password && formData.password !== formData.password_confirm) return false;
+      if (formData.ssh_key && !formData.ssh_key.trim().startsWith('ssh-')) return false;
+    } else if (currentStep === 'resources') {
+      if (formData.memory_limit && (formData.memory_limit < 128 || formData.memory_limit > 16384)) return false;
+      if (formData.cpu_limit && (formData.cpu_limit < 1 || formData.cpu_limit > 16)) return false;
+    } else if (currentStep === 'network') {
+      if (formData.network_mode === 'bridged' && !formData.bridge) return false;
+    }
+    return true;
+  }, [currentStep, formData]);
 
   if (!isOpen) return null;
 

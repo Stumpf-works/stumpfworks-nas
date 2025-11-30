@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -210,7 +210,25 @@ export function CreateVMWizard({ isOpen, onClose, onSuccess }: CreateVMWizardPro
   };
 
   const getCurrentStepIndex = () => STEPS.findIndex((s) => s.id === currentStep);
-  const canGoNext = validateStep(currentStep);
+
+  // Check if current step is valid (without updating validation errors state)
+  const canGoNext = useMemo(() => {
+    if (currentStep === 'general') {
+      if (!formData.name.trim()) return false;
+      if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(formData.name)) return false;
+      if (!formData.os_type) return false;
+      if (formData.password && formData.password.length < 8) return false;
+      if (formData.password && formData.password !== formData.password_confirm) return false;
+      if (formData.ssh_key && !formData.ssh_key.trim().startsWith('ssh-')) return false;
+    } else if (currentStep === 'resources') {
+      if (formData.memory < 512 || formData.memory > 32768) return false;
+      if (formData.vcpus < 1 || formData.vcpus > 16) return false;
+      if (formData.disk_size < 10 || formData.disk_size > 500) return false;
+    } else if (currentStep === 'network') {
+      if (!formData.network) return false;
+    }
+    return true;
+  }, [currentStep, formData]);
 
   if (!isOpen) return null;
 
