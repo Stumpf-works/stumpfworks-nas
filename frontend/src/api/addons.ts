@@ -1,4 +1,4 @@
-import { ApiResponse } from './client';
+import client, { ApiResponse } from './client';
 
 // Addon Types
 export interface AddonManifest {
@@ -38,35 +38,31 @@ export interface AddonWithStatus {
 export const addonsApi = {
   // List all available addons with their installation status
   listAddons: async (): Promise<ApiResponse<AddonWithStatus[]>> => {
-    const response = await fetch('/api/v1/addons/');
-    return response.json();
+    const response = await client.get<ApiResponse<AddonWithStatus[]>>('/addons/');
+    return response.data;
   },
 
   // Get details of a specific addon
   getAddon: async (addonId: string): Promise<ApiResponse<AddonWithStatus>> => {
-    const response = await fetch(`/api/v1/addons/${encodeURIComponent(addonId)}`);
-    return response.json();
+    const response = await client.get<ApiResponse<AddonWithStatus>>(`/addons/${encodeURIComponent(addonId)}`);
+    return response.data;
   },
 
   // Get installation status of an addon
   getAddonStatus: async (addonId: string): Promise<ApiResponse<InstallationStatus>> => {
-    const response = await fetch(`/api/v1/addons/${encodeURIComponent(addonId)}/status`);
-    return response.json();
+    const response = await client.get<ApiResponse<InstallationStatus>>(`/addons/${encodeURIComponent(addonId)}/status`);
+    return response.data;
   },
 
   // Install an addon
   installAddon: async (addonId: string): Promise<ApiResponse<{ message: string; addon_id: string }>> => {
-    const response = await fetch(`/api/v1/addons/${encodeURIComponent(addonId)}/install`, {
-      method: 'POST',
-    });
-    return response.json();
+    const response = await client.post<ApiResponse<{ message: string; addon_id: string }>>(`/addons/${encodeURIComponent(addonId)}/install`);
+    return response.data;
   },
 
   // Uninstall an addon
   uninstallAddon: async (addonId: string): Promise<ApiResponse<{ message: string; addon_id: string }>> => {
-    const response = await fetch(`/api/v1/addons/${encodeURIComponent(addonId)}/uninstall`, {
-      method: 'POST',
-    });
-    return response.json();
+    const response = await client.post<ApiResponse<{ message: string; addon_id: string }>>(`/addons/${encodeURIComponent(addonId)}/uninstall`);
+    return response.data;
   },
 };
