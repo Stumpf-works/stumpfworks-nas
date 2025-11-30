@@ -405,6 +405,12 @@ func NewRouter(cfg *config.Config) http.Handler {
 					r.Post("/firewall/default", netHandler.SetDefaultPolicy)
 					r.Post("/firewall/reset", netHandler.ResetFirewall)
 
+					// Bridge management
+					r.Post("/bridges", netHandler.CreateBridge)
+					r.Delete("/bridges/{name}", netHandler.DeleteBridge)
+					r.Post("/bridges/{name}/attach", netHandler.AttachPortToBridge)
+					r.Post("/bridges/{name}/detach", netHandler.DetachPortFromBridge)
+
 					// Wake-on-LAN
 					r.Post("/wol", netHandler.WakeOnLAN)
 				})

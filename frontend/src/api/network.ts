@@ -194,4 +194,25 @@ export const networkApi = {
     const response = await client.post('/network/wol', { macAddress });
     return response.data;
   },
+
+  // Bridge management
+  async createBridge(name: string, ports: string[]): Promise<ApiResponse<any>> {
+    const response = await client.post('/network/bridges', { name, ports });
+    return response.data;
+  },
+
+  async deleteBridge(name: string): Promise<ApiResponse<any>> {
+    const response = await client.delete(`/network/bridges/${name}`);
+    return response.data;
+  },
+
+  async attachPortToBridge(bridgeName: string, port: string): Promise<ApiResponse<any>> {
+    const response = await client.post(`/network/bridges/${bridgeName}/attach`, { port });
+    return response.data;
+  },
+
+  async detachPortFromBridge(port: string): Promise<ApiResponse<any>> {
+    const response = await client.post(`/network/bridges/detach`, { port });
+    return response.data;
+  },
 };

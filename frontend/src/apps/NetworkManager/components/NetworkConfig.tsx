@@ -12,11 +12,12 @@ import {
   Layers,
   Link2,
   Trash2,
+  GitBranch,
 } from 'lucide-react';
 import { networkApi, type NetworkInterface } from '@/api/network';
 import { syslibApi, type CreateBondRequest, type CreateVLANRequest } from '@/api/syslib';
 
-type DialogType = 'none' | 'bond' | 'vlan';
+type DialogType = 'none' | 'bond' | 'vlan' | 'bridge';
 
 export default function NetworkConfig() {
   const [interfaces, setInterfaces] = useState<NetworkInterface[]>([]);
@@ -32,6 +33,11 @@ export default function NetworkConfig() {
   const [vlanFormData, setVlanFormData] = useState<CreateVLANRequest>({
     parent: '',
     vlan_id: 100,
+  });
+
+  const [bridgeFormData, setBridgeFormData] = useState({
+    name: 'br0',
+    ports: [] as string[],
   });
 
   // Bond modes
@@ -156,9 +162,57 @@ export default function NetworkConfig() {
     }));
   };
 
+  const toggleBridgePort = (ifName: string) => {
+    setBridgeFormData((prev) => ({
+      ...prev,
+      ports: prev.ports.includes(ifName)
+        ? prev.ports.filter((i) => i !== ifName)
+        : [...prev.ports, ifName],
+    }));
+  };
+
+  const handleCreateBridge = async () => {
+    if (!bridgeFormData.name) {
+      alert('Please provide bridge name');
+      return;
+    }
+
+    try {
+      const response = await networkApi.createBridge(bridgeFormData.name, bridgeFormData.ports);
+      if (response.success) {
+        alert(`Bridge interface created: ${bridgeFormData.name}`);
+        setDialogType('none');
+        setBridgeFormData({ name: 'br0', ports: [] });
+        fetchInterfaces();
+      }
+    } catch (error) {
+      console.error('Failed to create bridge:', error);
+      alert('Failed to create bridge interface');
+    }
+  };
+
+  const handleDeleteBridge = async (name: string) => {
+    if (!confirm(`Are you sure you want to delete bridge interface "${name}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const response = await networkApi.deleteBridge(name);
+      if (response.success) {
+        alert(`Bridge interface "${name}" deleted successfully`);
+        fetchInterfaces();
+      }
+    } catch (error) {
+      console.error('Failed to delete bridge:', error);
+      alert('Failed to delete bridge interface');
+    }
+  };
+
   const getInterfaceIcon = (iface: NetworkInterface) => {
     if (iface.name.startsWith('wl')) {
       return <Wifi className="w-5 h-5 text-blue-500" />;
+    } else if (iface.name.startsWith('br') || iface.name.startsWith('vmbr')) {
+      return <GitBranch className="w-5 h-5 text-cyan-500" />;
     } else if (iface.name.startsWith('bond')) {
       return <Link2 className="w-5 h-5 text-purple-500" />;
     } else if (iface.name.includes('.')) {
@@ -170,6 +224,7 @@ export default function NetworkConfig() {
 
   const getInterfaceType = (iface: NetworkInterface): string => {
     if (iface.name.startsWith('wl')) return 'Wireless';
+    if (iface.name.startsWith('br') || iface.name.startsWith('vmbr')) return 'Bridge';
     if (iface.name.startsWith('bond')) return 'Bond';
     if (iface.name.includes('.')) return 'VLAN';
     if (iface.name.startsWith('lo')) return 'Loopback';
@@ -214,6 +269,13 @@ export default function NetworkConfig() {
           >
             <Layers className="w-4 h-4" />
             Create VLAN
+          </button>
+          <button
+            onClick={() => setDialogType('bridge')}
+            className="flex items-center gap-2 px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors"
+          >
+            <GitBranch className="w-4 h-4" />
+            Create Bridge
           </button>
         </div>
       </div>
@@ -268,12 +330,15 @@ export default function NetworkConfig() {
                       <Activity className="w-3 h-3" />
                       {iface.isUp ? 'UP' : 'DOWN'}
                     </div>
-                    {/* Delete button for Bond and VLAN interfaces */}
-                    {(iface.name.startsWith('bond') || iface.name.includes('.')) && (
+                    {/* Delete button for Bond, Bridge, and VLAN interfaces */}
+                    {(iface.name.startsWith('bond') || iface.name.startsWith('br') || iface.name.startsWith('vmbr') || iface.name.includes('.')) &&
+                     !iface.name.startsWith('br-') && (
                       <button
                         onClick={() => {
                           if (iface.name.startsWith('bond')) {
                             handleDeleteBond(iface.name);
+                          } else if (iface.name.startsWith('br') || iface.name.startsWith('vmbr')) {
+                            handleDeleteBridge(iface.name);
                           } else if (iface.name.includes('.')) {
                             handleDeleteVLAN(iface.name);
                           }
@@ -601,6 +666,130 @@ export default function NetworkConfig() {
                 className="px-4 py-2 bg-macos-blue text-white rounded-lg hover:bg-blue-600 transition-colors"
               >
                 Create VLAN
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Create Bridge Dialog */}
+      {dialogType === 'bridge' && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-macos-dark-100 rounded-2xl p-6 max-w-2xl w-full m-4 max-h-[80vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                Create Bridge Interface
+              </h3>
+              <button
+                onClick={() => setDialogType('none')}
+                className="p-1 hover:bg-gray-100 dark:hover:bg-macos-dark-200 rounded"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Bridge Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Bridge Name
+                </label>
+                <input
+                  type="text"
+                  value={bridgeFormData.name}
+                  onChange={(e) => setBridgeFormData({ ...bridgeFormData, name: e.target.value })}
+                  placeholder="br0 or vmbr0"
+                  className="w-full px-3 py-2 bg-gray-50 dark:bg-macos-dark-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Port Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Bridge Ports ({bridgeFormData.ports.length} selected, optional)
+                </label>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
+                  Select physical interfaces to attach to this bridge, or leave empty to create an isolated bridge
+                </p>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {interfaces
+                    .filter((iface) =>
+                      !iface.name.startsWith('lo') &&
+                      !iface.name.startsWith('br') &&
+                      !iface.name.startsWith('vmbr') &&
+                      !iface.name.startsWith('bond') &&
+                      !iface.name.startsWith('docker')
+                    )
+                    .map((iface) => (
+                      <div
+                        key={iface.name}
+                        className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-macos-dark-200 rounded-lg"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={bridgeFormData.ports.includes(iface.name)}
+                          onChange={() => toggleBridgePort(iface.name)}
+                          className="w-4 h-4 text-cyan-500 rounded focus:ring-2 focus:ring-cyan-500"
+                        />
+                        <div className="flex items-center gap-2 flex-1">
+                          {getInterfaceIcon(iface)}
+                          <div>
+                            <div className="font-medium text-gray-900 dark:text-gray-100">
+                              {iface.name}
+                            </div>
+                            <div className="text-xs text-gray-600 dark:text-gray-400">
+                              {iface.hardwareAddr} • {getInterfaceType(iface)}
+                            </div>
+                          </div>
+                        </div>
+                        <span
+                          className={`text-xs px-2 py-1 rounded ${
+                            iface.isUp
+                              ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                              : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                          }`}
+                        >
+                          {iface.isUp ? 'UP' : 'DOWN'}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+
+              {/* Info */}
+              <div className="bg-cyan-50 dark:bg-cyan-900/20 rounded-lg p-4">
+                <div className="flex gap-2">
+                  <Info className="w-5 h-5 text-cyan-600 dark:text-cyan-400 flex-shrink-0" />
+                  <div className="text-sm text-gray-700 dark:text-gray-300">
+                    <p className="font-medium mb-1">Bridge Interface Notes:</p>
+                    <ul className="list-disc list-inside space-y-1 text-xs">
+                      <li>Bridges connect multiple network segments at Layer 2</li>
+                      <li>Perfect for VMs and containers to share the same network</li>
+                      <li>Empty bridges are useful for isolated VM networks (like OPNsense)</li>
+                      <li>Use names like br0, br1, vmbr0, vmbr1, etc.</li>
+                      <li>Bridges with ports act as network switches</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                onClick={() => setDialogType('none')}
+                className="px-4 py-2 bg-gray-100 dark:bg-macos-dark-200 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-macos-dark-300 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateBridge}
+                className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors"
+              >
+                Create Bridge
               </button>
             </div>
           </motion.div>

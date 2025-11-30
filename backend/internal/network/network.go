@@ -550,3 +550,106 @@ func WakeOnLAN(macAddress string) error {
 
 	return nil
 }
+
+// CreateBridge creates a new bridge interface
+func CreateBridge(name string, ports []string) error {
+	// Create the bridge
+	cmd := exec.Command("ip", "link", "add", name, "type", "bridge")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to create bridge: %s", string(output))
+	}
+
+	// Add ports to the bridge if specified
+	for _, port := range ports {
+		if port == "" {
+			continue
+		}
+
+		// Bring the port down first
+		exec.Command("ip", "link", "set", port, "down").Run()
+
+		// Attach port to bridge
+		cmd = exec.Command("ip", "link", "set", port, "master", name)
+		if output, err := cmd.CombinedOutput(); err != nil {
+			// Try to clean up the bridge if we can't add a port
+			exec.Command("ip", "link", "delete", name, "type", "bridge").Run()
+			return fmt.Errorf("failed to attach port %s to bridge: %s", port, string(output))
+		}
+
+		// Bring the port back up
+		exec.Command("ip", "link", "set", port, "up").Run()
+	}
+
+	// Bring the bridge up
+	cmd = exec.Command("ip", "link", "set", name, "up")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to bring bridge up: %s", string(output))
+	}
+
+	return nil
+}
+
+// DeleteBridge deletes a bridge interface
+func DeleteBridge(name string) error {
+	// Get all ports attached to this bridge
+	cmd := exec.Command("ip", "link", "show", "master", name)
+	output, _ := cmd.CombinedOutput()
+
+	// Parse output to find ports
+	scanner := bufio.NewScanner(bytes.NewReader(output))
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.Contains(line, ":") {
+			fields := strings.Fields(line)
+			if len(fields) >= 2 {
+				portName := strings.TrimSuffix(fields[1], ":")
+				if portName != name {
+					// Remove port from bridge
+					exec.Command("ip", "link", "set", portName, "nomaster").Run()
+				}
+			}
+		}
+	}
+
+	// Bring bridge down
+	exec.Command("ip", "link", "set", name, "down").Run()
+
+	// Delete the bridge
+	cmd = exec.Command("ip", "link", "delete", name, "type", "bridge")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to delete bridge: %s", string(output))
+	}
+
+	return nil
+}
+
+// AttachPortToBridge attaches an interface to a bridge
+func AttachPortToBridge(bridgeName string, portName string) error {
+	// Bring the port down first
+	exec.Command("ip", "link", "set", portName, "down").Run()
+
+	// Attach port to bridge
+	cmd := exec.Command("ip", "link", "set", portName, "master", bridgeName)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to attach port to bridge: %s", string(output))
+	}
+
+	// Bring the port back up
+	cmd = exec.Command("ip", "link", "set", portName, "up")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to bring port up: %s", string(output))
+	}
+
+	return nil
+}
+
+// DetachPortFromBridge detaches an interface from a bridge
+func DetachPortFromBridge(portName string) error {
+	// Remove port from bridge
+	cmd := exec.Command("ip", "link", "set", portName, "nomaster")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to detach port from bridge: %s", string(output))
+	}
+
+	return nil
+}
