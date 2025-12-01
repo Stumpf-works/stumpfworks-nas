@@ -1,0 +1,87 @@
+# Stumpfworks NAS - VPN Server Configuration
+
+server:
+  host: "0.0.0.0"
+  port: 8080
+  mode: "release"  # debug or release
+
+database:
+  driver: "mysql"
+  host: "localhost"
+  port: 3306
+  database: "stumpfworks_nas"
+  username: "vpn_user"
+  password: "change_me"
+  charset: "utf8mb4"
+
+wireguard:
+  enabled: true
+  interface: "wg0"
+  listenPort: 51820
+  subnet: "10.8.0.0/24"
+  dns: "8.8.8.8, 8.8.4.4"
+  endpoint: "vpn.example.com"  # Your public IP or domain
+  mtu: 1420
+
+openvpn:
+  enabled: false  # Phase 2
+  protocol: "udp"
+  port: 1194
+  subnet: "10.9.0.0/24"
+  cipher: "AES-256-GCM"
+  auth: "SHA512"
+  compression: "lz4-v2"
+  tlsVersion: "1.3"
+  maxClients: 100
+  caPath: "/etc/openvpn/ca.crt"
+  certPath: "/etc/openvpn/server.crt"
+  keyPath: "/etc/openvpn/server.key"
+  dhPath: "/etc/openvpn/dh2048.pem"
+
+pptp:
+  enabled: false  # Phase 3 - Legacy protocol (not recommended)
+  port: 1723
+  subnet: "10.10.0.0/24"
+  encryption: "MPPE-128"
+  authentication: "MS-CHAPv2"
+  localIP: "10.10.0.1"
+  remoteIP: "10.10.0.100-200"
+
+l2tp:
+  enabled: false  # Phase 3
+  port: 1701
+  ipsecPort: 500
+  subnet: "10.11.0.0/24"
+  psk: "change_me_strong_psk"  # Pre-shared key
+  encryption: "AES-256"
+  authentication: "SHA2-256"
+  natTraversal: true
+  localIP: "10.11.0.1"
+  ipRange: "10.11.0.100-10.11.0.200"
+
+general:
+  defaultInterface: "eth0"  # Network interface for VPN traffic
+  accountSource: "local"    # local, ldap, ad, radius
+  enableLogging: true
+  logLevel: "info"          # error, warning, info, debug
+  maxConcurrentConnections: 100
+  connectionTimeout: 300    # seconds
+  enableIPv6: false
+  dnsServers: "8.8.8.8, 8.8.4.4"
+  defaultGateway: "auto"
+  enableNAT: true
+  forwardingRules: "allow-all"
+
+security:
+  jwtSecret: "change_me_to_random_secret"  # Generate with: openssl rand -base64 32
+  jwtExpiration: 24  # hours
+  rateLimitPerMinute: 60
+  enableAuditLogging: true
+  auditLogPath: "/var/log/vpn-server/audit.log"
+  allowedOrigins:
+    - "*"  # In production, specify exact origins
+
+# Environment variables (override config file):
+# VPN_DATABASE_PASSWORD=secret
+# VPN_SECURITY_JWTSECRET=secret
+# VPN_L2TP_PSK=secret

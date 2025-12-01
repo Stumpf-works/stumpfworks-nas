@@ -23,7 +23,10 @@
       "Bash($env:GOOS=\"linux\")",
       "Bash($env:GOARCH=\"amd64\")",
       "Bash(git push:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(tar:*)",
+      "Bash(echo:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

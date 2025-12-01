@@ -9,7 +9,7 @@ import {
   Square,
   Loader,
 } from 'lucide-react';
-import { vpnApi, ProtocolStatus, WireGuardPeer, VPNProtocol } from '../../api/vpn';
+import { vpnApi, ProtocolStatus, VPNProtocol } from '../../api/vpn';
 import { toast } from 'react-hot-toast';
 
 interface TabProps {
@@ -76,7 +76,7 @@ const VPNServer: React.FC = () => {
         toast.success(`${protocol.toUpperCase()} installed successfully!`, { id: toastId });
         await loadProtocolStatus();
       } else {
-        throw new Error(response.message || 'Installation failed');
+        throw new Error(response.error?.message || 'Installation failed');
       }
     } catch (error: any) {
       toast.error(`Failed to install ${protocol}: ${error.message}`, { id: toastId });
@@ -94,7 +94,7 @@ const VPNServer: React.FC = () => {
         toast.success(`${protocol.toUpperCase()} enabled successfully!`, { id: toastId });
         await loadProtocolStatus();
       } else {
-        throw new Error(response.message || 'Enable failed');
+        throw new Error(response.error?.message || 'Enable failed');
       }
     } catch (error: any) {
       toast.error(`Failed to enable ${protocol}: ${error.message}`, { id: toastId });
@@ -110,7 +110,7 @@ const VPNServer: React.FC = () => {
         toast.success(`${protocol.toUpperCase()} disabled successfully!`, { id: toastId });
         await loadProtocolStatus();
       } else {
-        throw new Error(response.message || 'Disable failed');
+        throw new Error(response.error?.message || 'Disable failed');
       }
     } catch (error: any) {
       toast.error(`Failed to disable ${protocol}: ${error.message}`, { id: toastId });
@@ -364,26 +364,6 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
 
 // WireGuard Tab Component (placeholder for now)
 const WireGuardTab: React.FC = () => {
-  const [peers, setPeers] = useState<WireGuardPeer[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    loadPeers();
-  }, []);
-
-  const loadPeers = async () => {
-    try {
-      const response = await vpnApi.wireguard.getPeers();
-      if (response.success && response.data) {
-        setPeers(response.data);
-      }
-    } catch (error) {
-      console.error('Failed to load peers:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
