@@ -519,9 +519,25 @@ func (h *NetworkHandler) ListBridges(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Return combined information
-	utils.RespondSuccess(w, map[string]interface{}{
-		"persisted": persistedBridges,
-		"system":    systemBridges,
-	})
+	// Create a combined list of unique bridge names for the frontend
+	bridgeNamesMap := make(map[string]bool)
+
+	// Add persisted bridges
+	for _, bridge := range persistedBridges {
+		bridgeNamesMap[bridge.Name] = true
+	}
+
+	// Add system bridges
+	for _, name := range systemBridges {
+		bridgeNamesMap[name] = true
+	}
+
+	// Convert map to slice
+	bridgeNames := make([]string, 0, len(bridgeNamesMap))
+	for name := range bridgeNamesMap {
+		bridgeNames = append(bridgeNames, name)
+	}
+
+	// Return list of bridge names for frontend compatibility
+	utils.RespondSuccess(w, bridgeNames)
 }
