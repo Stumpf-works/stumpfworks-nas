@@ -1,4 +1,4 @@
-// Revision: 2025-11-16 | Author: StumpfWorks AI | Version: 1.1.0
+// Revision: 2025-12-01 | Author: StumpfWorks AI | Version: 1.2.0
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -18,9 +18,11 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { syslibApi, type SambaShare, type CreateSambaShareRequest } from '@/api/syslib';
+import { storageApi, type Share } from '@/api/storage';
 
 export default function SambaManager() {
   const [shares, setShares] = useState<SambaShare[]>([]);
+  const [shareIdMap, setShareIdMap] = useState<Map<string, string>>(new Map()); // Maps share name to database ID
   const [selectedShare, setSelectedShare] = useState<SambaShare | null>(null);
   const [serviceStatus, setServiceStatus] = useState<{ active: boolean; enabled: boolean } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -40,13 +42,35 @@ export default function SambaManager() {
     recycle_bin: false,
   });
 
-  // Fetch shares
+  // Fetch shares from database (filtered for SMB type)
   const fetchShares = async () => {
     setIsLoading(true);
     try {
-      const response = await syslibApi.samba.listShares();
+      const response = await storageApi.listShares();
       if (response.success && response.data) {
-        setShares(response.data);
+        // Filter for SMB shares
+        const smbShares = response.data.filter((share: Share) => share.type === 'smb');
+
+        // Build ID map (share name -> database ID)
+        const idMap = new Map<string, string>();
+        smbShares.forEach((share: Share) => {
+          idMap.set(share.name, share.id);
+        });
+        setShareIdMap(idMap);
+
+        // Map to SambaShare format for display
+        const sambaShares: SambaShare[] = smbShares.map((share: Share) => ({
+          name: share.name,
+          path: share.path,
+          comment: share.description || '',
+          validUsers: share.validUsers || [],
+          validGroups: share.validGroups || [],
+          readOnly: share.readOnly,
+          browseable: share.browseable,
+          guestOK: share.guestOk,
+          recycleBin: false, // Not stored in database yet, default to false
+        }));
+        setShares(sambaShares);
       }
     } catch (error) {
       console.error('Failed to fetch Samba shares:', error);
@@ -79,7 +103,18 @@ export default function SambaManager() {
     }
 
     try {
-      const response = await syslibApi.samba.createShare(formData);
+      // Create share using storage API (saves to database)
+      const response = await storageApi.createShare({
+        name: formData.name,
+        path: formData.path,
+        type: 'smb',
+        description: formData.comment || '',
+        readOnly: formData.read_only || false,
+        browseable: formData.browseable !== false,
+        guestOk: formData.guest_ok || false,
+        validUsers: formData.valid_users,
+        validGroups: formData.valid_groups,
+      });
       if (response.success) {
         alert(`Share "${formData.name}" created successfully`);
         setShowCreateDialog(false);
@@ -105,8 +140,15 @@ export default function SambaManager() {
   const handleDeleteShare = async () => {
     if (!selectedShare) return;
 
+    // Get the database ID for this share
+    const shareId = shareIdMap.get(selectedShare.name);
+    if (!shareId) {
+      alert('Failed to delete share: ID not found');
+      return;
+    }
+
     try {
-      const response = await syslibApi.samba.deleteShare(selectedShare.name);
+      const response = await storageApi.deleteShare(shareId);
       if (response.success) {
         alert('Share deleted successfully');
         setShowDeleteConfirm(false);
