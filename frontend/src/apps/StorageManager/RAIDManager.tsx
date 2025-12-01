@@ -144,30 +144,41 @@ export default function RAIDManager() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-macos-dark-100">
+    <div className="flex flex-col h-full bg-gradient-to-br from-gray-50 to-white dark:from-macos-dark-100 dark:to-macos-dark-200">
       {/* Header */}
-      <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between p-6 border-b border-gray-200/50 dark:border-gray-700/50 bg-white/50 dark:bg-macos-dark-100/50 backdrop-blur-sm">
         <div className="flex items-center gap-3">
-          <Shield className="w-6 h-6 text-macos-blue" />
-          <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
-            RAID Array Manager
-          </h1>
+          <div className="p-3 bg-gradient-to-br from-macos-blue to-macos-purple rounded-xl shadow-lg">
+            <Shield className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              RAID Array Manager
+            </h1>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Redundant array management
+            </p>
+          </div>
         </div>
         <div className="flex gap-2">
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05, y: -2 }}
+            whileTap={{ scale: 0.95 }}
             onClick={fetchArrays}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-macos-dark-200 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-macos-dark-300 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-macos-dark-200 text-gray-700 dark:text-gray-300 rounded-xl hover:shadow-lg transition-all border border-gray-200 dark:border-gray-700"
           >
             <RefreshCw className="w-4 h-4" />
             Refresh
-          </button>
-          <button
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.05, y: -2 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => setShowCreateDialog(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-macos-blue text-white rounded-lg hover:bg-blue-600 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-macos-blue to-macos-purple text-white rounded-xl hover:shadow-lg transition-all"
           >
             <Plus className="w-4 h-4" />
             Create Array
-          </button>
+          </motion.button>
         </div>
       </div>
 
@@ -189,16 +200,18 @@ export default function RAIDManager() {
             </div>
           ) : (
             <div className="p-4 space-y-2">
-              {arrays.map((array) => (
+              {arrays.map((array, index) => (
                 <motion.div
                   key={array.name}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  whileHover={{ x: 4, scale: 1.02 }}
                   onClick={() => setSelectedArray(array)}
                   className={`p-4 rounded-xl cursor-pointer transition-all ${
                     selectedArray?.name === array.name
-                      ? 'bg-macos-blue/10 dark:bg-macos-blue/20 border-2 border-macos-blue'
-                      : 'bg-gray-50 dark:bg-macos-dark-200 hover:bg-gray-100 dark:hover:bg-macos-dark-300 border-2 border-transparent'
+                      ? 'bg-gradient-to-br from-macos-blue/10 to-macos-purple/10 dark:from-macos-blue/20 dark:to-macos-purple/20 border-2 border-macos-blue shadow-lg'
+                      : 'bg-white dark:bg-macos-dark-200 hover:bg-gray-50 dark:hover:bg-macos-dark-300 border-2 border-gray-200 dark:border-gray-700 hover:shadow-md'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-2">
@@ -208,7 +221,7 @@ export default function RAIDManager() {
                         {array.name}
                       </span>
                     </div>
-                    <span className="text-xs px-2 py-1 bg-macos-blue/10 text-macos-blue rounded">
+                    <span className="text-xs px-3 py-1 bg-gradient-to-r from-macos-blue/10 to-macos-purple/10 text-macos-blue rounded-full font-medium">
                       RAID {array.level}
                     </span>
                   </div>
@@ -216,7 +229,13 @@ export default function RAIDManager() {
                   <div className="space-y-1 text-sm">
                     <div className="flex justify-between">
                       <span className="text-gray-600 dark:text-gray-400">State:</span>
-                      <span className="font-medium text-gray-900 dark:text-gray-100 capitalize">
+                      <span className={`font-medium capitalize px-2 py-0.5 rounded ${
+                        array.state.toLowerCase() === 'clean' || array.state.toLowerCase() === 'active'
+                          ? 'bg-green-500/10 text-green-600 dark:text-green-400'
+                          : array.state.toLowerCase() === 'degraded' || array.state.toLowerCase() === 'recovering'
+                          ? 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400'
+                          : 'bg-red-500/10 text-red-600 dark:text-red-400'
+                      }`}>
                         {array.state}
                       </span>
                     </div>
@@ -243,11 +262,12 @@ export default function RAIDManager() {
                           {array.resync}%
                         </span>
                       </div>
-                      <div className="h-1.5 bg-gray-200 dark:bg-macos-dark-300 rounded-full overflow-hidden">
+                      <div className="h-2 bg-gray-200 dark:bg-macos-dark-300 rounded-full overflow-hidden shadow-inner">
                         <motion.div
                           initial={{ width: 0 }}
                           animate={{ width: `${array.resync}%` }}
-                          className="h-full bg-blue-500"
+                          transition={{ duration: 0.8, ease: 'easeOut' }}
+                          className="h-full bg-gradient-to-r from-blue-500 to-blue-600"
                         />
                       </div>
                     </div>
@@ -263,7 +283,11 @@ export default function RAIDManager() {
           {selectedArray ? (
             <div className="p-6">
               {/* Array Info Card */}
-              <div className="bg-gradient-to-br from-macos-blue/10 to-macos-purple/10 dark:from-macos-blue/20 dark:to-macos-purple/20 rounded-2xl p-6 mb-6">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-gradient-to-br from-macos-blue/10 via-macos-purple/10 to-pink-500/5 dark:from-macos-blue/20 dark:via-macos-purple/20 dark:to-pink-500/10 rounded-2xl p-6 mb-6 border border-gray-200/50 dark:border-gray-700/50 shadow-xl"
+              >
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
@@ -271,13 +295,19 @@ export default function RAIDManager() {
                     </h2>
                     <div className="flex items-center gap-2 mt-1">
                       {getStateIcon(selectedArray.state)}
-                      <span className="text-sm text-gray-600 dark:text-gray-400 capitalize">
+                      <span className={`text-sm font-medium capitalize px-2 py-1 rounded-full ${
+                        selectedArray.state.toLowerCase() === 'clean' || selectedArray.state.toLowerCase() === 'active'
+                          ? 'bg-green-500/10 text-green-600 dark:text-green-400'
+                          : selectedArray.state.toLowerCase() === 'degraded' || selectedArray.state.toLowerCase() === 'recovering'
+                          ? 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400'
+                          : 'bg-red-500/10 text-red-600 dark:text-red-400'
+                      }`}>
                         {selectedArray.state}
                       </span>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-3xl font-bold text-macos-blue">
+                    <div className="text-3xl font-bold bg-gradient-to-r from-macos-blue to-macos-purple bg-clip-text text-transparent">
                       {getRaidLevelInfo(selectedArray.level).name}
                     </div>
                     <div className="text-sm text-gray-600 dark:text-gray-400">
@@ -287,103 +317,166 @@ export default function RAIDManager() {
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-white/50 dark:bg-macos-dark-200/50 rounded-xl p-4">
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.1 }}
+                    className="bg-gradient-to-br from-white to-gray-50 dark:from-macos-dark-200 dark:to-macos-dark-300 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow"
+                  >
                     <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Total Size</div>
                     <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
                       {formatBytes(selectedArray.size)}
                     </div>
-                  </div>
-                  <div className="bg-white/50 dark:bg-macos-dark-200/50 rounded-xl p-4">
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.2 }}
+                    className="bg-gradient-to-br from-white to-gray-50 dark:from-macos-dark-200 dark:to-macos-dark-300 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow"
+                  >
                     <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Used</div>
                     <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
                       {formatBytes(selectedArray.usedSize)}
                     </div>
-                  </div>
-                  <div className="bg-white/50 dark:bg-macos-dark-200/50 rounded-xl p-4">
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.3 }}
+                    className="bg-gradient-to-br from-white to-gray-50 dark:from-macos-dark-200 dark:to-macos-dark-300 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow"
+                  >
                     <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Devices</div>
                     <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
                       {selectedArray.devices}
                     </div>
-                  </div>
-                  <div className="bg-white/50 dark:bg-macos-dark-200/50 rounded-xl p-4">
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.4 }}
+                    className="bg-gradient-to-br from-white to-gray-50 dark:from-macos-dark-200 dark:to-macos-dark-300 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow"
+                  >
                     <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Active</div>
                     <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
                       {selectedArray.active}
                     </div>
-                  </div>
+                  </motion.div>
                 </div>
-              </div>
+              </motion.div>
 
               {/* Device Status */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                  Device Status
-                </h3>
+                <div className="flex items-center gap-2 mb-4">
+                  <HardDrive className="w-5 h-5 text-macos-blue" />
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    Device Status
+                  </h3>
+                </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-gray-50 dark:bg-macos-dark-200 rounded-lg p-4">
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.1 }}
+                    whileHover={{ scale: 1.05, y: -2 }}
+                    className="bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-900/20 dark:to-green-800/20 rounded-xl p-4 border border-green-200 dark:border-green-700 shadow-md hover:shadow-lg transition-all"
+                  >
                     <div className="flex items-center gap-2 mb-2">
-                      <HardDrive className="w-4 h-4 text-green-500" />
+                      <div className="p-2 bg-green-500/10 rounded-lg">
+                        <HardDrive className="w-4 h-4 text-green-600 dark:text-green-400" />
+                      </div>
                       <span className="font-medium text-gray-900 dark:text-gray-100">Working</span>
                     </div>
-                    <div className="text-2xl font-bold text-green-500">
+                    <div className="text-2xl font-bold text-green-600 dark:text-green-400">
                       {selectedArray.working}
                     </div>
-                  </div>
+                  </motion.div>
 
-                  <div className="bg-gray-50 dark:bg-macos-dark-200 rounded-lg p-4">
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.2 }}
+                    whileHover={{ scale: 1.05, y: -2 }}
+                    className="bg-gradient-to-br from-red-50 to-red-100/50 dark:from-red-900/20 dark:to-red-800/20 rounded-xl p-4 border border-red-200 dark:border-red-700 shadow-md hover:shadow-lg transition-all"
+                  >
                     <div className="flex items-center gap-2 mb-2">
-                      <XCircle className="w-4 h-4 text-red-500" />
+                      <div className="p-2 bg-red-500/10 rounded-lg">
+                        <XCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
+                      </div>
                       <span className="font-medium text-gray-900 dark:text-gray-100">Failed</span>
                     </div>
-                    <div className="text-2xl font-bold text-red-500">
+                    <div className="text-2xl font-bold text-red-600 dark:text-red-400">
                       {selectedArray.failed}
                     </div>
-                  </div>
+                  </motion.div>
 
-                  <div className="bg-gray-50 dark:bg-macos-dark-200 rounded-lg p-4">
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.3 }}
+                    whileHover={{ scale: 1.05, y: -2 }}
+                    className="bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl p-4 border border-blue-200 dark:border-blue-700 shadow-md hover:shadow-lg transition-all"
+                  >
                     <div className="flex items-center gap-2 mb-2">
-                      <Server className="w-4 h-4 text-blue-500" />
+                      <div className="p-2 bg-blue-500/10 rounded-lg">
+                        <Server className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                      </div>
                       <span className="font-medium text-gray-900 dark:text-gray-100">Spare</span>
                     </div>
-                    <div className="text-2xl font-bold text-blue-500">
+                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                       {selectedArray.spare}
                     </div>
-                  </div>
+                  </motion.div>
 
-                  <div className="bg-gray-50 dark:bg-macos-dark-200 rounded-lg p-4">
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.4 }}
+                    whileHover={{ scale: 1.05, y: -2 }}
+                    className="bg-gradient-to-br from-yellow-50 to-yellow-100/50 dark:from-yellow-900/20 dark:to-yellow-800/20 rounded-xl p-4 border border-yellow-200 dark:border-yellow-700 shadow-md hover:shadow-lg transition-all"
+                  >
                     <div className="flex items-center gap-2 mb-2">
-                      <Zap className="w-4 h-4 text-yellow-500" />
+                      <div className="p-2 bg-yellow-500/10 rounded-lg">
+                        <Zap className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
+                      </div>
                       <span className="font-medium text-gray-900 dark:text-gray-100">Active</span>
                     </div>
-                    <div className="text-2xl font-bold text-yellow-500">
+                    <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
                       {selectedArray.active}
                     </div>
-                  </div>
+                  </motion.div>
                 </div>
               </div>
 
               {/* Resync Progress (if active) */}
               {selectedArray.resync > 0 && selectedArray.resync < 100 && (
-                <div className="mt-6 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-6 bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl p-4 border border-blue-200 dark:border-blue-700"
+                >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-gray-900 dark:text-gray-100">
-                      Resync in Progress
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <Activity className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        Resync in Progress
+                      </span>
+                    </div>
                     <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
                       {selectedArray.resync}%
                     </span>
                   </div>
-                  <div className="h-2 bg-gray-200 dark:bg-macos-dark-300 rounded-full overflow-hidden">
+                  <div className="h-2 bg-gray-200 dark:bg-macos-dark-300 rounded-full overflow-hidden shadow-inner">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${selectedArray.resync}%` }}
-                      className="h-full bg-blue-500"
+                      transition={{ duration: 0.8, ease: 'easeOut' }}
+                      className="h-full bg-gradient-to-r from-blue-500 to-blue-600"
                     />
                   </div>
                   <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
                     Array is being rebuilt. Performance may be degraded.
                   </p>
-                </div>
+                </motion.div>
               )}
             </div>
           ) : (
@@ -399,28 +492,35 @@ export default function RAIDManager() {
 
       {/* Create Array Dialog */}
       {showCreateDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white dark:bg-macos-dark-100 rounded-2xl p-6 max-w-2xl w-full m-4 max-h-[80vh] overflow-y-auto"
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="bg-white dark:bg-macos-dark-100 rounded-2xl p-6 max-w-2xl w-full m-4 max-h-[80vh] overflow-y-auto shadow-2xl border border-gray-200 dark:border-gray-700"
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                Create RAID Array
-              </h3>
-              <button
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-macos-blue to-macos-purple rounded-lg">
+                  <Shield className="w-5 h-5 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                  Create RAID Array
+                </h3>
+              </div>
+              <motion.button
+                whileHover={{ scale: 1.1, rotate: 90 }}
+                whileTap={{ scale: 0.9 }}
                 onClick={() => setShowCreateDialog(false)}
-                className="p-1 hover:bg-gray-100 dark:hover:bg-macos-dark-200 rounded"
+                className="p-1 hover:bg-gray-100 dark:hover:bg-macos-dark-200 rounded-lg transition-colors"
               >
                 <X className="w-5 h-5" />
-              </button>
+              </motion.button>
             </div>
 
             <div className="space-y-4">
               {/* Array Name */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Array Name
                 </label>
                 <input
@@ -428,7 +528,7 @@ export default function RAIDManager() {
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="md0"
-                  className="w-full px-3 py-2 bg-gray-50 dark:bg-macos-dark-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-macos-blue focus:border-transparent"
+                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-macos-dark-200 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-macos-blue focus:border-macos-blue transition-all"
                 />
               </div>
 
@@ -437,17 +537,22 @@ export default function RAIDManager() {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   RAID Level
                 </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {(['0', '1', '5', '6', '10'] as const).map((level) => {
+                <div className="grid grid-cols-2 gap-3">
+                  {(['0', '1', '5', '6', '10'] as const).map((level, index) => {
                     const info = getRaidLevelInfo(level);
                     return (
-                      <button
+                      <motion.button
                         key={level}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        whileHover={{ scale: 1.02, y: -2 }}
+                        whileTap={{ scale: 0.98 }}
                         onClick={() => setFormData({ ...formData, level })}
-                        className={`p-3 rounded-lg border-2 transition-all text-left ${
+                        className={`p-3 rounded-xl border-2 transition-all text-left ${
                           formData.level === level
-                            ? 'border-macos-blue bg-macos-blue/10 dark:bg-macos-blue/20'
-                            : 'border-gray-300 dark:border-gray-600 hover:border-macos-blue/50'
+                            ? 'border-macos-blue bg-gradient-to-br from-macos-blue/10 to-macos-purple/10 dark:from-macos-blue/20 dark:to-macos-purple/20 shadow-md'
+                            : 'border-gray-300 dark:border-gray-600 hover:border-macos-blue/50 bg-gray-50 dark:bg-macos-dark-200'
                         }`}
                       >
                         <div className="font-semibold text-gray-900 dark:text-gray-100">
@@ -459,7 +564,7 @@ export default function RAIDManager() {
                         <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
                           Min: {info.minDisks} disks
                         </div>
-                      </button>
+                      </motion.button>
                     );
                   })}
                 </div>
@@ -531,18 +636,22 @@ export default function RAIDManager() {
             </div>
 
             <div className="mt-6 flex justify-end gap-2">
-              <button
+              <motion.button
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => setShowCreateDialog(false)}
-                className="px-4 py-2 bg-gray-100 dark:bg-macos-dark-200 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-macos-dark-300 transition-colors"
+                className="px-4 py-2 bg-white dark:bg-macos-dark-200 text-gray-700 dark:text-gray-300 rounded-xl hover:shadow-lg transition-all border border-gray-200 dark:border-gray-700"
               >
                 Cancel
-              </button>
-              <button
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={handleCreateArray}
-                className="px-4 py-2 bg-macos-blue text-white rounded-lg hover:bg-blue-600 transition-colors"
+                className="px-4 py-2 bg-gradient-to-r from-macos-blue to-macos-purple text-white rounded-xl hover:shadow-lg transition-all"
               >
                 Create Array
-              </button>
+              </motion.button>
             </div>
           </motion.div>
         </div>

@@ -153,37 +153,50 @@ export default function NFSManager() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-macos-dark-100">
+    <div className="flex flex-col h-full bg-gradient-to-br from-gray-50 to-white dark:from-macos-dark-100 dark:to-macos-dark-200">
       {/* Header */}
-      <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between p-6 border-b border-gray-200/50 dark:border-gray-700/50 bg-white/50 dark:bg-macos-dark-100/50 backdrop-blur-sm">
         <div className="flex items-center gap-3">
-          <Share2 className="w-6 h-6 text-macos-blue" />
-          <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
-            NFS Export Manager
-          </h1>
+          <div className="p-3 bg-gradient-to-br from-macos-blue to-macos-purple rounded-xl shadow-lg">
+            <Share2 className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              NFS Export Manager
+            </h1>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Network file system sharing
+            </p>
+          </div>
         </div>
         <div className="flex gap-2">
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05, y: -2 }}
+            whileTap={{ scale: 0.95 }}
             onClick={handleRestartNFS}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-macos-dark-200 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-macos-dark-300 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-macos-dark-200 text-gray-700 dark:text-gray-300 rounded-xl hover:shadow-lg transition-all border border-gray-200 dark:border-gray-700"
           >
             <Settings className="w-4 h-4" />
             Restart NFS
-          </button>
-          <button
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.05, y: -2 }}
+            whileTap={{ scale: 0.95 }}
             onClick={fetchExports}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-macos-dark-200 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-macos-dark-300 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-macos-dark-200 text-gray-700 dark:text-gray-300 rounded-xl hover:shadow-lg transition-all border border-gray-200 dark:border-gray-700"
           >
             <RefreshCw className="w-4 h-4" />
             Refresh
-          </button>
-          <button
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.05, y: -2 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => setShowCreateDialog(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-macos-blue text-white rounded-lg hover:bg-blue-600 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-macos-blue to-macos-purple text-white rounded-xl hover:shadow-lg transition-all"
           >
             <Plus className="w-4 h-4" />
             Create Export
-          </button>
+          </motion.button>
         </div>
       </div>
 
@@ -209,47 +222,57 @@ export default function NFSManager() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
-                className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-macos-dark-200 dark:to-macos-dark-300 rounded-xl p-6 border border-gray-200 dark:border-gray-700"
+                whileHover={{ y: -4, scale: 1.02 }}
+                className="bg-gradient-to-br from-white to-gray-50 dark:from-macos-dark-200 dark:to-macos-dark-300 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-xl transition-all"
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-macos-blue/10 rounded-lg">
+                    <div className="p-3 bg-gradient-to-br from-macos-blue/10 to-macos-purple/10 rounded-xl">
                       <Folder className="w-6 h-6 text-macos-blue" />
                     </div>
                     <div>
                       <h3 className="font-semibold text-gray-900 dark:text-gray-100">
                         {exp.path}
                       </h3>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">NFS Export</p>
+                      <p className="text-xs px-2 py-1 bg-macos-blue/10 text-macos-blue rounded-full inline-block mt-1">
+                        NFS Export
+                      </p>
                     </div>
                   </div>
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.1, rotate: 10 }}
+                    whileTap={{ scale: 0.9 }}
                     onClick={() => {
                       setSelectedExport(exp);
                       setShowDeleteDialog(true);
                     }}
-                    className="p-2 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                    className="p-2 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-xl transition-colors"
                   >
                     <Trash2 className="w-4 h-4 text-red-500" />
-                  </button>
+                  </motion.button>
                 </div>
 
                 {/* Clients */}
                 <div className="mb-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <Globe className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                    <div className="p-1.5 bg-green-500/10 rounded-lg">
+                      <Globe className="w-4 h-4 text-green-600 dark:text-green-400" />
+                    </div>
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                       Allowed Clients ({exp.clients.length})
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {exp.clients.map((client, idx) => (
-                      <span
+                      <motion.span
                         key={idx}
-                        className="px-2 py-1 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs rounded"
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.1 + idx * 0.05 }}
+                        className="px-3 py-1 bg-gradient-to-r from-blue-100 to-blue-50 dark:from-blue-900/20 dark:to-blue-800/20 text-blue-700 dark:text-blue-300 text-xs rounded-full font-medium border border-blue-200 dark:border-blue-700"
                       >
                         {client}
-                      </span>
+                      </motion.span>
                     ))}
                   </div>
                 </div>
@@ -257,19 +280,24 @@ export default function NFSManager() {
                 {/* Options */}
                 <div>
                   <div className="flex items-center gap-2 mb-2">
-                    <Settings className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                    <div className="p-1.5 bg-purple-500/10 rounded-lg">
+                      <Settings className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                    </div>
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                       Export Options
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {exp.options.map((option, idx) => (
-                      <span
+                      <motion.span
                         key={idx}
-                        className="px-2 py-1 bg-gray-200 dark:bg-macos-dark-100 text-gray-700 dark:text-gray-300 text-xs font-mono rounded"
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.2 + idx * 0.05 }}
+                        className="px-2 py-1 bg-gray-100 dark:bg-macos-dark-100 text-gray-700 dark:text-gray-300 text-xs font-mono rounded border border-gray-300 dark:border-gray-600"
                       >
                         {option}
-                      </span>
+                      </motion.span>
                     ))}
                   </div>
                 </div>
@@ -281,28 +309,35 @@ export default function NFSManager() {
 
       {/* Create Export Dialog */}
       {showCreateDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white dark:bg-macos-dark-100 rounded-2xl p-6 max-w-2xl w-full m-4 max-h-[80vh] overflow-y-auto"
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="bg-white dark:bg-macos-dark-100 rounded-2xl p-6 max-w-2xl w-full m-4 max-h-[80vh] overflow-y-auto shadow-2xl border border-gray-200 dark:border-gray-700"
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                Create NFS Export
-              </h3>
-              <button
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-macos-blue to-macos-purple rounded-lg">
+                  <Share2 className="w-5 h-5 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                  Create NFS Export
+                </h3>
+              </div>
+              <motion.button
+                whileHover={{ scale: 1.1, rotate: 90 }}
+                whileTap={{ scale: 0.9 }}
                 onClick={() => setShowCreateDialog(false)}
-                className="p-1 hover:bg-gray-100 dark:hover:bg-macos-dark-200 rounded"
+                className="p-1 hover:bg-gray-100 dark:hover:bg-macos-dark-200 rounded-lg transition-colors"
               >
                 <X className="w-5 h-5" />
-              </button>
+              </motion.button>
             </div>
 
             <div className="space-y-6">
               {/* Export Path */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Export Path
                 </label>
                 <input
@@ -310,7 +345,7 @@ export default function NFSManager() {
                   value={formData.path}
                   onChange={(e) => setFormData({ ...formData, path: e.target.value })}
                   placeholder="/srv/nfs/share"
-                  className="w-full px-3 py-2 bg-gray-50 dark:bg-macos-dark-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-macos-blue focus:border-transparent"
+                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-macos-dark-200 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-macos-blue focus:border-macos-blue transition-all font-mono text-sm"
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   Absolute path to the directory to export
@@ -319,62 +354,73 @@ export default function NFSManager() {
 
               {/* Clients */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Allowed Clients
                 </label>
-                <div className="flex gap-2 mb-2">
+                <div className="flex gap-2 mb-3">
                   <input
                     type="text"
                     value={clientInput}
                     onChange={(e) => setClientInput(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && addClient()}
                     placeholder="192.168.1.0/24 or hostname"
-                    className="flex-1 px-3 py-2 bg-gray-50 dark:bg-macos-dark-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-macos-blue focus:border-transparent"
+                    className="flex-1 px-4 py-2.5 bg-gray-50 dark:bg-macos-dark-200 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-macos-blue focus:border-macos-blue transition-all font-mono text-sm"
                   />
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.05, y: -2 }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={addClient}
-                    className="px-4 py-2 bg-macos-blue text-white rounded-lg hover:bg-blue-600 transition-colors"
+                    className="px-5 py-2.5 bg-gradient-to-r from-macos-blue to-macos-purple text-white rounded-xl hover:shadow-lg transition-all font-medium"
                   >
                     Add
-                  </button>
+                  </motion.button>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {formData.clients.map((client, idx) => (
-                    <span
+                    <motion.span
                       key={idx}
-                      className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-sm rounded"
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="inline-flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-blue-100 to-blue-50 dark:from-blue-900/20 dark:to-blue-800/20 text-blue-700 dark:text-blue-300 text-sm rounded-full border border-blue-200 dark:border-blue-700"
                     >
                       {client}
-                      <button
+                      <motion.button
+                        whileHover={{ scale: 1.2, rotate: 90 }}
+                        whileTap={{ scale: 0.8 }}
                         onClick={() => removeClient(client)}
-                        className="hover:text-red-500"
+                        className="hover:text-red-500 transition-colors"
                       >
                         <X className="w-3 h-3" />
-                      </button>
-                    </span>
+                      </motion.button>
+                    </motion.span>
                   ))}
                 </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                   Use * for all hosts, IP addresses, CIDR notation, or hostnames
                 </p>
               </div>
 
               {/* Options */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                   Export Options
                 </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {commonOptions.map((opt) => {
+                <div className="grid grid-cols-2 gap-3">
+                  {commonOptions.map((opt, index) => {
                     const isSelected = formData.options?.includes(opt.value);
                     return (
-                      <button
+                      <motion.button
                         key={opt.value}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        whileHover={{ scale: 1.02, y: -2 }}
+                        whileTap={{ scale: 0.98 }}
                         onClick={() => toggleOption(opt.value)}
-                        className={`p-3 rounded-lg border-2 transition-all text-left ${
+                        className={`p-3 rounded-xl border-2 transition-all text-left ${
                           isSelected
-                            ? 'border-macos-blue bg-macos-blue/10 dark:bg-macos-blue/20'
-                            : 'border-gray-300 dark:border-gray-600 hover:border-macos-blue/50'
+                            ? 'border-macos-blue bg-gradient-to-br from-macos-blue/10 to-macos-purple/10 dark:from-macos-blue/20 dark:to-macos-purple/20 shadow-md'
+                            : 'border-gray-300 dark:border-gray-600 hover:border-macos-blue/50 bg-gray-50 dark:bg-macos-dark-200'
                         }`}
                       >
                         <div className="font-medium text-gray-900 dark:text-gray-100 text-sm">
@@ -383,21 +429,23 @@ export default function NFSManager() {
                         <div className="text-xs text-gray-600 dark:text-gray-400">
                           {opt.description}
                         </div>
-                      </button>
+                      </motion.button>
                     );
                   })}
                 </div>
               </div>
 
               {/* Info */}
-              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
-                <div className="flex gap-2">
-                  <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl p-4 border border-blue-200 dark:border-blue-700">
+                <div className="flex gap-3">
+                  <div className="p-2 bg-blue-500/10 rounded-lg">
+                    <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                  </div>
                   <div className="text-sm text-gray-700 dark:text-gray-300">
-                    <p className="font-medium mb-1">Important Notes:</p>
+                    <p className="font-semibold mb-2">Important Notes:</p>
                     <ul className="list-disc list-inside space-y-1 text-xs">
                       <li>Ensure the directory exists and has proper permissions</li>
-                      <li>Use <code className="bg-white dark:bg-macos-dark-100 px-1 rounded">no_root_squash</code> carefully - it allows root access</li>
+                      <li>Use <code className="bg-white dark:bg-macos-dark-100 px-2 py-0.5 rounded font-mono">no_root_squash</code> carefully - it allows root access</li>
                       <li>The export will be added to /etc/exports</li>
                       <li>Changes take effect after NFS restart</li>
                     </ul>
@@ -407,18 +455,22 @@ export default function NFSManager() {
             </div>
 
             <div className="mt-6 flex justify-end gap-2">
-              <button
+              <motion.button
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => setShowCreateDialog(false)}
-                className="px-4 py-2 bg-gray-100 dark:bg-macos-dark-200 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-macos-dark-300 transition-colors"
+                className="px-4 py-2 bg-white dark:bg-macos-dark-200 text-gray-700 dark:text-gray-300 rounded-xl hover:shadow-lg transition-all border border-gray-200 dark:border-gray-700"
               >
                 Cancel
-              </button>
-              <button
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={handleCreateExport}
-                className="px-4 py-2 bg-macos-blue text-white rounded-lg hover:bg-blue-600 transition-colors"
+                className="px-4 py-2 bg-gradient-to-r from-macos-blue to-macos-purple text-white rounded-xl hover:shadow-lg transition-all"
               >
                 Create Export
-              </button>
+              </motion.button>
             </div>
           </motion.div>
         </div>
@@ -426,38 +478,47 @@ export default function NFSManager() {
 
       {/* Delete Confirmation Dialog */}
       {showDeleteDialog && selectedExport && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white dark:bg-macos-dark-100 rounded-2xl p-6 max-w-md w-full m-4"
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="bg-white dark:bg-macos-dark-100 rounded-2xl p-6 max-w-md w-full m-4 shadow-2xl border border-gray-200 dark:border-gray-700"
           >
-            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-              Delete NFS Export
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-gradient-to-br from-red-500 to-rose-600 rounded-lg">
+                <AlertCircle className="w-5 h-5 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                Delete NFS Export
+              </h3>
+            </div>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
               Are you sure you want to delete the export for{' '}
-              <span className="font-semibold text-gray-900 dark:text-gray-100">
+              <span className="font-semibold px-2 py-1 bg-gray-100 dark:bg-macos-dark-200 rounded font-mono text-gray-900 dark:text-gray-100">
                 {selectedExport.path}
               </span>
               ? This action cannot be undone.
             </p>
             <div className="flex justify-end gap-2">
-              <button
+              <motion.button
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => {
                   setShowDeleteDialog(false);
                   setSelectedExport(null);
                 }}
-                className="px-4 py-2 bg-gray-100 dark:bg-macos-dark-200 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-macos-dark-300 transition-colors"
+                className="px-4 py-2 bg-white dark:bg-macos-dark-200 text-gray-700 dark:text-gray-300 rounded-xl hover:shadow-lg transition-all border border-gray-200 dark:border-gray-700"
               >
                 Cancel
-              </button>
-              <button
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={handleDeleteExport}
-                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                className="px-4 py-2 bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-xl hover:shadow-lg transition-all"
               >
                 Delete
-              </button>
+              </motion.button>
             </div>
           </motion.div>
         </div>

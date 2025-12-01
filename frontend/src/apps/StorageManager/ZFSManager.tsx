@@ -113,30 +113,41 @@ export default function ZFSManager() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-macos-dark-100">
+    <div className="flex flex-col h-full bg-gradient-to-br from-gray-50 to-white dark:from-macos-dark-100 dark:to-macos-dark-200">
       {/* Header */}
-      <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between p-6 border-b border-gray-200/50 dark:border-gray-700/50 bg-white/50 dark:bg-macos-dark-100/50 backdrop-blur-sm">
         <div className="flex items-center gap-3">
-          <Database className="w-6 h-6 text-macos-blue" />
-          <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
-            ZFS Pool Manager
-          </h1>
+          <div className="p-3 bg-gradient-to-br from-macos-blue to-macos-purple rounded-xl shadow-lg">
+            <Database className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              ZFS Pool Manager
+            </h1>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Advanced filesystem management
+            </p>
+          </div>
         </div>
         <div className="flex gap-2">
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05, y: -2 }}
+            whileTap={{ scale: 0.95 }}
             onClick={fetchPools}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-macos-dark-200 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-macos-dark-300 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-macos-dark-200 text-gray-700 dark:text-gray-300 rounded-xl hover:shadow-lg transition-all border border-gray-200 dark:border-gray-700"
           >
             <RefreshCw className="w-4 h-4" />
             Refresh
-          </button>
-          <button
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.05, y: -2 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => setShowCreateDialog(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-macos-blue text-white rounded-lg hover:bg-blue-600 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-macos-blue to-macos-purple text-white rounded-xl hover:shadow-lg transition-all"
           >
             <Plus className="w-4 h-4" />
             Create Pool
-          </button>
+          </motion.button>
         </div>
       </div>
 
@@ -158,16 +169,18 @@ export default function ZFSManager() {
             </div>
           ) : (
             <div className="p-4 space-y-2">
-              {pools.map((pool) => (
+              {pools.map((pool, index) => (
                 <motion.div
                   key={pool.name}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  whileHover={{ x: 4, scale: 1.02 }}
                   onClick={() => setSelectedPool(pool)}
                   className={`p-4 rounded-xl cursor-pointer transition-all ${
                     selectedPool?.name === pool.name
-                      ? 'bg-macos-blue/10 dark:bg-macos-blue/20 border-2 border-macos-blue'
-                      : 'bg-gray-50 dark:bg-macos-dark-200 hover:bg-gray-100 dark:hover:bg-macos-dark-300 border-2 border-transparent'
+                      ? 'bg-gradient-to-br from-macos-blue/10 to-macos-purple/10 dark:from-macos-blue/20 dark:to-macos-purple/20 border-2 border-macos-blue shadow-lg'
+                      : 'bg-white dark:bg-macos-dark-200 hover:bg-gray-50 dark:hover:bg-macos-dark-300 border-2 border-gray-200 dark:border-gray-700 hover:shadow-md'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-2">
@@ -177,7 +190,13 @@ export default function ZFSManager() {
                         {pool.name}
                       </span>
                     </div>
-                    <span className="text-xs text-gray-500 dark:text-gray-400 uppercase">
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                      pool.health.toLowerCase() === 'online'
+                        ? 'bg-green-500/10 text-green-600 dark:text-green-400'
+                        : pool.health.toLowerCase() === 'degraded'
+                        ? 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400'
+                        : 'bg-red-500/10 text-red-600 dark:text-red-400'
+                    }`}>
                       {pool.health}
                     </span>
                   </div>
@@ -204,16 +223,17 @@ export default function ZFSManager() {
                   </div>
 
                   {/* Progress Bar */}
-                  <div className="mt-3 h-2 bg-gray-200 dark:bg-macos-dark-300 rounded-full overflow-hidden">
+                  <div className="mt-3 h-2 bg-gray-200 dark:bg-macos-dark-300 rounded-full overflow-hidden shadow-inner">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${pool.capacity}%` }}
+                      transition={{ duration: 0.8, ease: 'easeOut' }}
                       className={`h-full rounded-full ${
                         pool.capacity > 90
-                          ? 'bg-red-500'
+                          ? 'bg-gradient-to-r from-red-500 to-rose-600'
                           : pool.capacity > 75
-                          ? 'bg-yellow-500'
-                          : 'bg-macos-blue'
+                          ? 'bg-gradient-to-r from-yellow-500 to-orange-500'
+                          : 'bg-gradient-to-r from-macos-blue to-macos-purple'
                       }`}
                     />
                   </div>
@@ -228,7 +248,11 @@ export default function ZFSManager() {
           {selectedPool ? (
             <div className="p-6">
               {/* Pool Info Card */}
-              <div className="bg-gradient-to-br from-macos-blue/10 to-macos-purple/10 dark:from-macos-blue/20 dark:to-macos-purple/20 rounded-2xl p-6 mb-6">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-gradient-to-br from-macos-blue/10 via-macos-purple/10 to-pink-500/5 dark:from-macos-blue/20 dark:via-macos-purple/20 dark:to-pink-500/10 rounded-2xl p-6 mb-6 border border-gray-200/50 dark:border-gray-700/50 shadow-xl"
+              >
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
@@ -236,81 +260,120 @@ export default function ZFSManager() {
                     </h2>
                     <div className="flex items-center gap-2 mt-1">
                       {getHealthIcon(selectedPool.health)}
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                      <span className={`text-sm font-medium px-2 py-1 rounded-full ${
+                        selectedPool.health.toLowerCase() === 'online'
+                          ? 'bg-green-500/10 text-green-600 dark:text-green-400'
+                          : selectedPool.health.toLowerCase() === 'degraded'
+                          ? 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400'
+                          : 'bg-red-500/10 text-red-600 dark:text-red-400'
+                      }`}>
                         {selectedPool.health}
                       </span>
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <button
+                    <motion.button
+                      whileHover={{ scale: 1.05, y: -2 }}
+                      whileTap={{ scale: 0.95 }}
                       onClick={() => handleScrub(selectedPool.name)}
-                      className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-macos-dark-200 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-macos-dark-300 transition-colors"
+                      className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-macos-dark-200 text-gray-700 dark:text-gray-300 rounded-xl hover:shadow-lg transition-all border border-gray-200 dark:border-gray-700"
                     >
                       <Activity className="w-4 h-4" />
                       Scrub
-                    </button>
-                    <button
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.05, y: -2 }}
+                      whileTap={{ scale: 0.95 }}
                       onClick={() => handleDestroyPool(selectedPool.name)}
-                      className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-xl hover:shadow-lg transition-all"
                     >
                       <Trash2 className="w-4 h-4" />
                       Destroy
-                    </button>
+                    </motion.button>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-white/50 dark:bg-macos-dark-200/50 rounded-xl p-4">
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.1 }}
+                    className="bg-gradient-to-br from-white to-gray-50 dark:from-macos-dark-200 dark:to-macos-dark-300 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow"
+                  >
                     <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Total Size</div>
                     <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
                       {formatBytes(selectedPool.size)}
                     </div>
-                  </div>
-                  <div className="bg-white/50 dark:bg-macos-dark-200/50 rounded-xl p-4">
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.2 }}
+                    className="bg-gradient-to-br from-white to-gray-50 dark:from-macos-dark-200 dark:to-macos-dark-300 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow"
+                  >
                     <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Used</div>
                     <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
                       {formatBytes(selectedPool.allocated)}
                     </div>
-                  </div>
-                  <div className="bg-white/50 dark:bg-macos-dark-200/50 rounded-xl p-4">
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.3 }}
+                    className="bg-gradient-to-br from-white to-gray-50 dark:from-macos-dark-200 dark:to-macos-dark-300 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow"
+                  >
                     <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Free</div>
                     <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
                       {formatBytes(selectedPool.free)}
                     </div>
-                  </div>
-                  <div className="bg-white/50 dark:bg-macos-dark-200/50 rounded-xl p-4">
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.4 }}
+                    className="bg-gradient-to-br from-white to-gray-50 dark:from-macos-dark-200 dark:to-macos-dark-300 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow"
+                  >
                     <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Fragmentation</div>
                     <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
                       {selectedPool.fragmentation}%
                     </div>
-                  </div>
+                  </motion.div>
                 </div>
-              </div>
+              </motion.div>
 
               {/* Datasets */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                  Datasets
-                </h3>
+                <div className="flex items-center gap-2 mb-4">
+                  <HardDrive className="w-5 h-5 text-macos-blue" />
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    Datasets
+                  </h3>
+                </div>
                 {datasets.length === 0 ? (
                   <div className="text-center py-12 text-gray-500 dark:text-gray-400">
                     No datasets found
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {datasets.map((dataset) => (
-                      <div
+                    {datasets.map((dataset, index) => (
+                      <motion.div
                         key={dataset.name}
-                        className="bg-gray-50 dark:bg-macos-dark-200 rounded-lg p-4"
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        whileHover={{ x: 4, scale: 1.01 }}
+                        className="bg-gradient-to-br from-white to-gray-50 dark:from-macos-dark-200 dark:to-macos-dark-300 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all"
                       >
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
-                            <HardDrive className="w-4 h-4 text-macos-blue" />
+                            <div className="p-2 bg-macos-blue/10 rounded-lg">
+                              <HardDrive className="w-4 h-4 text-macos-blue" />
+                            </div>
                             <span className="font-medium text-gray-900 dark:text-gray-100">
                               {dataset.name}
                             </span>
                           </div>
-                          <span className="text-xs px-2 py-1 bg-macos-blue/10 text-macos-blue rounded">
+                          <span className="text-xs px-3 py-1 bg-gradient-to-r from-macos-blue/10 to-macos-purple/10 text-macos-blue rounded-full font-medium">
                             {dataset.type}
                           </span>
                         </div>
@@ -329,12 +392,12 @@ export default function ZFSManager() {
                           </div>
                           <div>
                             <span className="text-gray-600 dark:text-gray-400">Mountpoint: </span>
-                            <span className="font-mono text-xs text-gray-900 dark:text-gray-100">
+                            <span className="font-mono text-xs text-gray-900 dark:text-gray-100 bg-gray-100 dark:bg-macos-dark-100 px-2 py-1 rounded">
                               {dataset.mountpoint}
                             </span>
                           </div>
                         </div>
-                      </div>
+                      </motion.div>
                     ))}
                   </div>
                 )}
@@ -353,28 +416,35 @@ export default function ZFSManager() {
 
       {/* Create Pool Dialog - Placeholder */}
       {showCreateDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white dark:bg-macos-dark-100 rounded-2xl p-6 max-w-md w-full m-4"
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="bg-white dark:bg-macos-dark-100 rounded-2xl p-6 max-w-md w-full m-4 shadow-2xl border border-gray-200 dark:border-gray-700"
           >
-            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-              Create ZFS Pool
-            </h3>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-gradient-to-br from-macos-blue to-macos-purple rounded-lg">
+                <Database className="w-5 h-5 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                Create ZFS Pool
+              </h3>
+            </div>
             <p className="text-gray-600 dark:text-gray-400 mb-4">
               Pool creation UI coming soon. Use CLI for now:
             </p>
-            <code className="block bg-gray-100 dark:bg-macos-dark-200 p-3 rounded text-sm font-mono">
+            <code className="block bg-gradient-to-br from-gray-100 to-gray-50 dark:from-macos-dark-200 dark:to-macos-dark-300 p-3 rounded-lg text-sm font-mono border border-gray-200 dark:border-gray-700">
               zpool create tank raidz sda sdb sdc
             </code>
             <div className="mt-6 flex justify-end">
-              <button
+              <motion.button
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => setShowCreateDialog(false)}
-                className="px-4 py-2 bg-macos-blue text-white rounded-lg hover:bg-blue-600 transition-colors"
+                className="px-4 py-2 bg-gradient-to-r from-macos-blue to-macos-purple text-white rounded-xl hover:shadow-lg transition-all"
               >
                 Close
-              </button>
+              </motion.button>
             </div>
           </motion.div>
         </div>
