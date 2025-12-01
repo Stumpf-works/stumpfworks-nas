@@ -361,7 +361,12 @@ func buildSambaShareConfig(share *models.Share) string {
    comment = %s
    browseable = %s
    read only = %s
-   guest ok = %s`,
+   guest ok = %s
+   # Synology-style: force user/group to avoid credential conflicts
+   force user = stumpfs
+   force group = stumpfs
+   create mask = 0664
+   directory mask = 0775`,
 		share.Name,
 		share.Path,
 		share.Description,
