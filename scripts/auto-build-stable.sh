@@ -1,14 +1,5 @@
 #!/bin/bash
-
-# Auto-build script for StumpfWorks NAS (Stable/Production Repository)
-# This script:
-# - Checks for new commits on main branch
-# - Builds only if there are changes
-# - Deploys to stable repository
-# - Sends Discord notifications
-# - Runs daily at 20:00 via cron
-
-set -e
+# auto-build-stable.sh - Automatically build and deploy stable versions
 
 # Configuration
 REPO_URL="https://github.com/Stumpf-works/stumpfworks-nas.git"
@@ -16,7 +7,6 @@ BRANCH="main"
 BUILD_DIR="/tmp/stumpfworks-nas-build-stable"
 STATE_FILE="/var/lib/stumpfworks-nas/auto-build-stable-state"
 LOG_FILE="/var/log/stumpfworks-nas/auto-build-stable.log"
-DISCORD_WEBHOOK="https://discord.com/api/webhooks/1444309433826938923/qfiaZnJqhvjYzOGLOpH-VewdRSUrAti13CXTx0hvhqyQ-DBKbDc-5jMZLnz-EW6qQ0o9"
 
 # Colors for output
 RED='\033[0;31m'
@@ -34,47 +24,10 @@ log() {
     echo -e "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
 }
 
-# Discord notification function
-send_discord() {
-    local title="$1"
-    local description="$2"
-    local color="$3"  # Decimal color code
-    local fields="$4"  # JSON array of fields
-
-    local json_payload=$(cat <<EOF
-{
-  "embeds": [{
-    "title": "$title",
-    "description": "$description",
-    "color": $color,
-    "fields": $fields,
-    "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)",
-    "footer": {
-      "text": "StumpfWorks NAS Auto-Build (Stable)"
-    }
-  }]
-}
-EOF
-)
-
-    curl -H "Content-Type: application/json" \
-         -d "$json_payload" \
-         "$DISCORD_WEBHOOK" \
-         -s -o /dev/null
-}
-
 # Error handler
 handle_error() {
     local exit_code=$?
     log "${RED}❌ Build failed with exit code $exit_code${NC}"
-
-    send_discord \
-        "❌ Stable Build Failed" \
-        "The automated stable build encountered an error." \
-        15158332 \
-        "[{\"name\": \"Exit Code\", \"value\": \"$exit_code\", \"inline\": true}, {\"name\": \"Branch\", \"value\": \"$BRANCH\", \"inline\": true}]"
-
-    # Cleanup
     rm -rf "$BUILD_DIR"
     exit $exit_code
 }
@@ -108,14 +61,6 @@ fi
 
 log "${YELLOW}New commits detected - starting build...${NC}"
 log ""
-
-# Send build start notification
-COMMIT_SHORT="${LATEST_COMMIT:0:7}"
-send_discord \
-    "🔨 Stable Build Started" \
-    "Building new stable release from main branch." \
-    16753920 \
-    "[{\"name\": \"Branch\", \"value\": \"$BRANCH\", \"inline\": true}, {\"name\": \"Commit\", \"value\": \"$COMMIT_SHORT\", \"inline\": true}]"
 
 # Cleanup old build directory
 rm -rf "$BUILD_DIR"
@@ -236,7 +181,6 @@ log ""
 
 # Update repository metadata
 log "${YELLOW}🔄 Updating repository metadata...${NC}"
-# Repository metadata is already updated above
 log "${GREEN}✓ Repository metadata updated${NC}"
 log ""
 
@@ -262,10 +206,3 @@ log ""
 log "${GREEN}🌐 Available at:${NC}"
 log "   http://apt.stumpfworks.de/dists/stable/"
 log ""
-
-# Send success notification
-send_discord \
-    "✅ Stable Build Successful" \
-    "New stable release deployed successfully!" \
-    3066993 \
-    "[{\"name\": \"Version\", \"value\": \"$VERSION\", \"inline\": true}, {\"name\": \"Commit\", \"value\": \"$COMMIT_SHORT\", \"inline\": true}, {\"name\": \"Repository\", \"value\": \"stable\", \"inline\": true}]"
