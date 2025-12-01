@@ -90,12 +90,6 @@ export default function SMARTMonitor() {
     return 'text-red-500';
   };
 
-  const getHealthBgColor = (score: number) => {
-    if (score >= 80) return 'bg-green-500';
-    if (score >= 60) return 'bg-yellow-500';
-    return 'bg-red-500';
-  };
-
   const getHealthIcon = (score: number) => {
     if (score >= 80) return <CheckCircle className="w-6 h-6 text-green-500" />;
     if (score >= 60) return <AlertTriangle className="w-6 h-6 text-yellow-500" />;
@@ -112,22 +106,31 @@ export default function SMARTMonitor() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-macos-dark-100">
+    <div className="flex flex-col h-full bg-gradient-to-br from-gray-50 to-white dark:from-macos-dark-100 dark:to-macos-dark-200">
       {/* Header */}
-      <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between p-6 border-b border-gray-200/50 dark:border-gray-700/50 bg-white/50 dark:bg-macos-dark-100/50 backdrop-blur-sm">
         <div className="flex items-center gap-3">
-          <Activity className="w-6 h-6 text-macos-blue" />
-          <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
-            SMART Monitoring
-          </h1>
+          <div className="p-3 bg-gradient-to-br from-macos-blue to-macos-purple rounded-xl shadow-lg">
+            <Activity className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              SMART Monitoring
+            </h1>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Real-time disk health monitoring
+            </p>
+          </div>
         </div>
-        <button
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           onClick={fetchDisks}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-macos-dark-200 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-macos-dark-300 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-macos-dark-200 text-gray-700 dark:text-gray-300 rounded-xl hover:shadow-lg transition-all border border-gray-200 dark:border-gray-700"
         >
           <RefreshCw className="w-4 h-4" />
           Refresh
-        </button>
+        </motion.button>
       </div>
 
       {/* Content */}
@@ -145,27 +148,34 @@ export default function SMARTMonitor() {
                   key={disk.path}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
+                  whileHover={{ y: -2, scale: 1.02 }}
                   onClick={() => setSelectedDisk(disk)}
                   className={`p-4 rounded-xl cursor-pointer transition-all ${
                     selectedDisk?.path === disk.path
-                      ? 'bg-macos-blue/10 dark:bg-macos-blue/20 border-2 border-macos-blue'
-                      : 'bg-gray-50 dark:bg-macos-dark-200 hover:bg-gray-100 dark:hover:bg-macos-dark-300 border-2 border-transparent'
+                      ? 'bg-gradient-to-br from-macos-blue/10 to-macos-purple/10 dark:from-macos-blue/20 dark:to-macos-purple/20 border-2 border-macos-blue shadow-lg'
+                      : 'bg-white dark:bg-macos-dark-200 hover:bg-gray-50 dark:hover:bg-macos-dark-300 border-2 border-gray-200 dark:border-gray-700 hover:shadow-md'
                   }`}
                 >
-                  <div className="flex items-center gap-3 mb-2">
-                    <HardDrive className="w-5 h-5 text-macos-blue" />
-                    <div className="flex-1">
-                      <div className="font-semibold text-gray-900 dark:text-gray-100">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-macos-dark-300 dark:to-macos-dark-400 rounded-lg">
+                      <HardDrive className="w-5 h-5 text-macos-blue" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-gray-900 dark:text-gray-100 truncate">
                         {disk.name}
                       </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                      <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
                         {disk.model}
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Thermometer className="w-4 h-4 text-gray-400" />
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                  <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 dark:bg-macos-dark-300 rounded-lg">
+                    <Thermometer className={`w-4 h-4 ${
+                      disk.temperature > 50 ? 'text-red-500' :
+                      disk.temperature > 45 ? 'text-orange-500' :
+                      'text-green-500'
+                    }`} />
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                       {disk.temperature}°C
                     </span>
                   </div>
@@ -186,9 +196,13 @@ export default function SMARTMonitor() {
               ) : smartInfo ? (
                 <>
                   {/* Health Score Card */}
-                  <div className="bg-gradient-to-br from-macos-blue/10 to-macos-purple/10 dark:from-macos-blue/20 dark:to-macos-purple/20 rounded-2xl p-6 mb-6">
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-gradient-to-br from-macos-blue/10 via-macos-purple/10 to-pink-500/10 dark:from-macos-blue/20 dark:via-macos-purple/20 dark:to-pink-500/20 rounded-2xl p-6 mb-6 border border-gray-200/50 dark:border-gray-700/50 shadow-xl"
+                  >
                     <div className="flex items-center justify-between mb-4">
-                      <div>
+                      <div className="flex-1">
                         <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                           {selectedDisk.name}
                         </h2>
@@ -196,13 +210,13 @@ export default function SMARTMonitor() {
                           {selectedDisk.model} • {selectedDisk.serial}
                         </p>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-4">
                         {getHealthIcon(smartInfo.healthScore)}
                         <div className="text-right">
-                          <div className={`text-3xl font-bold ${getHealthColor(smartInfo.healthScore)}`}>
+                          <div className={`text-4xl font-bold ${getHealthColor(smartInfo.healthScore)}`}>
                             {smartInfo.healthScore}
                           </div>
-                          <div className="text-xs text-gray-600 dark:text-gray-400">
+                          <div className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">
                             Health Score
                           </div>
                         </div>
@@ -210,82 +224,107 @@ export default function SMARTMonitor() {
                     </div>
 
                     {/* Health Progress Bar */}
-                    <div className="h-3 bg-gray-200 dark:bg-macos-dark-300 rounded-full overflow-hidden">
+                    <div className="h-4 bg-gray-200 dark:bg-macos-dark-300 rounded-full overflow-hidden shadow-inner">
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${smartInfo.healthScore}%` }}
-                        className={`h-full rounded-full ${getHealthBgColor(smartInfo.healthScore)}`}
+                        transition={{ duration: 1, ease: 'easeOut' }}
+                        className={`h-full rounded-full shadow-sm ${
+                          smartInfo.healthScore >= 80 ? 'bg-gradient-to-r from-green-500 to-emerald-500' :
+                          smartInfo.healthScore >= 60 ? 'bg-gradient-to-r from-yellow-500 to-orange-500' :
+                          'bg-gradient-to-r from-red-500 to-rose-600'
+                        }`}
                       />
                     </div>
 
-                    <div className="mt-4 flex items-center gap-2">
+                    <div className="mt-4 flex items-center gap-2 px-3 py-2 bg-white/50 dark:bg-macos-dark-200/50 rounded-lg">
                       {smartInfo.smartStatus === 'PASSED' ? (
                         <>
                           <CheckCircle className="w-4 h-4 text-green-500" />
-                          <span className="text-sm text-green-600 dark:text-green-400">
+                          <span className="text-sm font-medium text-green-600 dark:text-green-400">
                             SMART Status: PASSED
                           </span>
                         </>
                       ) : (
                         <>
                           <XCircle className="w-4 h-4 text-red-500" />
-                          <span className="text-sm text-red-600 dark:text-red-400">
+                          <span className="text-sm font-medium text-red-600 dark:text-red-400">
                             SMART Status: {smartInfo.smartStatus}
                           </span>
                         </>
                       )}
                     </div>
-                  </div>
+                  </motion.div>
 
                   {/* Key Metrics */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                    <div className="bg-white/50 dark:bg-macos-dark-200/50 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.1 }}
+                      className="bg-gradient-to-br from-white to-gray-50 dark:from-macos-dark-200 dark:to-macos-dark-300 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow"
+                    >
                       <div className="flex items-center gap-2 mb-2">
                         <Thermometer className="w-4 h-4 text-macos-blue" />
-                        <span className="text-xs text-gray-600 dark:text-gray-400">Temperature</span>
+                        <span className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Temperature</span>
                       </div>
                       <div className={`text-2xl font-bold ${
                         smartInfo.temperature > 50 ? 'text-red-500' :
                         smartInfo.temperature > 45 ? 'text-yellow-500' :
-                        'text-gray-900 dark:text-gray-100'
+                        'text-green-500'
                       }`}>
                         {smartInfo.temperature}°C
                       </div>
-                    </div>
+                    </motion.div>
 
-                    <div className="bg-white/50 dark:bg-macos-dark-200/50 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.2 }}
+                      className="bg-gradient-to-br from-white to-gray-50 dark:from-macos-dark-200 dark:to-macos-dark-300 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow"
+                    >
                       <div className="flex items-center gap-2 mb-2">
                         <Clock className="w-4 h-4 text-macos-blue" />
-                        <span className="text-xs text-gray-600 dark:text-gray-400">Power On</span>
+                        <span className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Power On</span>
                       </div>
                       <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                         {formatHours(smartInfo.powerOnHours)}
                       </div>
-                    </div>
+                    </motion.div>
 
-                    <div className="bg-white/50 dark:bg-macos-dark-200/50 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.3 }}
+                      className="bg-gradient-to-br from-white to-gray-50 dark:from-macos-dark-200 dark:to-macos-dark-300 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow"
+                    >
                       <div className="flex items-center gap-2 mb-2">
                         <Zap className="w-4 h-4 text-macos-blue" />
-                        <span className="text-xs text-gray-600 dark:text-gray-400">Bad Sectors</span>
+                        <span className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Bad Sectors</span>
                       </div>
                       <div className={`text-2xl font-bold ${
                         smartInfo.reallocatedSectors > 0 ? 'text-red-500' : 'text-green-500'
                       }`}>
                         {smartInfo.reallocatedSectors}
                       </div>
-                    </div>
+                    </motion.div>
 
-                    <div className="bg-white/50 dark:bg-macos-dark-200/50 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.4 }}
+                      className="bg-gradient-to-br from-white to-gray-50 dark:from-macos-dark-200 dark:to-macos-dark-300 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow"
+                    >
                       <div className="flex items-center gap-2 mb-2">
                         <AlertTriangle className="w-4 h-4 text-macos-blue" />
-                        <span className="text-xs text-gray-600 dark:text-gray-400">Errors</span>
+                        <span className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Errors</span>
                       </div>
                       <div className={`text-2xl font-bold ${
                         smartInfo.uncorrectableErrors > 0 ? 'text-red-500' : 'text-green-500'
                       }`}>
                         {smartInfo.uncorrectableErrors}
                       </div>
-                    </div>
+                    </motion.div>
                   </div>
 
                   {/* Detailed Attributes */}
@@ -333,33 +372,39 @@ export default function SMARTMonitor() {
                       Self-Test Operations
                     </h3>
                     <div className="grid grid-cols-3 gap-3">
-                      <button
+                      <motion.button
+                        whileHover={{ scale: 1.05, y: -2 }}
+                        whileTap={{ scale: 0.95 }}
                         onClick={() => handleRunTest('short')}
                         disabled={isRunningTest}
-                        className="flex flex-col items-center gap-2 p-4 bg-macos-blue/10 dark:bg-macos-blue/20 text-macos-blue rounded-xl hover:bg-macos-blue/20 dark:hover:bg-macos-blue/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex flex-col items-center gap-2 p-4 bg-gradient-to-br from-macos-blue/10 to-macos-blue/20 dark:from-macos-blue/20 dark:to-macos-blue/30 text-macos-blue rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed border border-macos-blue/20"
                       >
                         <PlayCircle className="w-6 h-6" />
-                        <span className="text-sm font-medium">Short Test</span>
-                        <span className="text-xs text-gray-600 dark:text-gray-400">~2 min</span>
-                      </button>
-                      <button
+                        <span className="text-sm font-bold">Short Test</span>
+                        <span className="text-xs font-medium text-gray-600 dark:text-gray-400">~2 min</span>
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.05, y: -2 }}
+                        whileTap={{ scale: 0.95 }}
                         onClick={() => handleRunTest('long')}
                         disabled={isRunningTest}
-                        className="flex flex-col items-center gap-2 p-4 bg-macos-purple/10 dark:bg-macos-purple/20 text-macos-purple rounded-xl hover:bg-macos-purple/20 dark:hover:bg-macos-purple/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex flex-col items-center gap-2 p-4 bg-gradient-to-br from-macos-purple/10 to-macos-purple/20 dark:from-macos-purple/20 dark:to-macos-purple/30 text-macos-purple rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed border border-macos-purple/20"
                       >
                         <PlayCircle className="w-6 h-6" />
-                        <span className="text-sm font-medium">Long Test</span>
-                        <span className="text-xs text-gray-600 dark:text-gray-400">~hours</span>
-                      </button>
-                      <button
+                        <span className="text-sm font-bold">Long Test</span>
+                        <span className="text-xs font-medium text-gray-600 dark:text-gray-400">~hours</span>
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.05, y: -2 }}
+                        whileTap={{ scale: 0.95 }}
                         onClick={() => handleRunTest('conveyance')}
                         disabled={isRunningTest}
-                        className="flex flex-col items-center gap-2 p-4 bg-macos-green/10 dark:bg-macos-green/20 text-macos-green rounded-xl hover:bg-macos-green/20 dark:hover:bg-macos-green/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex flex-col items-center gap-2 p-4 bg-gradient-to-br from-green-500/10 to-emerald-500/20 dark:from-green-500/20 dark:to-emerald-500/30 text-green-600 dark:text-green-400 rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed border border-green-500/20"
                       >
                         <PlayCircle className="w-6 h-6" />
-                        <span className="text-sm font-medium">Conveyance</span>
-                        <span className="text-xs text-gray-600 dark:text-gray-400">~5 min</span>
-                      </button>
+                        <span className="text-sm font-bold">Conveyance</span>
+                        <span className="text-xs font-medium text-gray-600 dark:text-gray-400">~5 min</span>
+                      </motion.button>
                     </div>
                   </div>
                 </>
