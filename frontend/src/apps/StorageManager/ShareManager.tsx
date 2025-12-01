@@ -7,6 +7,7 @@ import Input from '@/components/ui/Input';
 import FolderPicker from '@/components/FolderPicker';
 import UserPicker from '@/components/UserPicker';
 import GroupPicker from '@/components/GroupPicker';
+import { Share2, Network, Upload, Folder, RefreshCw, Plus, Power, Edit2, Trash2, X, Users, UserCheck, CheckCircle, XCircle } from 'lucide-react';
 
 export default function ShareManager() {
   const [shares, setShares] = useState<Share[]>([]);
@@ -63,11 +64,12 @@ export default function ShareManager() {
   };
 
   const getShareIcon = (type: string) => {
+    const iconClass = "w-8 h-8";
     switch (type) {
-      case 'smb': return '🖥️';
-      case 'nfs': return '🌐';
-      case 'ftp': return '📤';
-      default: return '📁';
+      case 'smb': return <Share2 className={`${iconClass} text-blue-500`} />;
+      case 'nfs': return <Network className={`${iconClass} text-green-500`} />;
+      case 'ftp': return <Upload className={`${iconClass} text-orange-500`} />;
+      default: return <Folder className={`${iconClass} text-gray-500`} />;
     }
   };
 
@@ -80,156 +82,206 @@ export default function ShareManager() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* Header */}
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-          Network Shares ({shares.length})
-        </h2>
-        <div className="flex space-x-2">
-          <Button onClick={loadShares} variant="secondary">
-            🔄 Refresh
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-gradient-to-br from-macos-blue to-macos-purple rounded-xl shadow-lg">
+            <Share2 className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              Network Shares
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              {shares.length} share{shares.length !== 1 ? 's' : ''} configured
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            onClick={loadShares}
+            variant="secondary"
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Refresh
           </Button>
-          <Button onClick={() => setShowCreate(true)}>
-            ➕ Create Share
+          <Button
+            onClick={() => setShowCreate(true)}
+            className="flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Create Share
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {shares.map((share) => (
-          <Card key={share.id}>
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center space-x-3">
-                <div className="text-3xl">{getShareIcon(share.type)}</div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                    {share.name}
-                  </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 uppercase">
-                    {share.type}
+      {/* Shares Grid */}
+      {shares.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {shares.map((share) => (
+            <motion.div
+              key={share.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              whileHover={{ y: -2 }}
+              transition={{ duration: 0.2 }}
+            >
+              <Card className="h-full hover:shadow-xl transition-shadow duration-200">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center space-x-3 flex-1 min-w-0">
+                    <div className="flex-shrink-0 p-2 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-macos-dark-200 dark:to-macos-dark-300 rounded-xl">
+                      {getShareIcon(share.type)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">
+                        {share.name}
+                      </h3>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 uppercase">
+                        {share.type}
+                      </p>
+                    </div>
+                  </div>
+                  <span className={`px-3 py-1 text-xs font-semibold rounded-full shadow-sm flex-shrink-0 ml-2 ${
+                    share.enabled
+                      ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white'
+                      : 'bg-gradient-to-r from-gray-400 to-gray-500 text-white'
+                  }`}>
+                    {share.enabled ? 'Enabled' : 'Disabled'}
+                  </span>
+                </div>
+
+                {share.description && (
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 italic">
+                    {share.description}
                   </p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-2">
-                {share.enabled ? (
-                  <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 rounded-full text-xs font-medium">
-                    Enabled
-                  </span>
-                ) : (
-                  <span className="px-2 py-1 bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-400 rounded-full text-xs font-medium">
-                    Disabled
-                  </span>
                 )}
-              </div>
-            </div>
 
-            {share.description && (
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                {share.description}
-              </p>
-            )}
-
-            <div className="space-y-2 mb-4 text-sm">
-              {share.volumeId && (
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Volume:</span>
-                  <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 rounded text-xs font-mono">
-                    {share.volumeId}
-                  </span>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Path:</span>
-                <span className="font-mono text-gray-900 dark:text-gray-100">
-                  {share.path}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Read-Only:</span>
-                <span className="text-gray-900 dark:text-gray-100">
-                  {share.readOnly ? 'Yes' : 'No'}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Guest Access:</span>
-                <span className="text-gray-900 dark:text-gray-100">
-                  {share.guestOk ? 'Allowed' : 'Denied'}
-                </span>
-              </div>
-              {share.validUsers && share.validUsers.length > 0 && (
-                <div>
-                  <span className="text-gray-600 dark:text-gray-400">Valid Users:</span>
-                  <div className="mt-1 flex flex-wrap gap-1">
-                    {share.validUsers.map((user) => (
-                      <span
-                        key={user}
-                        className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 rounded text-xs"
-                      >
-                        👤 {user}
-                      </span>
-                    ))}
+                {/* Details */}
+                <div className="space-y-2 mb-4">
+                  <div className="p-3 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-macos-dark-200/50 dark:to-macos-dark-300/50 rounded-lg">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Folder className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                      <span className="text-xs text-gray-600 dark:text-gray-400">Path</span>
+                    </div>
+                    <p className="text-sm font-mono font-semibold text-gray-900 dark:text-gray-100 truncate">
+                      {share.path}
+                    </p>
                   </div>
-                </div>
-              )}
-              {share.validGroups && share.validGroups.length > 0 && (
-                <div>
-                  <span className="text-gray-600 dark:text-gray-400">Valid Groups:</span>
-                  <div className="mt-1 flex flex-wrap gap-1">
-                    {share.validGroups.map((group) => (
-                      <span
-                        key={group}
-                        className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-400 rounded text-xs"
-                      >
-                        👥 @{group}
-                      </span>
-                    ))}
+
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
+                      <CheckCircle className="w-3 h-3" />
+                      Read-Only: {share.readOnly ? 'Yes' : 'No'}
+                    </div>
+                    <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
+                      <UserCheck className="w-3 h-3" />
+                      Guest: {share.guestOk ? 'Allowed' : 'Denied'}
+                    </div>
                   </div>
+
+                  {share.validUsers && share.validUsers.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 mb-1">
+                        <UserCheck className="w-3 h-3" />
+                        Valid Users:
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {share.validUsers.map((user) => (
+                          <span
+                            key={user}
+                            className="px-2 py-0.5 bg-gradient-to-r from-blue-100 to-blue-200 dark:from-blue-900/30 dark:to-blue-800/30 text-blue-800 dark:text-blue-400 rounded-md text-xs font-medium border border-blue-200 dark:border-blue-700"
+                          >
+                            {user}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {share.validGroups && share.validGroups.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 mb-1">
+                        <Users className="w-3 h-3" />
+                        Valid Groups:
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {share.validGroups.map((group) => (
+                          <span
+                            key={group}
+                            className="px-2 py-0.5 bg-gradient-to-r from-purple-100 to-purple-200 dark:from-purple-900/30 dark:to-purple-800/30 text-purple-800 dark:text-purple-400 rounded-md text-xs font-medium border border-purple-200 dark:border-purple-700"
+                          >
+                            @{group}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
 
-            <div className="flex space-x-2">
-              <Button
-                onClick={() => handleToggle(share.id, share.enabled)}
-                variant="secondary"
-                size="sm"
-                className="flex-1"
-              >
-                {share.enabled ? '⏸️ Disable' : '▶️ Enable'}
-              </Button>
-              <Button
-                onClick={() => {
-                  setEditShare(share);
-                  setShowCreate(true);
-                }}
-                variant="secondary"
-                size="sm"
-                className="flex-1"
-              >
-                ✏️ Edit
-              </Button>
-              <Button
-                onClick={() => handleDelete(share.id)}
-                variant="secondary"
-                size="sm"
-                className="text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
-              >
-                🗑️
-              </Button>
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      {shares.length === 0 && (
-        <div className="text-center py-12 text-gray-600 dark:text-gray-400">
-          <div className="text-6xl mb-4">📁</div>
-          <p className="text-lg font-medium mb-2">No shares found</p>
-          <p className="text-sm mb-4">Create your first network share to get started</p>
-          <Button onClick={() => setShowCreate(true)}>
-            ➕ Create Share
-          </Button>
+                {/* Actions */}
+                <div className="grid grid-cols-3 gap-2">
+                  <Button
+                    onClick={() => handleToggle(share.id, share.enabled)}
+                    variant="secondary"
+                    size="sm"
+                    className="flex items-center justify-center gap-1"
+                  >
+                    <Power className="w-3 h-3" />
+                    {share.enabled ? 'Disable' : 'Enable'}
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setEditShare(share);
+                      setShowCreate(true);
+                    }}
+                    variant="secondary"
+                    size="sm"
+                    className="flex items-center justify-center gap-1"
+                  >
+                    <Edit2 className="w-3 h-3" />
+                    Edit
+                  </Button>
+                  <Button
+                    onClick={() => handleDelete(share.id)}
+                    variant="secondary"
+                    size="sm"
+                    className="flex items-center justify-center gap-1 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    Delete
+                  </Button>
+                </div>
+              </Card>
+            </motion.div>
+          ))}
         </div>
+      )}
+
+      {/* Empty State */}
+      {shares.length === 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col items-center justify-center py-16 px-4"
+        >
+          <div className="p-6 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-macos-dark-200 dark:to-macos-dark-300 rounded-2xl mb-6">
+            <Share2 className="w-16 h-16 text-gray-400 dark:text-gray-600" />
+          </div>
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+            No Shares Found
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-6 text-center max-w-md">
+            Create your first network share to start sharing files
+          </p>
+          <Button
+            onClick={() => setShowCreate(true)}
+            className="flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Create Share
+          </Button>
+        </motion.div>
       )}
 
       {/* Create/Edit Share Modal */}
@@ -326,7 +378,7 @@ function ShareModal({ share, onClose, onSuccess }: ShareModalProps) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
       onClick={onClose}
     >
       <motion.div
@@ -334,11 +386,30 @@ function ShareModal({ share, onClose, onSuccess }: ShareModalProps) {
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
         onClick={(e) => e.stopPropagation()}
-        className="bg-white dark:bg-macos-dark-100 rounded-lg shadow-2xl p-6 w-full max-w-2xl max-h-[80vh] overflow-auto"
+        className="bg-white dark:bg-macos-dark-100 rounded-2xl shadow-2xl p-6 w-full max-w-2xl max-h-[80vh] overflow-auto"
       >
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">
-          {share ? 'Edit Share' : 'Create Share'}
-        </h2>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-br from-macos-blue to-macos-purple rounded-xl">
+              {share ? <Edit2 className="w-6 h-6 text-white" /> : <Plus className="w-6 h-6 text-white" />}
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                {share ? 'Edit Share' : 'Create Share'}
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {share ? 'Update share configuration' : 'Configure a new network share'}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-macos-dark-200 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
@@ -491,8 +562,11 @@ function ShareModal({ share, onClose, onSuccess }: ShareModalProps) {
           </div>
 
           {error && (
-            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-600 dark:text-red-400 text-sm">
-              {error}
+            <div className="p-3 bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 border border-red-200 dark:border-red-800 rounded-xl flex items-start gap-2">
+              <XCircle className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-red-600 dark:text-red-400">
+                {error}
+              </p>
             </div>
           )}
 
