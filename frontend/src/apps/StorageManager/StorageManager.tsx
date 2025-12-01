@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
 import StorageOverview from './StorageOverview';
 import DiskManager from './DiskManager';
 import VolumeManager from './VolumeManager';
@@ -29,32 +28,27 @@ export function StorageManager() {
 
   return (
     <div className="flex flex-col h-full bg-gray-50 dark:bg-macos-dark-50">
-      {/* Tab Navigation */}
-      <div className="flex border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-macos-dark-100">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`
-              relative px-6 py-3 text-sm font-medium transition-colors
-              ${
-                activeTab === tab.id
-                  ? 'text-macos-blue dark:text-macos-blue'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-              }
-            `}
-          >
-            <span className="mr-2">{tab.icon}</span>
-            {tab.name}
-            {activeTab === tab.id && (
-              <motion.div
-                layoutId="activeTab"
-                className="absolute bottom-0 left-0 right-0 h-0.5 bg-macos-blue"
-                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-              />
-            )}
-          </button>
-        ))}
+      {/* Tab Navigation - Modern Pill Style */}
+      <div className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-macos-dark-100 dark:to-macos-dark-200 border-b border-gray-200/50 dark:border-gray-700/50">
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`
+                relative px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 whitespace-nowrap
+                ${
+                  activeTab === tab.id
+                    ? 'bg-gradient-to-r from-macos-blue to-macos-purple text-white shadow-lg shadow-macos-blue/30 scale-105'
+                    : 'bg-white/50 dark:bg-macos-dark-200/50 text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-macos-dark-200 hover:shadow-md backdrop-blur-sm'
+                }
+              `}
+            >
+              <span className="mr-2">{tab.icon}</span>
+              {tab.name}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Tab Content */}
