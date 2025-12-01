@@ -10,9 +10,150 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Stumpf-works/stumpfworks-nas/internal/database"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/database/models"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
 	"go.uber.org/zap"
 )
+
+// MountPersistedVolumes mounts all volumes from the database on startup
+// This ensures that volumes persist across reboots and are automatically mounted
+func MountPersistedVolumes() error {
+	db := database.GetDB()
+	if db == nil {
+		return fmt.Errorf("database not initialized")
+	}
+
+	var dbVolumes []models.Volume
+	if err := db.Find(&dbVolumes).Error; err != nil {
+		return fmt.Errorf("failed to read volumes from database: %w", err)
+	}
+
+	if len(dbVolumes) == 0 {
+		logger.Info("No persisted volumes found in database")
+		return nil
+	}
+
+	logger.Info("Mounting persisted volumes", zap.Int("count", len(dbVolumes)))
+
+	var mountErrors []string
+	successCount := 0
+	now := time.Now()
+
+	for _, vol := range dbVolumes {
+		logger.Info("Processing volume",
+			zap.String("name", vol.Name),
+			zap.String("mount_point", vol.MountPoint),
+			zap.String("current_status", vol.Status))
+
+		// Check if already mounted
+		if isVolumeMounted(vol.MountPoint) {
+			logger.Info("Volume already mounted",
+				zap.String("volume", vol.Name),
+				zap.String("mount_point", vol.MountPoint))
+
+			// Update status to online and clear any errors
+			vol.Status = "online"
+			vol.LastMounted = &now
+			vol.LastError = ""
+			if err := db.Save(&vol).Error; err != nil {
+				logger.Warn("Failed to update volume status",
+					zap.String("volume", vol.Name),
+					zap.Error(err))
+			}
+			successCount++
+			continue
+		}
+
+		// Ensure mount point directory exists
+		if err := os.MkdirAll(vol.MountPoint, 0755); err != nil {
+			errMsg := fmt.Sprintf("failed to create mount point: %v", err)
+			logger.Error("Failed to create mount point",
+				zap.String("volume", vol.Name),
+				zap.String("mount_point", vol.MountPoint),
+				zap.Error(err))
+
+			vol.Status = "error"
+			vol.LastError = errMsg
+			db.Save(&vol)
+			mountErrors = append(mountErrors, fmt.Sprintf("%s: %s", vol.Name, errMsg))
+			continue
+		}
+
+		// Try to mount the volume
+		logger.Info("Attempting to mount volume",
+			zap.String("volume", vol.Name),
+			zap.String("mount_point", vol.MountPoint))
+
+		if err := mountVolumeFromDB(&vol); err != nil {
+			errMsg := fmt.Sprintf("mount failed: %v", err)
+			logger.Error("Failed to mount volume",
+				zap.String("volume", vol.Name),
+				zap.String("mount_point", vol.MountPoint),
+				zap.Error(err))
+
+			vol.Status = "offline"
+			vol.LastError = errMsg
+			db.Save(&vol)
+			mountErrors = append(mountErrors, fmt.Sprintf("%s: %s", vol.Name, errMsg))
+		} else {
+			logger.Info("Volume mounted successfully",
+				zap.String("volume", vol.Name),
+				zap.String("mount_point", vol.MountPoint))
+
+			vol.Status = "online"
+			vol.LastMounted = &now
+			vol.LastError = ""
+			db.Save(&vol)
+			successCount++
+		}
+	}
+
+	logger.Info("Volume mounting completed",
+		zap.Int("total", len(dbVolumes)),
+		zap.Int("successful", successCount),
+		zap.Int("failed", len(mountErrors)))
+
+	if len(mountErrors) > 0 {
+		return fmt.Errorf("failed to mount %d/%d volumes: %s",
+			len(mountErrors), len(dbVolumes), strings.Join(mountErrors, "; "))
+	}
+
+	return nil
+}
+
+// isVolumeMounted checks if a volume is currently mounted
+func isVolumeMounted(mountPoint string) bool {
+	cmd := exec.Command("mountpoint", "-q", mountPoint)
+	err := cmd.Run()
+	return err == nil
+}
+
+// mountVolumeFromDB mounts a volume based on its database configuration
+func mountVolumeFromDB(vol *models.Volume) error {
+	// Get the device path from the disks field
+	disks := strings.Split(vol.Disks, ",")
+	if len(disks) == 0 || disks[0] == "" {
+		return fmt.Errorf("no disks specified for volume")
+	}
+
+	// For single-disk volumes, mount the first disk
+	devicePath := "/dev/" + strings.TrimSpace(disks[0])
+
+	// Check if device exists
+	if _, err := os.Stat(devicePath); err != nil {
+		return fmt.Errorf("device %s not found: %w", devicePath, err)
+	}
+
+	// Mount the device
+	cmd := exec.Command("mount", devicePath, vol.MountPoint)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("mount command failed: %w (output: %s)", err, string(output))
+	}
+
+	return nil
+}
 
 // ListVolumes lists all storage volumes/pools
 func ListVolumes() ([]Volume, error) {
@@ -620,6 +761,36 @@ func createSingleVolume(req *CreateVolumeRequest) (*Volume, error) {
 
 	logger.Info("Single volume created successfully", zap.String("name", req.Name), zap.String("mount", req.MountPoint))
 
+	// Save to database for persistence
+	db := database.GetDB()
+	if db != nil {
+		now := time.Now()
+		diskName := filepath.Base(disk)
+		dbVolume := models.Volume{
+			ID:          diskName,
+			Name:        req.Name,
+			Type:        string(req.Type),
+			MountPoint:  req.MountPoint,
+			Disks:       strings.TrimPrefix(disk, "/dev/"),
+			Filesystem:  req.Filesystem,
+			Status:      "online",
+			LastMounted: &now,
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		}
+
+		if err := db.Create(&dbVolume).Error; err != nil {
+			logger.Warn("Failed to save volume to database - volume will not be automatically mounted on reboot",
+				zap.String("volume", req.Name),
+				zap.Error(err))
+			// Don't fail - volume is created and mounted, just won't be in DB
+		} else {
+			logger.Info("Volume saved to database for automatic mounting on reboot",
+				zap.String("volume", req.Name),
+				zap.String("id", diskName))
+		}
+	}
+
 	return GetVolume(filepath.Base(disk))
 }
 
@@ -680,6 +851,19 @@ func DeleteVolume(id string) error {
 
 	// Remove from fstab
 	removeFromFstab(volume.MountPoint)
+
+	// Remove from database
+	db := database.GetDB()
+	if db != nil {
+		if err := db.Where("id = ? OR mount_point = ?", id, volume.MountPoint).Delete(&models.Volume{}).Error; err != nil {
+			logger.Warn("Failed to remove volume from database",
+				zap.String("id", id),
+				zap.Error(err))
+			// Don't fail - volume is deleted from system, just not from DB
+		} else {
+			logger.Info("Volume removed from database", zap.String("id", id))
+		}
+	}
 
 	logger.Info("Volume deleted successfully", zap.String("id", id))
 

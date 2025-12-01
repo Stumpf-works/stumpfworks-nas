@@ -165,6 +165,15 @@ func main() {
 		logger.Info("Samba configuration verified and repaired if needed")
 	}
 
+	// Mount all persisted volumes from database (ensures volumes persist across reboots)
+	if err := storage.MountPersistedVolumes(); err != nil {
+		logger.Warn("Failed to mount some volumes from database",
+			zap.Error(err),
+			zap.String("message", "Some volumes may be offline - check storage page for details"))
+	} else {
+		logger.Info("All persisted volumes mounted successfully")
+	}
+
 	// Initialize file service
 	if err := handlers.InitFileService(); err != nil {
 		logger.Fatal("Failed to initialize file service", zap.Error(err))

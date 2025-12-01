@@ -16,6 +16,7 @@ func RunMigrations() error {
 		&models.User{},
 		&models.UserGroup{},
 		&models.Share{},
+		&models.Volume{},
 		&models.DiskLabel{},
 		&models.AuditLog{},
 		&models.FailedLoginAttempt{},
@@ -90,6 +91,19 @@ func AddPerformanceIndexes() error {
 
 	// Index for system metrics timestamp
 	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_metrics_timestamp ON system_metrics(timestamp DESC)").Error; err != nil {
+		return err
+	}
+
+	// Index for volume name lookups
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_volumes_name ON volumes(name)").Error; err != nil {
+		return err
+	}
+	// Index for volume mount point lookups
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_volumes_mount_point ON volumes(mount_point)").Error; err != nil {
+		return err
+	}
+	// Index for volume status queries
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_volumes_status ON volumes(status)").Error; err != nil {
 		return err
 	}
 
