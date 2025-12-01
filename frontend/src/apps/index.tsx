@@ -19,6 +19,7 @@ const SystemManager = lazy(() => import('./SystemManager/SystemManager').then(m 
 const HighAvailability = lazy(() => import('./HighAvailability/HighAvailability').then(m => ({ default: m.HighAvailability })));
 const VMManager = lazy(() => import('./VMManager').then(m => ({ default: m.VMManager })));
 const LXCManager = lazy(() => import('./LXCManager').then(m => ({ default: m.LXCManager })));
+const VPNServer = lazy(() => import('./VPNServer/VPNServer'));
 
 export const registeredApps: App[] = [
   {
@@ -157,6 +158,14 @@ export const registeredApps: App[] = [
     defaultSize: { width: 1200, height: 800 },
     minSize: { width: 900, height: 600 },
   },
+  {
+    id: 'vpn-server',
+    name: 'VPN Server',
+    icon: '🔒',
+    component: VPNServer,
+    defaultSize: { width: 1400, height: 900 },
+    minSize: { width: 1000, height: 700 },
+  },
 ];
 
 export function getAppById(id: string): App | undefined {
@@ -166,7 +175,7 @@ export function getAppById(id: string): App | undefined {
 // App categories for App Gallery
 export const appCategories = {
   system: ['dashboard', 'system', 'settings', 'terminal'],
-  management: ['users', 'quotas', 'network', 'storage', 'ad-dc', 'high-availability', 'vm-manager', 'lxc-manager'],
+  management: ['users', 'quotas', 'network', 'storage', 'ad-dc', 'high-availability', 'vm-manager', 'lxc-manager', 'vpn-server'],
   security: ['security-center'],
   tools: ['files'],
   development: ['docker', 'plugins', 'app-store'],
