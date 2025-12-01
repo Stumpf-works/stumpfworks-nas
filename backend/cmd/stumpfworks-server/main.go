@@ -27,6 +27,7 @@ import (
 	"github.com/Stumpf-works/stumpfworks-nas/internal/dependencies"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/docker"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/metrics"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/network"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/plugins"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/scheduler"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/storage"
@@ -175,6 +176,15 @@ func main() {
 		logger.Info("All persisted volumes mounted successfully")
 	}
 
+	// Restore all network bridges from database (ensures bridges persist across reboots)
+	if err := restoreNetworkBridges(); err != nil {
+		logger.Warn("Failed to restore some network bridges from database",
+			zap.Error(err),
+			zap.String("message", "Some network bridges may be offline - check network page for details"))
+	} else {
+		logger.Info("All persisted network bridges restored successfully")
+	}
+
 	// Initialize file service
 	if err := handlers.InitFileService(); err != nil {
 		logger.Fatal("Failed to initialize file service", zap.Error(err))
@@ -239,12 +249,25 @@ func main() {
 	}
 
 	// Initialize LXC Manager (non-fatal, requires LXC Manager addon)
+	var lxcManagerInstance *lxc.LXCManager
 	if err := initializeLXCManager(); err != nil {
 		logger.Warn("LXC Manager initialization failed",
 			zap.Error(err),
 			zap.String("message", "LXC management features will be disabled. Install LXC Manager addon to enable."))
 	} else {
 		logger.Info("LXC Manager initialized")
+		// Get the LXC manager instance for container restoration
+		shell := system.MustGet().Shell
+		lxcManagerInstance, _ = lxc.NewLXCManager(shell)
+
+		// Restore autostart containers from database
+		if err := restoreLXCContainers(lxcManagerInstance); err != nil {
+			logger.Warn("Failed to restore some LXC containers from database",
+				zap.Error(err),
+				zap.String("message", "Some autostart containers may not have started - check LXC page for details"))
+		} else {
+			logger.Info("All autostart LXC containers restored successfully")
+		}
 	}
 
 	// Initialize VPN Manager (non-fatal, requires VPN Server addon)
@@ -793,4 +816,20 @@ func separator(width int) string {
 		s += "="
 	}
 	return s
+}
+
+// restoreNetworkBridges restores all network bridges from database on startup
+// This ensures bridges persist across reboots
+func restoreNetworkBridges() error {
+	return network.RestoreAllBridges()
+}
+
+// restoreLXCContainers restores all autostart LXC containers from database on startup
+// This ensures containers with autostart enabled are started after reboot
+func restoreLXCContainers(lxcManager *lxc.LXCManager) error {
+	if lxcManager == nil {
+		logger.Info("LXC manager not initialized, skipping container restoration")
+		return nil
+	}
+	return lxcManager.RestoreAllContainers()
 }

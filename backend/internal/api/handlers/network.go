@@ -409,8 +409,11 @@ func (h *NetworkHandler) WakeOnLAN(w http.ResponseWriter, r *http.Request) {
 // CreateBridge handles POST /api/network/bridges
 func (h *NetworkHandler) CreateBridge(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Name  string   `json:"name"`
-		Ports []string `json:"ports"`
+		Name        string   `json:"name"`
+		Ports       []string `json:"ports"`
+		IPAddress   string   `json:"ip_address,omitempty"`   // Optional CIDR (e.g., "192.168.1.10/24")
+		Gateway     string   `json:"gateway,omitempty"`      // Optional gateway
+		Description string   `json:"description,omitempty"`  // Optional description
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -423,12 +426,13 @@ func (h *NetworkHandler) CreateBridge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := network.CreateBridge(req.Name, req.Ports); err != nil {
+	// Use persistent bridge creation (saves to database)
+	if err := network.CreateBridgePersistent(req.Name, req.Ports, req.IPAddress, req.Gateway, req.Description); err != nil {
 		utils.RespondError(w, errors.InternalServerError("Failed to create bridge", err))
 		return
 	}
 
-	utils.RespondSuccess(w, map[string]string{"message": "Bridge created successfully", "name": req.Name})
+	utils.RespondSuccess(w, map[string]string{"message": "Bridge created successfully and saved to database", "name": req.Name})
 }
 
 // DeleteBridge handles DELETE /api/network/bridges/{name}
@@ -440,12 +444,13 @@ func (h *NetworkHandler) DeleteBridge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := network.DeleteBridge(name); err != nil {
+	// Use persistent bridge deletion (removes from database)
+	if err := network.DeleteBridgePersistent(name); err != nil {
 		utils.RespondError(w, errors.InternalServerError("Failed to delete bridge", err))
 		return
 	}
 
-	utils.RespondSuccess(w, map[string]string{"message": "Bridge deleted successfully", "name": name})
+	utils.RespondSuccess(w, map[string]string{"message": "Bridge deleted successfully from system and database", "name": name})
 }
 
 // AttachPortToBridge handles POST /api/network/bridges/{name}/attach
@@ -500,11 +505,23 @@ func (h *NetworkHandler) DetachPortFromBridge(w http.ResponseWriter, r *http.Req
 
 // ListBridges handles GET /api/network/bridges
 func (h *NetworkHandler) ListBridges(w http.ResponseWriter, r *http.Request) {
-	bridges, err := network.ListBridges()
+	// Get bridges from database (includes configuration and status)
+	persistedBridges, err := network.GetPersistedBridges()
 	if err != nil {
-		utils.RespondError(w, errors.InternalServerError("Failed to list bridges", err))
+		utils.RespondError(w, errors.InternalServerError("Failed to list bridges from database", err))
 		return
 	}
 
-	utils.RespondSuccess(w, bridges)
+	// Also get current system bridges for comparison
+	systemBridges, err := network.ListBridges()
+	if err != nil {
+		utils.RespondError(w, errors.InternalServerError("Failed to list bridges from system", err))
+		return
+	}
+
+	// Return combined information
+	utils.RespondSuccess(w, map[string]interface{}{
+		"persisted": persistedBridges,
+		"system":    systemBridges,
+	})
 }

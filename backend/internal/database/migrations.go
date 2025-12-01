@@ -40,6 +40,11 @@ func RunMigrations() error {
 		&models.VPNConnection{},
 		&models.VPNRoute{},
 		&models.VPNFirewallRule{},
+		// Network configuration models
+		&models.NetworkBridge{},
+		&models.NetworkInterface{},
+		// LXC container models
+		&models.LXCContainer{},
 		// Add more models here as they are created
 	); err != nil {
 		return err
@@ -188,6 +193,36 @@ func AddPerformanceIndexes() error {
 		return err
 	}
 	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_vpn_firewall_priority ON vpn_firewall_rules(priority ASC)").Error; err != nil {
+		return err
+	}
+
+	// Network bridge indexes
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_network_bridges_name ON network_bridges(name)").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_network_bridges_autostart ON network_bridges(autostart)").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_network_bridges_status ON network_bridges(status)").Error; err != nil {
+		return err
+	}
+
+	// Network interface indexes
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_network_interfaces_name ON network_interfaces(name)").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_network_interfaces_autostart ON network_interfaces(autostart)").Error; err != nil {
+		return err
+	}
+
+	// LXC container indexes
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_lxc_containers_name ON lxc_containers(name)").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_lxc_containers_autostart ON lxc_containers(autostart)").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_lxc_containers_status ON lxc_containers(status)").Error; err != nil {
 		return err
 	}
 

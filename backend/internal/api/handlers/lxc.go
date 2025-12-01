@@ -75,15 +75,16 @@ func CreateContainer(w http.ResponseWriter, r *http.Request) {
 
 	logger.Info("Creating container via API", zap.String("container_name", req.Name))
 
-	if err := lxcManager.CreateContainer(req); err != nil {
+	// Use persistent container creation (saves to database)
+	if err := lxcManager.CreateContainerPersistent(req); err != nil {
 		logger.Error("Failed to create container", zap.Error(err), zap.String("container_name", req.Name))
 		utils.RespondError(w, errors.InternalServerError("Failed to create container", err))
 		return
 	}
 
-	logger.Info("Container created successfully via API", zap.String("container_name", req.Name))
+	logger.Info("Container created successfully and saved to database", zap.String("container_name", req.Name))
 	utils.RespondSuccess(w, map[string]string{
-		"message": "Container created successfully",
+		"message": "Container created successfully and saved to database",
 		"name":    req.Name,
 	})
 }
@@ -108,6 +109,9 @@ func StartContainer(w http.ResponseWriter, r *http.Request) {
 		utils.RespondError(w, errors.InternalServerError("Failed to start container", err))
 		return
 	}
+
+	// Update status in database
+	lxcManager.UpdateContainerStatus(containerName, "running", "", "")
 
 	logger.Info("Container started successfully via API", zap.String("container", containerName))
 	utils.RespondSuccess(w, map[string]string{
@@ -140,6 +144,9 @@ func StopContainer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Update status in database
+	lxcManager.UpdateContainerStatus(containerName, "stopped", "", "")
+
 	logger.Info("Container stopped successfully via API", zap.String("container", containerName))
 	utils.RespondSuccess(w, map[string]string{
 		"message": "Container stopped successfully",
@@ -162,15 +169,16 @@ func DeleteContainer(w http.ResponseWriter, r *http.Request) {
 
 	logger.Info("Deleting container via API", zap.String("container", containerName))
 
-	if err := lxcManager.DeleteContainer(containerName); err != nil {
+	// Use persistent container deletion (removes from database)
+	if err := lxcManager.DeleteContainerPersistent(containerName); err != nil {
 		logger.Error("Failed to delete container", zap.Error(err), zap.String("container", containerName))
 		utils.RespondError(w, errors.InternalServerError("Failed to delete container", err))
 		return
 	}
 
-	logger.Info("Container deleted successfully via API", zap.String("container", containerName))
+	logger.Info("Container deleted successfully from system and database", zap.String("container", containerName))
 	utils.RespondSuccess(w, map[string]string{
-		"message": "Container deleted successfully",
+		"message": "Container deleted successfully from system and database",
 		"name":    containerName,
 	})
 }
