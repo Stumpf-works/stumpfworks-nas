@@ -1,19 +1,24 @@
-import { Dashboard } from './Dashboard/Dashboard';
-import { UserManager } from './UserManager/UserManager';
-import { Settings } from './Settings/Settings';
-import { StorageManager } from './StorageManager/StorageManager';
-import FileManager from './FileManager/FileManager';
-import { NetworkManager } from './NetworkManager/NetworkManager';
-import { DockerManager } from './DockerManager/DockerManager';
-import { PluginManager} from './PluginManager/PluginManager';
-import { BackupManager } from './BackupManager/BackupManager';
-import { SecurityCenter } from './SecurityCenter';
-import { Tasks } from './Tasks/Tasks';
-import { AppStore } from './AppStore/AppStore';
-import { Terminal } from './Terminal/Terminal';
-import { ADDCManager } from './ADDCManager';
-import { Monitoring } from './Monitoring';
+import { lazy } from 'react';
 import type { App } from '@/types';
+
+// Lazy load all apps for better initial load performance
+const Dashboard = lazy(() => import('./Dashboard/Dashboard').then(m => ({ default: m.Dashboard })));
+const UserManager = lazy(() => import('./UserManager/UserManager').then(m => ({ default: m.UserManager })));
+const QuotaManager = lazy(() => import('./QuotaManager/QuotaManager').then(m => ({ default: m.QuotaManager })));
+const Settings = lazy(() => import('./Settings/Settings').then(m => ({ default: m.Settings })));
+const StorageManager = lazy(() => import('./StorageManager/StorageManager').then(m => ({ default: m.StorageManager })));
+const FileManager = lazy(() => import('./FileManager/FileManager'));
+const NetworkManager = lazy(() => import('./NetworkManager/NetworkManager').then(m => ({ default: m.NetworkManager })));
+const DockerManager = lazy(() => import('./DockerManager/DockerManager').then(m => ({ default: m.DockerManager })));
+const PluginManager = lazy(() => import('./PluginManager/PluginManager').then(m => ({ default: m.PluginManager })));
+const SecurityCenter = lazy(() => import('./SecurityCenter').then(m => ({ default: m.SecurityCenter })));
+const AppStore = lazy(() => import('./AppStore/AppStore').then(m => ({ default: m.AppStore })));
+const Terminal = lazy(() => import('./Terminal/Terminal').then(m => ({ default: m.Terminal })));
+const ADDCManager = lazy(() => import('./ADDCManager').then(m => ({ default: m.ADDCManager })));
+const SystemManager = lazy(() => import('./SystemManager/SystemManager').then(m => ({ default: m.SystemManager })));
+const HighAvailability = lazy(() => import('./HighAvailability/HighAvailability').then(m => ({ default: m.HighAvailability })));
+const VMManager = lazy(() => import('./VMManager').then(m => ({ default: m.VMManager })));
+const LXCManager = lazy(() => import('./LXCManager').then(m => ({ default: m.LXCManager })));
 
 export const registeredApps: App[] = [
   {
@@ -23,14 +28,6 @@ export const registeredApps: App[] = [
     component: Dashboard,
     defaultSize: { width: 900, height: 600 },
     minSize: { width: 600, height: 400 },
-  },
-  {
-    id: 'monitoring',
-    name: 'Monitoring',
-    icon: '📈',
-    component: Monitoring,
-    defaultSize: { width: 1200, height: 800 },
-    minSize: { width: 900, height: 600 },
   },
   {
     id: 'storage',
@@ -57,6 +54,14 @@ export const registeredApps: App[] = [
     minSize: { width: 800, height: 600 },
   },
   {
+    id: 'quotas',
+    name: 'Quotas',
+    icon: '📊',
+    component: QuotaManager,
+    defaultSize: { width: 1200, height: 800 },
+    minSize: { width: 900, height: 600 },
+  },
+  {
     id: 'security-center',
     name: 'Security Center',
     icon: '🛡️',
@@ -65,12 +70,12 @@ export const registeredApps: App[] = [
     minSize: { width: 1000, height: 700 },
   },
   {
-    id: 'tasks',
-    name: 'Scheduled Tasks',
-    icon: '📅',
-    component: Tasks,
-    defaultSize: { width: 1400, height: 800 },
-    minSize: { width: 1000, height: 600 },
+    id: 'system',
+    name: 'System',
+    icon: '🖥️',
+    component: SystemManager,
+    defaultSize: { width: 1400, height: 900 },
+    minSize: { width: 1000, height: 700 },
   },
   {
     id: 'network',
@@ -85,6 +90,14 @@ export const registeredApps: App[] = [
     name: 'AD Domain Controller',
     icon: '🏢',
     component: ADDCManager,
+    defaultSize: { width: 1400, height: 900 },
+    minSize: { width: 1000, height: 700 },
+  },
+  {
+    id: 'high-availability',
+    name: 'High Availability',
+    icon: '⚡',
+    component: HighAvailability,
     defaultSize: { width: 1400, height: 900 },
     minSize: { width: 1000, height: 700 },
   },
@@ -121,20 +134,28 @@ export const registeredApps: App[] = [
     minSize: { width: 800, height: 500 },
   },
   {
-    id: 'backups',
-    name: 'Backups',
-    icon: '⏱️',
-    component: BackupManager,
-    defaultSize: { width: 1200, height: 800 },
-    minSize: { width: 900, height: 600 },
-  },
-  {
     id: 'settings',
     name: 'Settings',
     icon: '⚙️',
     component: Settings,
     defaultSize: { width: 800, height: 700 },
     minSize: { width: 600, height: 500 },
+  },
+  {
+    id: 'vm-manager',
+    name: 'VM Manager',
+    icon: '🖥️',
+    component: VMManager,
+    defaultSize: { width: 1200, height: 800 },
+    minSize: { width: 900, height: 600 },
+  },
+  {
+    id: 'lxc-manager',
+    name: 'LXC Manager',
+    icon: '📦',
+    component: LXCManager,
+    defaultSize: { width: 1200, height: 800 },
+    minSize: { width: 900, height: 600 },
   },
 ];
 
@@ -144,10 +165,10 @@ export function getAppById(id: string): App | undefined {
 
 // App categories for App Gallery
 export const appCategories = {
-  system: ['dashboard', 'monitoring', 'settings', 'terminal'],
-  management: ['users', 'network', 'storage', 'ad-dc'],
+  system: ['dashboard', 'system', 'settings', 'terminal'],
+  management: ['users', 'quotas', 'network', 'storage', 'ad-dc', 'high-availability', 'vm-manager', 'lxc-manager'],
   security: ['security-center'],
-  tools: ['files', 'backups', 'tasks'],
+  tools: ['files'],
   development: ['docker', 'plugins', 'app-store'],
 } as const;
 

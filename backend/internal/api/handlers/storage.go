@@ -10,22 +10,36 @@ import (
 	"github.com/Stumpf-works/stumpfworks-nas/internal/api/middleware"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database/models"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/storage"
+	"github.com/Stumpf-works/stumpfworks-nas/pkg/cache"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/errors"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/utils"
 	"go.uber.org/zap"
 )
 
+// Storage cache with 30s TTL (disk info changes infrequently)
+var storageCache = cache.New(30 * time.Second)
+
 // ===== Disk Handlers =====
 
 // ListDisks lists all available disks
 func ListDisks(w http.ResponseWriter, r *http.Request) {
+	// Try cache first
+	if cached, ok := storageCache.Get("disks"); ok {
+		utils.RespondSuccess(w, cached)
+		return
+	}
+
+	// Cache miss - fetch from storage
 	disks, err := storage.ListDisks()
 	if err != nil {
 		logger.Error("Failed to list disks", zap.Error(err))
 		utils.RespondError(w, errors.InternalServerError("Failed to list disks", err))
 		return
 	}
+
+	// Cache for 30 seconds
+	storageCache.Set("disks", disks)
 
 	utils.RespondSuccess(w, disks)
 }
@@ -353,12 +367,22 @@ func DisableShare(w http.ResponseWriter, r *http.Request) {
 
 // GetStorageStats retrieves overall storage statistics
 func GetStorageStats(w http.ResponseWriter, r *http.Request) {
+	// Try cache first
+	if cached, ok := storageCache.Get("storage_stats"); ok {
+		utils.RespondSuccess(w, cached)
+		return
+	}
+
+	// Cache miss - fetch from storage
 	stats, err := storage.GetStorageStats()
 	if err != nil {
 		logger.Error("Failed to get storage stats", zap.Error(err))
 		utils.RespondError(w, errors.InternalServerError("Failed to get storage stats", err))
 		return
 	}
+
+	// Cache for 30 seconds
+	storageCache.Set("storage_stats", stats)
 
 	utils.RespondSuccess(w, stats)
 }

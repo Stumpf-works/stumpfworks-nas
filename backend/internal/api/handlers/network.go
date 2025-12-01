@@ -405,3 +405,106 @@ func (h *NetworkHandler) WakeOnLAN(w http.ResponseWriter, r *http.Request) {
 
 	utils.RespondSuccess(w, map[string]string{"message": "Wake-on-LAN packet sent"})
 }
+
+// CreateBridge handles POST /api/network/bridges
+func (h *NetworkHandler) CreateBridge(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Name  string   `json:"name"`
+		Ports []string `json:"ports"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.RespondError(w, errors.BadRequest("Invalid request", err))
+		return
+	}
+
+	if req.Name == "" {
+		utils.RespondError(w, errors.BadRequest("Bridge name is required", nil))
+		return
+	}
+
+	if err := network.CreateBridge(req.Name, req.Ports); err != nil {
+		utils.RespondError(w, errors.InternalServerError("Failed to create bridge", err))
+		return
+	}
+
+	utils.RespondSuccess(w, map[string]string{"message": "Bridge created successfully", "name": req.Name})
+}
+
+// DeleteBridge handles DELETE /api/network/bridges/{name}
+func (h *NetworkHandler) DeleteBridge(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+
+	if name == "" {
+		utils.RespondError(w, errors.BadRequest("Bridge name is required", nil))
+		return
+	}
+
+	if err := network.DeleteBridge(name); err != nil {
+		utils.RespondError(w, errors.InternalServerError("Failed to delete bridge", err))
+		return
+	}
+
+	utils.RespondSuccess(w, map[string]string{"message": "Bridge deleted successfully", "name": name})
+}
+
+// AttachPortToBridge handles POST /api/network/bridges/{name}/attach
+func (h *NetworkHandler) AttachPortToBridge(w http.ResponseWriter, r *http.Request) {
+	bridgeName := chi.URLParam(r, "name")
+
+	var req struct {
+		Port string `json:"port"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.RespondError(w, errors.BadRequest("Invalid request", err))
+		return
+	}
+
+	if req.Port == "" {
+		utils.RespondError(w, errors.BadRequest("Port name is required", nil))
+		return
+	}
+
+	if err := network.AttachPortToBridge(bridgeName, req.Port); err != nil {
+		utils.RespondError(w, errors.InternalServerError("Failed to attach port to bridge", err))
+		return
+	}
+
+	utils.RespondSuccess(w, map[string]string{"message": "Port attached to bridge successfully"})
+}
+
+// DetachPortFromBridge handles POST /api/network/bridges/{name}/detach
+func (h *NetworkHandler) DetachPortFromBridge(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Port string `json:"port"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.RespondError(w, errors.BadRequest("Invalid request", err))
+		return
+	}
+
+	if req.Port == "" {
+		utils.RespondError(w, errors.BadRequest("Port name is required", nil))
+		return
+	}
+
+	if err := network.DetachPortFromBridge(req.Port); err != nil {
+		utils.RespondError(w, errors.InternalServerError("Failed to detach port from bridge", err))
+		return
+	}
+
+	utils.RespondSuccess(w, map[string]string{"message": "Port detached from bridge successfully"})
+}
+
+// ListBridges handles GET /api/network/bridges
+func (h *NetworkHandler) ListBridges(w http.ResponseWriter, r *http.Request) {
+	bridges, err := network.ListBridges()
+	if err != nil {
+		utils.RespondError(w, errors.InternalServerError("Failed to list bridges", err))
+		return
+	}
+
+	utils.RespondSuccess(w, bridges)
+}

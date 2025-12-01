@@ -37,6 +37,7 @@ fi
 echo "📁 Creating package structure..."
 mkdir -p "$DEB_DIR/DEBIAN"
 mkdir -p "$DEB_DIR/usr/bin"
+mkdir -p "$DEB_DIR/usr/local/bin"
 mkdir -p "$DEB_DIR/etc/stumpfworks-nas"
 mkdir -p "$DEB_DIR/etc/systemd/system"
 mkdir -p "$DEB_DIR/usr/share/doc/stumpfworks-nas"
@@ -87,9 +88,16 @@ echo "📝 Copying configuration files..."
 cp config.yaml.example "$DEB_DIR/etc/stumpfworks-nas/"
 chmod 644 "$DEB_DIR/etc/stumpfworks-nas/config.yaml.example"
 
-# Copy systemd service
+# Copy systemd services
 cp debian/stumpfworks-nas.service "$DEB_DIR/etc/systemd/system/"
 chmod 644 "$DEB_DIR/etc/systemd/system/stumpfworks-nas.service"
+
+cp scripts/bridge-firewall.service "$DEB_DIR/etc/systemd/system/"
+chmod 644 "$DEB_DIR/etc/systemd/system/bridge-firewall.service"
+
+# Copy bridge firewall setup script
+cp scripts/setup-bridge-firewall.sh "$DEB_DIR/usr/local/bin/"
+chmod 755 "$DEB_DIR/usr/local/bin/setup-bridge-firewall.sh"
 
 # Copy documentation
 echo "📚 Copying documentation..."

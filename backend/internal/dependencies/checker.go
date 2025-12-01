@@ -145,6 +145,33 @@ func getRequiredPackages() []*Package {
 			PacmanName:   "docker",
 			Description:  "Container runtime (for Docker management features)",
 		},
+		{
+			Name:         "acl",
+			Required:     false,
+			CheckCommand: "getfacl",
+			AptName:      "acl",
+			YumName:      "acl",
+			PacmanName:   "acl",
+			Description:  "POSIX ACL support for granular file permissions",
+		},
+		{
+			Name:         "quota",
+			Required:     false,
+			CheckCommand: "quota",
+			AptName:      "quota",
+			YumName:      "quota",
+			PacmanName:   "quota-tools",
+			Description:  "Disk quota management for users and groups",
+		},
+		{
+			Name:         "drbd-utils",
+			Required:     false,
+			CheckCommand: "drbdadm",
+			AptName:      "drbd-utils",
+			YumName:      "drbd-utils",
+			PacmanName:   "drbd-utils",
+			Description:  "DRBD block-level replication for High Availability",
+		},
 	}
 }
 

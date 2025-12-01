@@ -8,6 +8,7 @@ import FilePreviewModal from './components/FilePreviewModal';
 import NewFolderModal from './components/NewFolderModal';
 import UploadModal from './components/UploadModal';
 import PermissionsModal from './components/PermissionsModal';
+import { ACLDialog } from './components/ACLDialog';
 import ContextMenu from './components/ContextMenu';
 import DropZone from './components/DropZone';
 import { useAuthStore } from '@/store';
@@ -30,6 +31,7 @@ const FileManager: React.FC = () => {
   const [showNewFolderModal, setShowNewFolderModal] = useState<boolean>(false);
   const [showUploadModal, setShowUploadModal] = useState<boolean>(false);
   const [permissionsFile, setPermissionsFile] = useState<FileInfo | null>(null);
+  const [aclFile, setAclFile] = useState<FileInfo | null>(null);
 
   // Context Menu
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; file: FileInfo | null } | null>(null);
@@ -231,6 +233,12 @@ const FileManager: React.FC = () => {
   const handleContextMenuPermissions = () => {
     if (contextMenu?.file) {
       setPermissionsFile(contextMenu.file);
+    }
+  };
+
+  const handleContextMenuACL = () => {
+    if (contextMenu?.file) {
+      setAclFile(contextMenu.file);
     }
   };
 
@@ -445,6 +453,14 @@ const FileManager: React.FC = () => {
         />
       )}
 
+      {aclFile && (
+        <ACLDialog
+          path={aclFile.path}
+          isDirectory={aclFile.isDir}
+          onClose={() => setAclFile(null)}
+        />
+      )}
+
       {/* Context Menu */}
       {contextMenu && (
         <ContextMenu
@@ -458,6 +474,7 @@ const FileManager: React.FC = () => {
           onCut={handleCut}
           onDelete={handleContextMenuDelete}
           onPermissions={user?.role === 'admin' ? handleContextMenuPermissions : undefined}
+          onACL={user?.role === 'admin' ? handleContextMenuACL : undefined}
           isAdmin={user?.role === 'admin'}
         />
       )}

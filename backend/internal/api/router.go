@@ -28,6 +28,7 @@ func NewRouter(cfg *config.Config) http.Handler {
 	r.Use(mw.RevisionMiddleware) // Add version headers to all responses
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
+	r.Use(middleware.Compress(5)) // Gzip compression (level 5 = balanced speed/compression)
 
 	// CORS middleware - auto-detect origins in development
 	var corsHandler *cors.Cors
@@ -113,6 +114,23 @@ func NewRouter(cfg *config.Config) http.Handler {
 			r.Post("/auth/login", handlers.Login)
 			r.Post("/auth/login/2fa", handlers.LoginWith2FA)
 			// r.Post("/auth/register", handlers.Register) // Will implement later
+		})
+
+		// Addon routes (public viewing, auth required for modifications)
+		r.Route("/addons", func(r chi.Router) {
+			// Public endpoints - anyone can view available addons
+			r.Get("/", handlers.ListAddons)
+			r.Get("/{id}", handlers.GetAddon)
+			r.Get("/{id}/status", handlers.GetAddonStatus)
+
+			// Admin-only endpoints - only admins can install/uninstall
+			r.Group(func(r chi.Router) {
+				r.Use(mw.SetupRequired)
+				r.Use(mw.AuthMiddleware)
+				r.Use(mw.AdminOnly)
+				r.Post("/{id}/install", handlers.InstallAddon)
+				r.Post("/{id}/uninstall", handlers.UninstallAddon)
+			})
 		})
 
 		// Protected routes (auth required + setup check)
@@ -315,6 +333,38 @@ func NewRouter(cfg *config.Config) http.Handler {
 				})
 			})
 
+			// Filesystem ACL routes (admin only)
+			r.Route("/filesystem/acl", func(r chi.Router) {
+				r.Use(mw.AdminOnly)
+
+				r.Get("/", handlers.GetACL)                    // GET /api/v1/filesystem/acl?path=/path/to/file
+				r.Post("/", handlers.SetACL)                   // POST /api/v1/filesystem/acl
+				r.Delete("/", handlers.RemoveACL)              // DELETE /api/v1/filesystem/acl
+				r.Post("/default", handlers.SetDefaultACL)     // POST /api/v1/filesystem/acl/default
+				r.Post("/recursive", handlers.ApplyRecursive)  // POST /api/v1/filesystem/acl/recursive
+				r.Delete("/all", handlers.RemoveAllACLs)       // DELETE /api/v1/filesystem/acl/all
+			})
+
+			// Disk Quota routes (admin only)
+			r.Route("/quotas", func(r chi.Router) {
+				r.Use(mw.AdminOnly)
+
+				// User quotas
+				r.Get("/user", handlers.GetUserQuota)           // GET /api/v1/quotas/user?name=user&filesystem=/path
+				r.Post("/user", handlers.SetUserQuota)          // POST /api/v1/quotas/user
+				r.Delete("/user", handlers.RemoveUserQuota)     // DELETE /api/v1/quotas/user
+				r.Get("/users", handlers.ListUserQuotas)        // GET /api/v1/quotas/users?filesystem=/path
+
+				// Group quotas
+				r.Get("/group", handlers.GetGroupQuota)         // GET /api/v1/quotas/group?name=group&filesystem=/path
+				r.Post("/group", handlers.SetGroupQuota)        // POST /api/v1/quotas/group
+				r.Delete("/group", handlers.RemoveGroupQuota)   // DELETE /api/v1/quotas/group
+				r.Get("/groups", handlers.ListGroupQuotas)      // GET /api/v1/quotas/groups?filesystem=/path
+
+				// Filesystem status
+				r.Get("/status", handlers.GetFilesystemQuotaStatus) // GET /api/v1/quotas/status?filesystem=/path
+			})
+
 			// Network routes
 			r.Route("/network", func(r chi.Router) {
 				netHandler := handlers.NewNetworkHandler()
@@ -354,6 +404,13 @@ func NewRouter(cfg *config.Config) http.Handler {
 					r.Delete("/firewall/rules/{number}", netHandler.DeleteFirewallRule)
 					r.Post("/firewall/default", netHandler.SetDefaultPolicy)
 					r.Post("/firewall/reset", netHandler.ResetFirewall)
+
+					// Bridge management
+					r.Get("/bridges", netHandler.ListBridges)
+					r.Post("/bridges", netHandler.CreateBridge)
+					r.Delete("/bridges/{name}", netHandler.DeleteBridge)
+					r.Post("/bridges/{name}/attach", netHandler.AttachPortToBridge)
+					r.Post("/bridges/{name}/detach", netHandler.DetachPortFromBridge)
 
 					// Wake-on-LAN
 					r.Post("/wol", netHandler.WakeOnLAN)
@@ -543,6 +600,48 @@ func NewRouter(cfg *config.Config) http.Handler {
 				r.Post("/backup", dcHandler.BackupOnline)
 			})
 
+			// High Availability - DRBD routes
+			r.Route("/ha/drbd", func(r chi.Router) {
+				r.Use(mw.AdminOnly)
+				r.Get("/resources", handlers.ListDRBDResources)
+				r.Post("/resources", handlers.CreateDRBDResource)
+				r.Get("/resources/{name}", handlers.GetDRBDResourceStatus)
+				r.Delete("/resources/{name}", handlers.DeleteDRBDResource)
+				r.Post("/resources/{name}/promote", handlers.PromoteDRBDResource)
+				r.Post("/resources/{name}/demote", handlers.DemoteDRBDResource)
+				r.Post("/resources/{name}/force-primary", handlers.ForcePrimaryDRBDResource)
+				r.Post("/resources/{name}/disconnect", handlers.DisconnectDRBDResource)
+				r.Post("/resources/{name}/connect", handlers.ConnectDRBDResource)
+				r.Post("/resources/{name}/sync", handlers.StartDRBDSync)
+				r.Post("/resources/{name}/verify", handlers.VerifyDRBDData)
+			})
+
+			// High Availability - Pacemaker/Corosync routes
+			r.Route("/ha/cluster", func(r chi.Router) {
+				r.Use(mw.AdminOnly)
+				r.Get("/status", handlers.GetClusterStatus)
+				r.Post("/resources", handlers.CreateClusterResource)
+				r.Delete("/resources/{id}", handlers.DeleteClusterResource)
+				r.Post("/resources/{id}/enable", handlers.EnableClusterResource)
+				r.Post("/resources/{id}/disable", handlers.DisableClusterResource)
+				r.Post("/resources/{id}/move", handlers.MoveClusterResource)
+				r.Post("/resources/{id}/clear", handlers.ClearClusterResource)
+				r.Post("/maintenance", handlers.SetMaintenanceMode)
+				r.Post("/nodes/{name}/standby", handlers.StandbyNode)
+				r.Post("/nodes/{name}/unstandby", handlers.UnstandbyNode)
+			})
+
+			// High Availability - Keepalived (VIP) routes
+			r.Route("/ha/vip", func(r chi.Router) {
+				r.Use(mw.AdminOnly)
+				r.Get("/", handlers.ListVIPs)
+				r.Post("/", handlers.CreateVIP)
+				r.Get("/{id}", handlers.GetVIPStatus)
+				r.Delete("/{id}", handlers.DeleteVIP)
+				r.Post("/{id}/promote", handlers.PromoteVIPToMaster)
+				r.Post("/{id}/demote", handlers.DemoteVIPToBackup)
+			})
+
 			// Audit Log routes
 			r.Route("/audit", func(r chi.Router) {
 				auditHandler := handlers.NewAuditHandler()
@@ -553,6 +652,32 @@ func NewRouter(cfg *config.Config) http.Handler {
 				r.Get("/logs/recent", auditHandler.GetRecentAuditLogs)
 				r.Get("/logs/{id}", auditHandler.GetAuditLog)
 				r.Get("/stats", auditHandler.GetAuditStats)
+			})
+
+			// VM Management routes (requires VM Manager addon installed)
+			r.Route("/vms", func(r chi.Router) {
+				r.Use(mw.AdminOnly)
+				r.Get("/", handlers.ListVMs)
+				r.Post("/", handlers.CreateVM)
+				r.Get("/{id}", handlers.GetVM)
+				r.Post("/{id}/start", handlers.StartVM)
+				r.Post("/{id}/stop", handlers.StopVM)
+				r.Delete("/{id}", handlers.DeleteVM)
+				r.Get("/{id}/vnc", handlers.GetVMVNCPort)
+			})
+
+			// LXC Container Management routes (requires LXC Manager addon installed)
+			r.Route("/lxc", func(r chi.Router) {
+				r.Use(mw.AdminOnly)
+				r.Get("/containers", handlers.ListContainers)
+				r.Post("/containers", handlers.CreateContainer)
+				r.Get("/containers/{name}", handlers.GetContainer)
+				r.Post("/containers/{name}/start", handlers.StartContainer)
+				r.Post("/containers/{name}/stop", handlers.StopContainer)
+				r.Delete("/containers/{name}", handlers.DeleteContainer)
+				r.Post("/containers/{name}/exec", handlers.ExecContainerCommand)
+				r.Get("/containers/{name}/console", handlers.GetContainerConsole)
+				r.Get("/templates", handlers.ListLXCTemplates)
 			})
 
 			// Failed Login Tracking routes

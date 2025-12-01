@@ -14,6 +14,7 @@ interface ContextMenuProps {
   onCut?: () => void;
   onDelete?: () => void;
   onPermissions?: () => void;
+  onACL?: () => void;
   onCompress?: () => void;
   isAdmin?: boolean;
 }
@@ -30,6 +31,7 @@ export default function ContextMenu({
   onCut,
   onDelete,
   onPermissions,
+  onACL,
   onCompress,
   isAdmin = false,
 }: ContextMenuProps) {
@@ -111,6 +113,9 @@ export default function ContextMenu({
     ] : []),
     ...(isAdmin && onPermissions ? [
       { label: 'Permissions', icon: '🔒', action: onPermissions }
+    ] : []),
+    ...(isAdmin && onACL ? [
+      { label: 'Manage ACLs...', icon: '🛡️', action: onACL, divider: true }
     ] : []),
     ...(onDelete ? [
       { label: 'Delete', icon: '🗑️', action: onDelete, danger: true, shortcut: 'Del' }

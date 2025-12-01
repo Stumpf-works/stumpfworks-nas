@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { useWindowStore } from '@/store';
 import { getAppById } from '@/apps';
@@ -188,7 +188,18 @@ export default function Window({ window }: WindowProps) {
       {/* Content */}
       <div className="flex-1 overflow-hidden">
         {AppComponent ? (
-          <AppComponent />
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center h-full bg-white dark:bg-gray-900">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Loading app...</p>
+                </div>
+              </div>
+            }
+          >
+            <AppComponent />
+          </Suspense>
         ) : (
           <div className="flex items-center justify-center h-full bg-white dark:bg-gray-900">
             <p className="text-gray-500 dark:text-gray-400">App not found</p>

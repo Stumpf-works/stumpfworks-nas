@@ -1,0 +1,12 @@
+[Unit]
+Description=Setup firewall rules for bridge networking
+After=network.target
+Before=lxc.service libvirtd.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/setup-bridge-firewall.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

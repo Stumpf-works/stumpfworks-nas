@@ -3,11 +3,16 @@ package handlers
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/Stumpf-works/stumpfworks-nas/internal/system"
+	"github.com/Stumpf-works/stumpfworks-nas/pkg/cache"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/errors"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/utils"
 )
+
+// System metrics cache with 5s TTL (frequently polled, needs to be fresh)
+var systemMetricsCache = cache.New(5 * time.Second)
 
 // GetSystemInfo returns basic system information
 func GetSystemInfo(w http.ResponseWriter, r *http.Request) {
@@ -22,11 +27,21 @@ func GetSystemInfo(w http.ResponseWriter, r *http.Request) {
 
 // GetSystemMetrics returns real-time system metrics
 func GetSystemMetrics(w http.ResponseWriter, r *http.Request) {
+	// Try cache first (5s TTL to keep metrics relatively fresh)
+	if cached, ok := systemMetricsCache.Get("metrics"); ok {
+		utils.RespondSuccess(w, cached)
+		return
+	}
+
+	// Cache miss - fetch realtime metrics
 	metrics, err := system.GetRealtimeSystemMetrics()
 	if err != nil {
 		utils.RespondError(w, errors.InternalServerError("Failed to get system metrics", err))
 		return
 	}
+
+	// Cache for 5 seconds
+	systemMetricsCache.Set("metrics", metrics)
 
 	utils.RespondSuccess(w, metrics)
 }

@@ -1,0 +1,1 @@
+export { HighAvailability } from './HighAvailability';

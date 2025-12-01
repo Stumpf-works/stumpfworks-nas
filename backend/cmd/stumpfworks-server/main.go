@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/Stumpf-works/stumpfworks-nas/internal/ad"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/addons"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/alerts"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/api"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/api/handlers"
@@ -30,6 +31,10 @@ import (
 	"github.com/Stumpf-works/stumpfworks-nas/internal/scheduler"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/storage"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/system"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/system/filesystem"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/system/ha"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/system/lxc"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/system/vm"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/twofa"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/updates"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/usergroups"
@@ -165,6 +170,72 @@ func main() {
 		logger.Fatal("Failed to initialize file service", zap.Error(err))
 	}
 	logger.Info("File service initialized")
+
+	// Initialize ACL service (non-fatal if ACL tools not available)
+	if err := initializeACL(); err != nil {
+		logger.Warn("ACL service initialization failed",
+			zap.Error(err),
+			zap.String("message", "ACL features will be disabled"))
+	} else {
+		logger.Info("ACL service initialized")
+	}
+
+	// Initialize Quota service (non-fatal if quota tools not available)
+	if err := initializeQuota(); err != nil {
+		logger.Warn("Quota service initialization failed",
+			zap.Error(err),
+			zap.String("message", "Quota features will be disabled"))
+	} else {
+		logger.Info("Quota service initialized")
+	}
+
+	// Initialize DRBD service (non-fatal if DRBD tools not available)
+	if err := initializeDRBD(); err != nil {
+		logger.Warn("DRBD service initialization failed",
+			zap.Error(err),
+			zap.String("message", "DRBD features will be disabled"))
+	} else {
+		logger.Info("DRBD service initialized")
+	}
+
+	// Initialize Pacemaker/Corosync service (non-fatal if not available)
+	if err := initializePacemaker(); err != nil {
+		logger.Warn("Pacemaker service initialization failed",
+			zap.Error(err),
+			zap.String("message", "Pacemaker/Corosync features will be disabled"))
+	} else {
+		logger.Info("Pacemaker/Corosync service initialized")
+	}
+
+	// Initialize Keepalived service (non-fatal if not available)
+	if err := initializeKeepalived(); err != nil {
+		logger.Warn("Keepalived service initialization failed",
+			zap.Error(err),
+			zap.String("message", "Virtual IP (Keepalived) features will be disabled"))
+	} else {
+		logger.Info("Keepalived service initialized")
+	}
+
+	// Initialize Addon Manager (always enabled)
+	initializeAddonManager()
+
+	// Initialize VM Manager (non-fatal, requires VM Manager addon)
+	if err := initializeVMManager(); err != nil {
+		logger.Warn("VM Manager initialization failed",
+			zap.Error(err),
+			zap.String("message", "VM management features will be disabled. Install VM Manager addon to enable."))
+	} else {
+		logger.Info("VM Manager initialized")
+	}
+
+	// Initialize LXC Manager (non-fatal, requires LXC Manager addon)
+	if err := initializeLXCManager(); err != nil {
+		logger.Warn("LXC Manager initialization failed",
+			zap.Error(err),
+			zap.String("message", "LXC management features will be disabled. Install LXC Manager addon to enable."))
+	} else {
+		logger.Info("LXC Manager initialized")
+	}
 
 	// Initialize Docker service (non-fatal if not available)
 	if err := initializeDocker(); err != nil {
@@ -429,6 +500,99 @@ func initializeMetrics() error {
 		return err
 	}
 	return service.Start()
+}
+
+// initializeACL initializes the ACL (Access Control List) service
+// Returns error if ACL tools are not installed, but this is non-fatal
+func initializeACL() error {
+	shell := system.MustGet().Shell
+	aclManager, err := filesystem.NewACLManager(shell)
+	if err != nil {
+		return err
+	}
+	handlers.InitACLManager(aclManager)
+	return nil
+}
+
+// initializeQuota initializes the Disk Quota service
+// Returns error if quota tools are not installed, but this is non-fatal
+func initializeQuota() error {
+	shell := system.MustGet().Shell
+	quotaManager, err := filesystem.NewQuotaManager(shell)
+	if err != nil {
+		return err
+	}
+	handlers.InitQuotaManager(quotaManager)
+	return nil
+}
+
+// initializeDRBD initializes the DRBD (High Availability) service
+// Returns error if DRBD tools are not installed, but this is non-fatal
+func initializeDRBD() error {
+	shell := system.MustGet().Shell
+	drbdManager, err := ha.NewDRBDManager(shell)
+	if err != nil {
+		return err
+	}
+	handlers.InitDRBDManager(drbdManager)
+	return nil
+}
+
+// initializePacemaker initializes the Pacemaker/Corosync (Cluster HA) service
+// Returns error if Pacemaker tools are not installed, but this is non-fatal
+func initializePacemaker() error {
+	shell := system.MustGet().Shell
+	pacemakerManager, err := ha.NewPacemakerManager(shell)
+	if err != nil {
+		return err
+	}
+	handlers.InitPacemakerManager(pacemakerManager)
+	return nil
+}
+
+// initializeKeepalived initializes the Keepalived (VIP Management) service
+// Returns error if Keepalived is not installed, but this is non-fatal
+func initializeKeepalived() error {
+	shell := system.MustGet().Shell
+	keepalivedManager, err := ha.NewKeepalivedManager(shell)
+	if err != nil {
+		return err
+	}
+	handlers.InitKeepalivedManager(keepalivedManager)
+	return nil
+}
+
+// initializeAddonManager initializes the Addon Manager
+// This is always enabled and manages installable addons
+func initializeAddonManager() {
+	shell := system.MustGet().Shell
+	addonManager := addons.NewManager(shell)
+	handlers.InitAddonManager(addonManager)
+	logger.Info("Addon manager initialized")
+}
+
+// initializeVMManager initializes the VM Manager
+// Returns error if libvirt is not installed, but this is non-fatal
+func initializeVMManager() error {
+	shell := system.MustGet().Shell
+	vmManager, err := vm.NewLibvirtManager(shell)
+	if err != nil {
+		return err
+	}
+	handlers.InitVMManager(vmManager)
+	return nil
+}
+
+// initializeLXCManager initializes the LXC Manager
+// Returns error if LXC is not installed, but this is non-fatal
+func initializeLXCManager() error {
+	shell := system.MustGet().Shell
+	lxcManager, err := lxc.NewLXCManager(shell)
+	if err != nil {
+		return err
+	}
+	handlers.InitLXCManager(lxcManager)
+	return nil
 }
 
 // checkDependencies checks and optionally installs system dependencies

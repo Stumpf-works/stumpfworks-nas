@@ -24,11 +24,15 @@ RestartSec=5s
 
 # Security hardening
 NoNewPrivileges=false
-PrivateTmp=true
-ProtectSystem=strict
+PrivateTmp=false
+ProtectSystem=false
 ProtectHome=false
-ReadWritePaths=/var/lib/stumpfworks-nas /etc/stumpfworks-nas /mnt /srv /etc/samba /var/lib/samba /etc /etc/passwd /etc/shadow /etc/group /etc/gshadow /run
-AmbientCapabilities=CAP_NET_BIND_SERVICE CAP_SYS_ADMIN CAP_DAC_OVERRIDE CAP_CHOWN CAP_FOWNER
+ReadWritePaths=/var/lib/stumpfworks-nas /etc/stumpfworks-nas /mnt /srv /etc/samba /var/lib/samba /etc /etc/passwd /etc/shadow /etc/group /etc/gshadow /run /var/cache/apt /var/cache/debconf /var/lib/apt /var/lib/dpkg /var/log/apt /var/lib/lxc /var/cache/lxc
+AmbientCapabilities=CAP_NET_BIND_SERVICE CAP_SYS_ADMIN CAP_DAC_OVERRIDE CAP_CHOWN CAP_FOWNER CAP_NET_ADMIN CAP_SYS_PTRACE CAP_SETUID CAP_SETGID CAP_MKNOD CAP_SYS_BOOT CAP_SYS_NICE CAP_SYS_RESOURCE
+
+# LXC/VM container management
+Delegate=yes
+TasksMax=infinity
 
 # Resource limits
 LimitNOFILE=65535
