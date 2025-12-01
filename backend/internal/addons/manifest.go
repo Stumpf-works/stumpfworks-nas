@@ -132,4 +132,26 @@ var BuiltinAddons = []Manifest{
 		MinimumDisk:   5,    // 5GB
 		Architecture:  []string{"amd64", "arm64"},
 	},
+	{
+		ID:          "vpn-server",
+		Name:        "VPN Server",
+		Description: "Multi-protocol VPN server with WireGuard, OpenVPN, PPTP, and L2TP/IPsec support",
+		Icon:        "🔒",
+		Category:    "networking",
+		Version:     "1.0.0",
+		Author:      "StumpfWorks",
+		SystemPackages: []string{
+			// NOTE: Protocols are installed on-demand when user enables them
+			// No packages installed during addon installation
+		},
+		Services: []string{
+			// Services are started on-demand per protocol
+		},
+		AppComponent: "VPNServer",
+		RoutePrefix:  "/api/v1/vpn",
+		MinimumMemory: 512,  // 512MB
+		MinimumDisk:   2,    // 2GB
+		Architecture:  []string{"amd64", "arm64"},
+		RequiresRestart: false, // No restart needed - protocols are managed dynamically
+	},
 }

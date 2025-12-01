@@ -35,6 +35,7 @@ import (
 	"github.com/Stumpf-works/stumpfworks-nas/internal/system/ha"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/system/lxc"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/system/vm"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/system/vpn"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/twofa"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/updates"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/usergroups"
@@ -244,6 +245,15 @@ func main() {
 			zap.String("message", "LXC management features will be disabled. Install LXC Manager addon to enable."))
 	} else {
 		logger.Info("LXC Manager initialized")
+	}
+
+	// Initialize VPN Manager (non-fatal, requires VPN Server addon)
+	if err := initializeVPNManager(); err != nil {
+		logger.Warn("VPN Manager initialization failed",
+			zap.Error(err),
+			zap.String("message", "VPN management features will be disabled. Install VPN Server addon to enable."))
+	} else {
+		logger.Info("VPN Manager initialized")
 	}
 
 	// Initialize Docker service (non-fatal if not available)
@@ -601,6 +611,15 @@ func initializeLXCManager() error {
 		return err
 	}
 	handlers.InitLXCManager(lxcManager)
+	return nil
+}
+
+// initializeVPNManager initializes the VPN Manager
+// Returns error if initialization fails, but this is non-fatal
+func initializeVPNManager() error {
+	shell := system.MustGet().Shell
+	vpnManager := vpn.NewVPNManager(shell)
+	handlers.InitVPNManager(vpnManager)
 	return nil
 }
 

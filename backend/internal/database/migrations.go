@@ -32,6 +32,14 @@ func RunMigrations() error {
 		&models.HealthScore{},
 		&models.MonitoringConfig{},
 		&models.AddonInstallation{},
+		// VPN Server models
+		&models.VPNProtocolConfig{},
+		&models.VPNPeer{},
+		&models.VPNCertificate{},
+		&models.VPNUser{},
+		&models.VPNConnection{},
+		&models.VPNRoute{},
+		&models.VPNFirewallRule{},
 		// Add more models here as they are created
 	); err != nil {
 		return err
@@ -104,6 +112,82 @@ func AddPerformanceIndexes() error {
 	}
 	// Index for volume status queries
 	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_volumes_status ON volumes(status)").Error; err != nil {
+		return err
+	}
+
+	// VPN Server indexes
+	// Index for VPN protocol lookups
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_vpn_protocols_protocol ON vpn_protocol_configs(protocol)").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_vpn_protocols_enabled ON vpn_protocol_configs(enabled)").Error; err != nil {
+		return err
+	}
+
+	// Index for VPN peer lookups
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_vpn_peers_protocol_id ON vpn_peers(protocol_id)").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_vpn_peers_enabled ON vpn_peers(enabled)").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_vpn_peers_public_key ON vpn_peers(public_key)").Error; err != nil {
+		return err
+	}
+
+	// Index for VPN certificate lookups
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_vpn_certs_protocol_id ON vpn_certificates(protocol_id)").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_vpn_certs_status ON vpn_certificates(status)").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_vpn_certs_serial ON vpn_certificates(serial_number)").Error; err != nil {
+		return err
+	}
+
+	// Index for VPN user lookups
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_vpn_users_username ON vpn_users(username)").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_vpn_users_enabled ON vpn_users(enabled)").Error; err != nil {
+		return err
+	}
+
+	// Index for VPN connection queries
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_vpn_connections_user_id ON vpn_connections(user_id)").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_vpn_connections_active ON vpn_connections(active)").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_vpn_connections_protocol ON vpn_connections(protocol)").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_vpn_connections_connected_at ON vpn_connections(connected_at DESC)").Error; err != nil {
+		return err
+	}
+	// Composite index for active connections by protocol
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_vpn_connections_active_protocol ON vpn_connections(active, protocol)").Error; err != nil {
+		return err
+	}
+
+	// Index for VPN route lookups
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_vpn_routes_protocol_id ON vpn_routes(protocol_id)").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_vpn_routes_enabled ON vpn_routes(enabled)").Error; err != nil {
+		return err
+	}
+
+	// Index for VPN firewall rule lookups
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_vpn_firewall_protocol_id ON vpn_firewall_rules(protocol_id)").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_vpn_firewall_enabled ON vpn_firewall_rules(enabled)").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_vpn_firewall_priority ON vpn_firewall_rules(priority ASC)").Error; err != nil {
 		return err
 	}
 

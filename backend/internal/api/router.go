@@ -680,6 +680,38 @@ func NewRouter(cfg *config.Config) http.Handler {
 				r.Get("/templates", handlers.ListLXCTemplates)
 			})
 
+			// VPN Server routes (requires VPN Server addon installed)
+			r.Route("/vpn", func(r chi.Router) {
+				r.Use(mw.AdminOnly)
+
+				// General status
+				r.Get("/status", handlers.GetVPNStatus)
+
+				// Protocol management
+				r.Route("/protocols/{protocol}", func(r chi.Router) {
+					r.Get("/status", handlers.GetProtocolStatus)
+					r.Post("/install", handlers.InstallProtocol)
+					r.Post("/enable", handlers.EnableProtocol)
+					r.Post("/disable", handlers.DisableProtocol)
+				})
+
+				// WireGuard-specific
+				r.Route("/wireguard", func(r chi.Router) {
+					r.Get("/peers", handlers.GetWireGuardPeers)
+					r.Post("/peers", handlers.CreateWireGuardPeer)
+					r.Delete("/peers/{id}", handlers.DeleteWireGuardPeer)
+					r.Get("/peers/{id}/config", handlers.GetWireGuardPeerConfig)
+					r.Get("/peers/{id}/qrcode", handlers.GetWireGuardPeerQRCode)
+				})
+
+				// OpenVPN-specific
+				r.Route("/openvpn", func(r chi.Router) {
+					r.Get("/certificates", handlers.GetOpenVPNCertificates)
+					r.Post("/certificates", handlers.CreateOpenVPNCertificate)
+					// TODO: Add more OpenVPN endpoints as needed
+				})
+			})
+
 			// Failed Login Tracking routes
 			r.Route("/security", func(r chi.Router) {
 				failedLoginHandler := handlers.NewFailedLoginHandler()
