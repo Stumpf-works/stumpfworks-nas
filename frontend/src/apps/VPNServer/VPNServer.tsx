@@ -117,18 +117,19 @@ const VPNServer: React.FC = () => {
     }
   };
 
-  const getProtocolIcon = (protocol: string) => {
+  const ProtocolIcon: React.FC<{ protocol: string }> = ({ protocol }) => {
+    const iconClass = "w-10 h-10";
     switch (protocol.toLowerCase()) {
       case 'wireguard':
-        return '=';
+        return <Shield className={`${iconClass} text-blue-400`} />;
       case 'openvpn':
-        return '=';
+        return <Shield className={`${iconClass} text-green-400`} />;
       case 'pptp':
-        return '=á';
+        return <Shield className={`${iconClass} text-purple-400`} />;
       case 'l2tp':
-        return '=á';
+        return <Shield className={`${iconClass} text-orange-400`} />;
       default:
-        return '='';
+        return <Shield className={`${iconClass} text-gray-400`} />;
     }
   };
 
@@ -167,10 +168,12 @@ const VPNServer: React.FC = () => {
           Overview
         </Tab>
         <Tab active={activeTab === 'wireguard'} onClick={() => setActiveTab('wireguard')}>
-          = WireGuard
+          <Shield className="w-4 h-4 inline mr-2" />
+          WireGuard
         </Tab>
         <Tab active={activeTab === 'openvpn'} onClick={() => setActiveTab('openvpn')}>
-          = OpenVPN
+          <Shield className="w-4 h-4 inline mr-2" />
+          OpenVPN
         </Tab>
         <Tab active={activeTab === 'settings'} onClick={() => setActiveTab('settings')}>
           <Settings className="w-4 h-4 inline mr-2" />
@@ -189,7 +192,7 @@ const VPNServer: React.FC = () => {
             onInstall={handleInstall}
             onEnable={handleEnable}
             onDisable={handleDisable}
-            getProtocolIcon={getProtocolIcon}
+            ProtocolIcon={ProtocolIcon}
           />
         )}
         {activeTab === 'wireguard' && (
@@ -214,7 +217,7 @@ interface OverviewTabProps {
   onInstall: (protocol: VPNProtocol) => void;
   onEnable: (protocol: VPNProtocol) => void;
   onDisable: (protocol: VPNProtocol) => void;
-  getProtocolIcon: (protocol: string) => string;
+  ProtocolIcon: React.FC<{ protocol: string }>;
 }
 
 const OverviewTab: React.FC<OverviewTabProps> = ({
@@ -224,7 +227,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
   onInstall,
   onEnable,
   onDisable,
-  getProtocolIcon,
+  ProtocolIcon,
 }) => {
   if (loading) {
     return (
@@ -262,7 +265,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
             {/* Header */}
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">
-                <span className="text-4xl">{getProtocolIcon(protocol.protocol)}</span>
+                <ProtocolIcon protocol={protocol.protocol} />
                 <div>
                   <h3 className="text-xl font-bold text-white capitalize">
                     {protocol.protocol}
