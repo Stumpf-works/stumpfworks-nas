@@ -1,4 +1,4 @@
-// Revision: 2025-12-02 | Author: Claude | Version: 1.0.1
+// Revision: 2025-12-02 | Author: Claude | Version: 2.0.0
 package network
 
 import (
@@ -220,7 +220,27 @@ func ApplyAllPendingChanges() error {
 		successCount++
 	}
 
-	// Step 5: All changes applied successfully
+	// Step 5: Reload networking to apply changes from /etc/network/interfaces
+	logger.Info("Reloading network configuration...")
+
+	// Use systemctl to restart networking (Debian/Ubuntu way)
+	cmd := exec.Command("systemctl", "restart", "networking")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		logger.Error("Failed to restart networking service",
+			zap.Error(err),
+			zap.String("output", string(output)))
+
+		// ROLLBACK on networking restart failure
+		logger.Warn("Rolling back all changes due to networking restart failure")
+		if rollbackErr := RollbackToFullSnapshot(snapshot.ID); rollbackErr != nil {
+			logger.Error("CRITICAL: Rollback failed!", zap.Error(rollbackErr))
+			return fmt.Errorf("networking restart failed and rollback also failed: %w", rollbackErr)
+		}
+
+		return fmt.Errorf("failed to restart networking (rolled back): %w", err)
+	}
+
+	// Step 6: All changes applied successfully
 	database.DB.Model(snapshot).Updates(map[string]interface{}{
 		"status":     "applied",
 		"applied_at": time.Now(),
@@ -251,7 +271,8 @@ func applyNetworkChange(change *models.PendingNetworkChange) error {
 	}
 }
 
-// applyBridgeChange applies a bridge configuration change
+// applyBridgeChange applies a bridge configuration change by writing to /etc/network/interfaces
+// This is the PROXMOX-STYLE approach: all changes go to /etc/network/interfaces
 func applyBridgeChange(change *models.PendingNetworkChange) error {
 	// Parse pending config
 	var config map[string]interface{}
@@ -260,6 +281,12 @@ func applyBridgeChange(change *models.PendingNetworkChange) error {
 	}
 
 	bridgeName := change.ResourceID
+
+	// Read current /etc/network/interfaces
+	interfaces, err := ParseInterfacesFile()
+	if err != nil {
+		return fmt.Errorf("failed to parse interfaces file: %w", err)
+	}
 
 	switch change.Action {
 	case "create":
@@ -278,35 +305,48 @@ func applyBridgeChange(change *models.PendingNetworkChange) error {
 		ipAddress, _ := config["ip_address"].(string)
 		gateway, _ := config["gateway"].(string)
 
-		// Create bridge WITHOUT ports first
-		if err := CreateBridge(bridgeName, []string{}); err != nil {
-			return fmt.Errorf("failed to create bridge: %w", err)
-		}
+		// Add bridge to interfaces configuration
+		AddBridgeToInterfaces(interfaces, bridgeName, ports, ipAddress, gateway)
 
-		// Apply IP configuration
-		if ipAddress != "" {
-			if err := ConfigureStaticIP(bridgeName, ipAddress, "", gateway); err != nil {
-				DeleteBridge(bridgeName)
-				return fmt.Errorf("failed to configure IP: %w", err)
-			}
-		}
-
-		// Add ports
-		for _, port := range ports {
-			if err := AttachPortToBridge(bridgeName, port); err != nil {
-				logger.Warn("Failed to attach port", zap.Error(err), zap.String("port", port))
-			}
-		}
+		logger.Info("Adding bridge to /etc/network/interfaces",
+			zap.String("bridge", bridgeName),
+			zap.String("address", ipAddress),
+			zap.Strings("ports", ports))
 
 	case "delete":
-		if err := DeleteBridge(bridgeName); err != nil {
-			return fmt.Errorf("failed to delete bridge: %w", err)
-		}
+		// Remove bridge from interfaces configuration
+		RemoveBridgeFromInterfaces(interfaces, bridgeName)
+
+		logger.Info("Removing bridge from /etc/network/interfaces",
+			zap.String("bridge", bridgeName))
 
 	case "update":
-		// Update is complex - for now we recreate
-		// In production, you'd implement incremental updates
-		return fmt.Errorf("bridge update not yet implemented - use delete + create")
+		// For update, remove old config and add new one
+		RemoveBridgeFromInterfaces(interfaces, bridgeName)
+
+		ports := []string{}
+		if portsInterface, ok := config["ports"]; ok {
+			if portsList, ok := portsInterface.([]interface{}); ok {
+				for _, p := range portsList {
+					if portStr, ok := p.(string); ok {
+						ports = append(ports, portStr)
+					}
+				}
+			}
+		}
+
+		ipAddress, _ := config["ip_address"].(string)
+		gateway, _ := config["gateway"].(string)
+
+		AddBridgeToInterfaces(interfaces, bridgeName, ports, ipAddress, gateway)
+
+		logger.Info("Updating bridge in /etc/network/interfaces",
+			zap.String("bridge", bridgeName))
+	}
+
+	// Write updated interfaces file
+	if err := WriteInterfacesFile(interfaces); err != nil {
+		return fmt.Errorf("failed to write interfaces file: %w", err)
 	}
 
 	return nil
@@ -420,6 +460,7 @@ func applyDNSChange(change *models.PendingNetworkChange) error {
 }
 
 // RollbackToFullSnapshot rolls back the entire network to a previous snapshot
+// This restores /etc/network/interfaces from backup and restarts networking
 func RollbackToFullSnapshot(snapshotID string) error {
 	var snapshot models.NetworkSnapshot
 	if err := database.DB.Where("id = ?", snapshotID).First(&snapshot).Error; err != nil {
@@ -429,12 +470,20 @@ func RollbackToFullSnapshot(snapshotID string) error {
 	logger.Warn("Rolling back network to full snapshot",
 		zap.String("snapshot_id", snapshotID))
 
-	// This is a simplified rollback - in production you'd want to:
-	// 1. Restore all interface states from snapshot.InterfaceStates
-	// 2. Restore routing table from snapshot.RouteTable
-	// 3. Restore firewall rules from snapshot.FirewallRules
+	// Restore /etc/network/interfaces from backup
+	if err := RestoreInterfacesFileFromBackup(); err != nil {
+		logger.Error("Failed to restore interfaces file from backup", zap.Error(err))
+		return fmt.Errorf("failed to restore interfaces file: %w", err)
+	}
 
-	logger.Warn("Full network rollback not fully implemented - manual intervention may be required")
+	// Restart networking to apply the restored configuration
+	cmd := exec.Command("systemctl", "restart", "networking")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		logger.Error("Failed to restart networking during rollback",
+			zap.Error(err),
+			zap.String("output", string(output)))
+		return fmt.Errorf("failed to restart networking during rollback: %w", err)
+	}
 
 	// Mark snapshot as rolled back
 	database.DB.Model(&snapshot).Updates(map[string]interface{}{
@@ -450,6 +499,7 @@ func RollbackToFullSnapshot(snapshotID string) error {
 			"updated_at": time.Now(),
 		})
 
+	logger.Info("Network configuration rolled back successfully")
 	return nil
 }
 
