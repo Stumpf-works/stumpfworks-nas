@@ -541,7 +541,7 @@ export default function NetworkConfig() {
         </motion.div>
       )}
 
-      {/* Content */}
+      {/* Content - Proxmox-style Table (StumpfWorks Design) */}
       <div className="flex-1 overflow-y-auto p-6">
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
@@ -553,136 +553,148 @@ export default function NetworkConfig() {
             <p className="text-gray-500 dark:text-gray-400">No network interfaces found</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-            {interfaces.map((iface, index) => (
-              <motion.div
-                key={iface.name}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                className={`rounded-xl p-5 border-2 transition-all ${
-                  iface.isUp
-                    ? 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800'
-                    : 'bg-gradient-to-br from-gray-50 to-gray-100 dark:from-macos-dark-200 dark:to-macos-dark-300 border-gray-200 dark:border-gray-700'
-                }`}
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-white dark:bg-macos-dark-100 rounded-lg shadow-sm">
-                      {getInterfaceIcon(iface)}
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-gray-900 dark:text-gray-100">
-                        {iface.name}
-                      </h3>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {getInterfaceType(iface)}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div
-                      className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
-                        iface.isUp
-                          ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
-                          : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-                      }`}
-                    >
-                      <Activity className="w-3 h-3" />
-                      {iface.isUp ? 'UP' : 'DOWN'}
-                    </div>
-                    {/* Delete button for Bond, Bridge, and VLAN interfaces */}
-                    {(iface.name.startsWith('bond') || iface.name.startsWith('br') || iface.name.startsWith('vmbr') || iface.name.includes('.')) &&
-                     !iface.name.startsWith('br-') && (
-                      <button
-                        onClick={() => {
-                          if (iface.name.startsWith('bond')) {
-                            handleDeleteBond(iface.name);
-                          } else if (iface.name.startsWith('br') || iface.name.startsWith('vmbr')) {
-                            handleDeleteBridge(iface.name);
-                          } else if (iface.name.includes('.')) {
-                            handleDeleteVLAN(iface.name);
-                          }
-                        }}
-                        className="p-1.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
-                        title={`Delete ${getInterfaceType(iface)}`}
+          <div className="bg-white dark:bg-macos-dark-100 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden">
+            {/* Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-macos-dark-200 dark:to-macos-dark-300 border-b-2 border-gray-200 dark:border-gray-700">
+                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Name</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Type</th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Active</th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Autostart</th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">VLAN aware</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Ports/Slaves</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">CIDR</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Gateway</th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {interfaces
+                    .filter((iface) => !iface.name.startsWith('lo')) // Hide loopback
+                    .map((iface, index) => (
+                      <motion.tr
+                        key={iface.name}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.03 }}
+                        className={`hover:bg-gray-50 dark:hover:bg-macos-dark-200 transition-colors ${
+                          iface.isUp
+                            ? 'bg-green-50/30 dark:bg-green-900/10'
+                            : 'bg-gray-50/50 dark:bg-macos-dark-200/50'
+                        }`}
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Interface Details */}
-                <div className="space-y-2 text-sm">
-                  {/* MAC Address */}
-                  {iface.hardwareAddr && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 dark:text-gray-400">MAC:</span>
-                      <span className="font-mono text-xs text-gray-900 dark:text-gray-100">
-                        {iface.hardwareAddr}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* IP Addresses */}
-                  {iface.addresses && iface.addresses.length > 0 && (
-                    <div>
-                      <span className="text-gray-600 dark:text-gray-400 block mb-1">
-                        IP Addresses:
-                      </span>
-                      <div className="space-y-1">
-                        {iface.addresses.map((addr, idx) => (
-                          <div
-                            key={idx}
-                            className="font-mono text-xs bg-white dark:bg-macos-dark-100 px-2 py-1 rounded"
-                          >
-                            {addr}
+                        {/* Name */}
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            {getInterfaceIcon(iface)}
+                            <span className="font-semibold text-gray-900 dark:text-gray-100">
+                              {iface.name}
+                            </span>
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                        </td>
 
-                  {/* Speed & MTU */}
-                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
-                    <div>
-                      <span className="text-gray-600 dark:text-gray-400 text-xs">Speed:</span>
-                      <div className="font-medium text-gray-900 dark:text-gray-100">
-                        {formatSpeed(iface.speed)}
-                      </div>
-                    </div>
-                    <div>
-                      <span className="text-gray-600 dark:text-gray-400 text-xs">MTU:</span>
-                      <div className="font-medium text-gray-900 dark:text-gray-100">
-                        {iface.mtu}
-                      </div>
-                    </div>
-                  </div>
+                        {/* Type */}
+                        <td className="px-4 py-3">
+                          <span className="text-sm text-gray-700 dark:text-gray-300">
+                            {getInterfaceType(iface)}
+                          </span>
+                        </td>
 
-                  {/* Flags */}
-                  {iface.flags && iface.flags.length > 0 && (
-                    <div className="pt-2">
-                      <div className="flex flex-wrap gap-1">
-                        {iface.flags.slice(0, 4).map((flag, idx) => (
+                        {/* Active */}
+                        <td className="px-4 py-3 text-center">
                           <span
-                            key={idx}
-                            className="px-1.5 py-0.5 bg-gray-200 dark:bg-macos-dark-100 text-gray-700 dark:text-gray-300 text-xs rounded"
+                            className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                              iface.isUp
+                                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                                : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                            }`}
                           >
-                            {flag}
+                            <Activity className="w-3 h-3" />
+                            {iface.isUp ? 'Yes' : 'No'}
                           </span>
-                        ))}
-                        {iface.flags.length > 4 && (
-                          <span className="px-1.5 py-0.5 text-gray-500 dark:text-gray-400 text-xs">
-                            +{iface.flags.length - 4} more
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-            ))}
+                        </td>
+
+                        {/* Autostart */}
+                        <td className="px-4 py-3 text-center">
+                          <span className="text-sm text-gray-700 dark:text-gray-300">-</span>
+                        </td>
+
+                        {/* VLAN aware */}
+                        <td className="px-4 py-3 text-center">
+                          <span className="text-sm text-gray-700 dark:text-gray-300">-</span>
+                        </td>
+
+                        {/* Ports/Slaves */}
+                        <td className="px-4 py-3">
+                          <span className="text-sm text-gray-700 dark:text-gray-300">-</span>
+                        </td>
+
+                        {/* CIDR */}
+                        <td className="px-4 py-3">
+                          {iface.addresses && iface.addresses.length > 0 ? (
+                            <div className="space-y-1">
+                              {iface.addresses.slice(0, 2).map((addr, idx) => (
+                                <div key={idx} className="font-mono text-xs text-gray-900 dark:text-gray-100">
+                                  {addr}
+                                </div>
+                              ))}
+                              {iface.addresses.length > 2 && (
+                                <div className="text-xs text-gray-500">
+                                  +{iface.addresses.length - 2} more
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-sm text-gray-500 dark:text-gray-400">-</span>
+                          )}
+                        </td>
+
+                        {/* Gateway */}
+                        <td className="px-4 py-3">
+                          <span className="text-sm text-gray-700 dark:text-gray-300">-</span>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-center gap-2">
+                            {/* Edit button - coming soon for physical interfaces */}
+                            <button
+                              className="p-1.5 bg-macos-blue/10 dark:bg-macos-blue/20 text-macos-blue rounded hover:bg-macos-blue/20 dark:hover:bg-macos-blue/30 transition-colors"
+                              title="Edit interface"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+
+                            {/* Delete button for Bond, Bridge, and VLAN interfaces */}
+                            {(iface.name.startsWith('bond') || iface.name.startsWith('br') || iface.name.startsWith('vmbr') || iface.name.includes('.')) &&
+                             !iface.name.startsWith('br-') && (
+                              <button
+                                onClick={() => {
+                                  if (iface.name.startsWith('bond')) {
+                                    handleDeleteBond(iface.name);
+                                  } else if (iface.name.startsWith('br') || iface.name.startsWith('vmbr')) {
+                                    handleDeleteBridge(iface.name);
+                                  } else if (iface.name.includes('.')) {
+                                    handleDeleteVLAN(iface.name);
+                                  }
+                                }}
+                                className="p-1.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
+                                title={`Delete ${getInterfaceType(iface)}`}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </motion.tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
