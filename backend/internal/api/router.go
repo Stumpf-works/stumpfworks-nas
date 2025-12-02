@@ -412,6 +412,14 @@ func NewRouter(cfg *config.Config) http.Handler {
 					r.Post("/bridges/{name}/attach", netHandler.AttachPortToBridge)
 					r.Post("/bridges/{name}/detach", netHandler.DetachPortFromBridge)
 
+					// Proxmox-style pending changes workflow
+					r.Post("/bridges/pending", netHandler.CreateBridgeWithPendingChanges)
+					r.Put("/bridges/{name}/pending", netHandler.UpdateBridgeWithPendingChanges)
+					r.Get("/pending-changes", netHandler.GetPendingChanges)
+					r.Post("/apply-changes", netHandler.ApplyPendingChanges)
+					r.Post("/discard-changes", netHandler.DiscardPendingChanges)
+					r.Post("/rollback", netHandler.RollbackToSnapshot)
+
 					// Wake-on-LAN
 					r.Post("/wol", netHandler.WakeOnLAN)
 				})

@@ -43,6 +43,7 @@ func RunMigrations() error {
 		// Network configuration models
 		&models.NetworkBridge{},
 		&models.NetworkInterface{},
+		&models.NetworkSnapshot{},
 		// LXC container models
 		&models.LXCContainer{},
 		// Add more models here as they are created

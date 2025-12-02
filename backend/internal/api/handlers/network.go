@@ -541,3 +541,170 @@ func (h *NetworkHandler) ListBridges(w http.ResponseWriter, r *http.Request) {
 	// Return list of bridge names for frontend compatibility
 	utils.RespondSuccess(w, bridgeNames)
 }
+
+// ============================================================================
+// PROXMOX-STYLE PENDING CHANGES API
+// ============================================================================
+
+// CreateBridgeWithPendingChanges handles POST /api/network/bridges/pending
+// Creates bridge configuration WITHOUT applying it to the system
+// Proxmox-style workflow: Create -> Review -> Apply
+func (h *NetworkHandler) CreateBridgeWithPendingChanges(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Name        string   `json:"name"`
+		Ports       []string `json:"ports"`
+		IPAddress   string   `json:"ip_address,omitempty"`
+		Gateway     string   `json:"gateway,omitempty"`
+		Description string   `json:"description,omitempty"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.RespondError(w, errors.BadRequest("Invalid request", err))
+		return
+	}
+
+	if req.Name == "" {
+		utils.RespondError(w, errors.BadRequest("Bridge name is required", nil))
+		return
+	}
+
+	if err := network.CreateBridgeWithPendingChanges(req.Name, req.Ports, req.IPAddress, req.Gateway, req.Description); err != nil {
+		utils.RespondError(w, errors.InternalServerError("Failed to create bridge configuration", err))
+		return
+	}
+
+	utils.RespondSuccess(w, map[string]interface{}{
+		"message": "Bridge configuration saved. Click 'Apply Changes' to activate.",
+		"name":    req.Name,
+		"pending": true,
+	})
+}
+
+// UpdateBridgeWithPendingChanges handles PUT /api/network/bridges/{name}/pending
+// Updates bridge configuration WITHOUT applying it to the system
+func (h *NetworkHandler) UpdateBridgeWithPendingChanges(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+
+	var req struct {
+		Ports     []string `json:"ports"`
+		IPAddress string   `json:"ip_address,omitempty"`
+		Gateway   string   `json:"gateway,omitempty"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.RespondError(w, errors.BadRequest("Invalid request", err))
+		return
+	}
+
+	if err := network.UpdateBridgeWithPendingChanges(name, req.Ports, req.IPAddress, req.Gateway); err != nil {
+		utils.RespondError(w, errors.InternalServerError("Failed to update bridge configuration", err))
+		return
+	}
+
+	utils.RespondSuccess(w, map[string]interface{}{
+		"message": "Bridge configuration updated. Click 'Apply Changes' to activate.",
+		"name":    name,
+		"pending": true,
+	})
+}
+
+// GetPendingChanges handles GET /api/network/pending-changes
+// Returns all network configurations with pending changes
+func (h *NetworkHandler) GetPendingChanges(w http.ResponseWriter, r *http.Request) {
+	bridges, err := network.GetPendingChanges()
+	if err != nil {
+		utils.RespondError(w, errors.InternalServerError("Failed to get pending changes", err))
+		return
+	}
+
+	utils.RespondSuccess(w, map[string]interface{}{
+		"count":   len(bridges),
+		"bridges": bridges,
+	})
+}
+
+// ApplyPendingChanges handles POST /api/network/apply-changes
+// Applies all pending network changes with automatic rollback on failure
+// This is the critical "Apply Configuration" button
+func (h *NetworkHandler) ApplyPendingChanges(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		BridgeName string `json:"bridge_name"` // Which bridge to apply changes for
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.RespondError(w, errors.BadRequest("Invalid request", err))
+		return
+	}
+
+	if req.BridgeName == "" {
+		utils.RespondError(w, errors.BadRequest("Bridge name is required", nil))
+		return
+	}
+
+	// Apply changes with automatic rollback on failure
+	if err := network.ApplyPendingChanges(req.BridgeName); err != nil {
+		utils.RespondError(w, errors.InternalServerError("Failed to apply changes", err))
+		return
+	}
+
+	utils.RespondSuccess(w, map[string]interface{}{
+		"message": "Network changes applied successfully",
+		"bridge":  req.BridgeName,
+	})
+}
+
+// DiscardPendingChanges handles POST /api/network/discard-changes
+// Discards pending changes without applying them
+func (h *NetworkHandler) DiscardPendingChanges(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		BridgeName string `json:"bridge_name"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.RespondError(w, errors.BadRequest("Invalid request", err))
+		return
+	}
+
+	if req.BridgeName == "" {
+		utils.RespondError(w, errors.BadRequest("Bridge name is required", nil))
+		return
+	}
+
+	if err := network.DiscardPendingChanges(req.BridgeName); err != nil {
+		utils.RespondError(w, errors.InternalServerError("Failed to discard changes", err))
+		return
+	}
+
+	utils.RespondSuccess(w, map[string]interface{}{
+		"message": "Pending changes discarded",
+		"bridge":  req.BridgeName,
+	})
+}
+
+// RollbackToSnapshot handles POST /api/network/rollback
+// Manually rolls back to a previous network snapshot
+func (h *NetworkHandler) RollbackToSnapshot(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		SnapshotID string `json:"snapshot_id"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.RespondError(w, errors.BadRequest("Invalid request", err))
+		return
+	}
+
+	if req.SnapshotID == "" {
+		utils.RespondError(w, errors.BadRequest("Snapshot ID is required", nil))
+		return
+	}
+
+	if err := network.RollbackToSnapshot(req.SnapshotID); err != nil {
+		utils.RespondError(w, errors.InternalServerError("Failed to rollback to snapshot", err))
+		return
+	}
+
+	utils.RespondSuccess(w, map[string]interface{}{
+		"message":     "Network configuration rolled back successfully",
+		"snapshot_id": req.SnapshotID,
+	})
+}
