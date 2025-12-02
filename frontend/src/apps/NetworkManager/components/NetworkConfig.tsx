@@ -19,7 +19,7 @@ import {
 import { networkApi, type NetworkInterface, type PendingChangesResponse } from '@/api/network';
 import { syslibApi, type CreateBondRequest, type CreateVLANRequest } from '@/api/syslib';
 
-type DialogType = 'none' | 'bond' | 'vlan' | 'bridge';
+type DialogType = 'none' | 'bond' | 'vlan' | 'bridge' | 'edit-interface' | 'edit-bridge';
 
 export default function NetworkConfig() {
   const [interfaces, setInterfaces] = useState<NetworkInterface[]>([]);
@@ -28,6 +28,7 @@ export default function NetworkConfig() {
   const [showCreateMenu, setShowCreateMenu] = useState(false);
   const [pendingChanges, setPendingChanges] = useState<PendingChangesResponse>({ has_pending: false, count: 0, changes: [] });
   const [isApplying, setIsApplying] = useState(false);
+  const [selectedInterface, setSelectedInterface] = useState<NetworkInterface | null>(null);
 
   const [bondFormData, setBondFormData] = useState<CreateBondRequest>({
     name: 'bond0',
@@ -50,6 +51,16 @@ export default function NetworkConfig() {
     ipv6Gateway: '',
     vlanAware: false,
     autostart: true,
+  });
+
+  const [interfaceFormData, setInterfaceFormData] = useState({
+    name: '',
+    ipAddress: '',
+    gateway: '',
+    ipv6Address: '',
+    ipv6Gateway: '',
+    autostart: true,
+    comment: '',
   });
 
   // Bond modes
@@ -654,8 +665,26 @@ export default function NetworkConfig() {
                         {/* Actions */}
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-center gap-2">
-                            {/* Edit button - coming soon for physical interfaces */}
+                            {/* Edit button - works for all interfaces */}
                             <button
+                              onClick={() => {
+                                setSelectedInterface(iface);
+                                if (iface.name.startsWith('br') || iface.name.startsWith('vmbr')) {
+                                  setDialogType('edit-bridge');
+                                  // Populate bridge form data (will be implemented)
+                                } else {
+                                  setDialogType('edit-interface');
+                                  setInterfaceFormData({
+                                    name: iface.name,
+                                    ipAddress: iface.addresses?.[0] || '',
+                                    gateway: '',
+                                    ipv6Address: '',
+                                    ipv6Gateway: '',
+                                    autostart: true,
+                                    comment: '',
+                                  });
+                                }
+                              }}
                               className="p-1.5 bg-macos-blue/10 dark:bg-macos-blue/20 text-macos-blue rounded hover:bg-macos-blue/20 dark:hover:bg-macos-blue/30 transition-colors"
                               title="Edit interface"
                             >
@@ -1195,6 +1224,174 @@ export default function NetworkConfig() {
                 className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors"
               >
                 Add to Pending Changes
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Edit Network Device Dialog (Proxmox-style) */}
+      {dialogType === 'edit-interface' && selectedInterface && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-macos-dark-100 rounded-2xl p-6 max-w-2xl w-full m-4"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                Edit: Network Device
+              </h3>
+              <button
+                onClick={() => setDialogType('none')}
+                className="p-1 hover:bg-gray-100 dark:hover:bg-macos-dark-200 rounded"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Name (Read-only) */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Name
+                  </label>
+                  <input
+                    type="text"
+                    value={interfaceFormData.name}
+                    disabled
+                    className="w-full px-3 py-2 bg-gray-100 dark:bg-macos-dark-300 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 cursor-not-allowed"
+                  />
+                </div>
+
+                {/* Autostart */}
+                <div className="flex items-center gap-3 mt-6">
+                  <input
+                    type="checkbox"
+                    checked={interfaceFormData.autostart}
+                    onChange={(e) => setInterfaceFormData({ ...interfaceFormData, autostart: e.target.checked })}
+                    className="w-4 h-4 text-macos-blue rounded focus:ring-2 focus:ring-macos-blue"
+                  />
+                  <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    Autostart
+                  </label>
+                </div>
+              </div>
+
+              {/* IPv4 Configuration */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                  IPv4 Configuration
+                </h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      IPv4/CIDR
+                    </label>
+                    <input
+                      type="text"
+                      value={interfaceFormData.ipAddress}
+                      onChange={(e) => setInterfaceFormData({ ...interfaceFormData, ipAddress: e.target.value })}
+                      placeholder="192.168.1.10/24"
+                      className="w-full px-3 py-2 bg-gray-50 dark:bg-macos-dark-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-macos-blue focus:border-transparent text-sm font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Gateway (IPv4)
+                    </label>
+                    <input
+                      type="text"
+                      value={interfaceFormData.gateway}
+                      onChange={(e) => setInterfaceFormData({ ...interfaceFormData, gateway: e.target.value })}
+                      placeholder="192.168.1.1"
+                      className="w-full px-3 py-2 bg-gray-50 dark:bg-macos-dark-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-macos-blue focus:border-transparent text-sm font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* IPv6 Configuration */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                  IPv6 Configuration
+                </h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      IPv6/CIDR
+                    </label>
+                    <input
+                      type="text"
+                      value={interfaceFormData.ipv6Address}
+                      onChange={(e) => setInterfaceFormData({ ...interfaceFormData, ipv6Address: e.target.value })}
+                      placeholder="2001:db8::1/64"
+                      className="w-full px-3 py-2 bg-gray-50 dark:bg-macos-dark-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-macos-blue focus:border-transparent text-sm font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Gateway (IPv6)
+                    </label>
+                    <input
+                      type="text"
+                      value={interfaceFormData.ipv6Gateway}
+                      onChange={(e) => setInterfaceFormData({ ...interfaceFormData, ipv6Gateway: e.target.value })}
+                      placeholder="2001:db8::ffff"
+                      className="w-full px-3 py-2 bg-gray-50 dark:bg-macos-dark-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-macos-blue focus:border-transparent text-sm font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Comment */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Comment
+                </label>
+                <input
+                  type="text"
+                  value={interfaceFormData.comment}
+                  onChange={(e) => setInterfaceFormData({ ...interfaceFormData, comment: e.target.value })}
+                  placeholder="Optional comment"
+                  className="w-full px-3 py-2 bg-gray-50 dark:bg-macos-dark-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-macos-blue focus:border-transparent"
+                />
+              </div>
+
+              {/* Info */}
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                <div className="flex gap-2">
+                  <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                  <div className="text-sm text-gray-700 dark:text-gray-300">
+                    <p className="font-medium mb-1">Network Device Configuration:</p>
+                    <ul className="list-disc list-inside space-y-1 text-xs">
+                      <li>Configure IPv4 and IPv6 addresses in CIDR notation</li>
+                      <li>Leave IP fields empty for DHCP configuration</li>
+                      <li>Changes will be added to pending changes for review</li>
+                      <li>Click "Apply Configuration" to activate changes</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                onClick={() => setDialogType('none')}
+                className="px-4 py-2 bg-gray-100 dark:bg-macos-dark-200 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-macos-dark-300 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  // TODO: Implement interface update API call
+                  alert('Interface configuration will be saved to pending changes');
+                  setDialogType('none');
+                }}
+                className="px-4 py-2 bg-macos-blue text-white rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                OK
               </button>
             </div>
           </motion.div>
