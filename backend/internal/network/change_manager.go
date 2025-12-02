@@ -221,23 +221,44 @@ func ApplyAllPendingChanges() error {
 	}
 
 	// Step 5: Reload networking to apply changes from /etc/network/interfaces
-	logger.Info("Reloading network configuration...")
+	// IMPORTANT: Use "reload" instead of "restart" to avoid breaking SSH connections
+	logger.Info("Reloading network configuration (safe mode)...")
 
-	// Use systemctl to restart networking (Debian/Ubuntu way)
-	cmd := exec.Command("systemctl", "restart", "networking")
-	if output, err := cmd.CombinedOutput(); err != nil {
-		logger.Error("Failed to restart networking service",
+	// First, try ifreload (Debian/Ubuntu - safest method, only reloads changed interfaces)
+	cmd := exec.Command("ifreload", "-a")
+	output, err := cmd.CombinedOutput()
+
+	// If ifreload not available, fall back to systemctl reload (safer than restart)
+	if err != nil {
+		logger.Warn("ifreload not available, falling back to systemctl reload",
+			zap.Error(err))
+
+		cmd = exec.Command("systemctl", "reload", "networking")
+		output, err = cmd.CombinedOutput()
+
+		// Last resort: reload-or-restart (systemd will choose safest option)
+		if err != nil {
+			logger.Warn("systemctl reload failed, trying reload-or-restart",
+				zap.Error(err))
+
+			cmd = exec.Command("systemctl", "reload-or-restart", "networking")
+			output, err = cmd.CombinedOutput()
+		}
+	}
+
+	if err != nil {
+		logger.Error("Failed to reload networking service",
 			zap.Error(err),
 			zap.String("output", string(output)))
 
-		// ROLLBACK on networking restart failure
-		logger.Warn("Rolling back all changes due to networking restart failure")
+		// ROLLBACK on networking reload failure
+		logger.Warn("Rolling back all changes due to networking reload failure")
 		if rollbackErr := RollbackToFullSnapshot(snapshot.ID); rollbackErr != nil {
 			logger.Error("CRITICAL: Rollback failed!", zap.Error(rollbackErr))
-			return fmt.Errorf("networking restart failed and rollback also failed: %w", rollbackErr)
+			return fmt.Errorf("networking reload failed and rollback also failed: %w", rollbackErr)
 		}
 
-		return fmt.Errorf("failed to restart networking (rolled back): %w", err)
+		return fmt.Errorf("failed to reload networking (rolled back): %w", err)
 	}
 
 	// Step 6: All changes applied successfully
@@ -304,13 +325,18 @@ func applyBridgeChange(change *models.PendingNetworkChange) error {
 
 		ipAddress, _ := config["ip_address"].(string)
 		gateway, _ := config["gateway"].(string)
+		ipv6Address, _ := config["ipv6_address"].(string)
+		ipv6Gateway, _ := config["ipv6_gateway"].(string)
+		vlanAware, _ := config["vlan_aware"].(bool)
 
-		// Add bridge to interfaces configuration
-		AddBridgeToInterfaces(interfaces, bridgeName, ports, ipAddress, gateway)
+		// Add bridge to interfaces configuration (Proxmox-style with IPv6)
+		AddBridgeToInterfaces(interfaces, bridgeName, ports, ipAddress, gateway, ipv6Address, ipv6Gateway, vlanAware)
 
 		logger.Info("Adding bridge to /etc/network/interfaces",
 			zap.String("bridge", bridgeName),
-			zap.String("address", ipAddress),
+			zap.String("ipv4_address", ipAddress),
+			zap.String("ipv6_address", ipv6Address),
+			zap.Bool("vlan_aware", vlanAware),
 			zap.Strings("ports", ports))
 
 	case "delete":
@@ -337,11 +363,17 @@ func applyBridgeChange(change *models.PendingNetworkChange) error {
 
 		ipAddress, _ := config["ip_address"].(string)
 		gateway, _ := config["gateway"].(string)
+		ipv6Address, _ := config["ipv6_address"].(string)
+		ipv6Gateway, _ := config["ipv6_gateway"].(string)
+		vlanAware, _ := config["vlan_aware"].(bool)
 
-		AddBridgeToInterfaces(interfaces, bridgeName, ports, ipAddress, gateway)
+		AddBridgeToInterfaces(interfaces, bridgeName, ports, ipAddress, gateway, ipv6Address, ipv6Gateway, vlanAware)
 
 		logger.Info("Updating bridge in /etc/network/interfaces",
-			zap.String("bridge", bridgeName))
+			zap.String("bridge", bridgeName),
+			zap.String("ipv4_address", ipAddress),
+			zap.String("ipv6_address", ipv6Address),
+			zap.Bool("vlan_aware", vlanAware))
 	}
 
 	// Write updated interfaces file

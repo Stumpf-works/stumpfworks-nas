@@ -26,11 +26,22 @@ type InterfaceConfig struct {
 	Name          string
 	Type          string // "loopback", "physical", "bridge"
 	AddressMethod string // "static", "dhcp", "manual"
+
+	// IPv4 configuration
 	Address       string // CIDR notation: 192.168.1.10/24
 	Gateway       string
+
+	// IPv6 configuration
+	IPv6Address   string // CIDR notation: 2001:db8::1/64
+	IPv6Gateway   string
+	IPv6Method    string // "static", "auto", "dhcp"
+
+	// Bridge-specific
 	BridgePorts   string // For bridges: "eno1" or "eno1 eno2"
 	BridgeSTP     string // "off" or "on"
 	BridgeFD      string // Forward delay: "0"
+	BridgeVLANAware bool // VLAN aware bridge
+
 	Auto          bool   // "auto" line
 	AllowHotplug  bool   // "allow-hotplug" line
 	Comment       string // Optional comment above interface
@@ -182,10 +193,10 @@ func WriteInterfacesFile(interfaces map[string]*InterfaceConfig) error {
 			content.WriteString(fmt.Sprintf("allow-hotplug %s\n", iface.Name))
 		}
 
-		// Write iface line
+		// Write IPv4 iface line
 		content.WriteString(fmt.Sprintf("iface %s inet %s\n", iface.Name, iface.AddressMethod))
 
-		// Write options (indented with 8 spaces like Proxmox)
+		// Write IPv4 options (indented with 8 spaces like Proxmox)
 		if iface.Address != "" {
 			content.WriteString(fmt.Sprintf("        address %s\n", iface.Address))
 		}
@@ -201,8 +212,30 @@ func WriteInterfacesFile(interfaces map[string]*InterfaceConfig) error {
 		if iface.BridgeFD != "" {
 			content.WriteString(fmt.Sprintf("        bridge-fd %s\n", iface.BridgeFD))
 		}
+		if iface.BridgeVLANAware {
+			content.WriteString("        bridge-vlan-aware yes\n")
+		}
 
 		content.WriteString("\n")
+
+		// Write IPv6 configuration if present (Proxmox-style)
+		if iface.IPv6Address != "" || iface.IPv6Method != "" {
+			method := iface.IPv6Method
+			if method == "" {
+				method = "static"
+			}
+
+			content.WriteString(fmt.Sprintf("iface %s inet6 %s\n", iface.Name, method))
+
+			if iface.IPv6Address != "" {
+				content.WriteString(fmt.Sprintf("        address %s\n", iface.IPv6Address))
+			}
+			if iface.IPv6Gateway != "" {
+				content.WriteString(fmt.Sprintf("        gateway %s\n", iface.IPv6Gateway))
+			}
+
+			content.WriteString("\n")
+		}
 	}
 
 	// Write to file atomically (write to temp file, then rename)
@@ -250,19 +283,29 @@ func RestoreInterfacesFileFromBackup() error {
 	return nil
 }
 
-// AddBridgeToInterfaces adds a bridge configuration to the interfaces map
-func AddBridgeToInterfaces(interfaces map[string]*InterfaceConfig, name string, ports []string, address string, gateway string) {
+// AddBridgeToInterfaces adds a bridge configuration to the interfaces map (Proxmox-style with IPv6 support)
+func AddBridgeToInterfaces(interfaces map[string]*InterfaceConfig, name string, ports []string, address string, gateway string, ipv6Address string, ipv6Gateway string, vlanAware bool) {
+	// Determine address method
+	method := "manual"
+	if address != "" {
+		method = "static"
+	}
+
 	interfaces[name] = &InterfaceConfig{
-		Name:          name,
-		Type:          "bridge",
-		AddressMethod: "static",
-		Address:       address,
-		Gateway:       gateway,
-		BridgePorts:   strings.Join(ports, " "),
-		BridgeSTP:     "off",
-		BridgeFD:      "0",
-		Auto:          true,
-		Comment:       fmt.Sprintf("# Bridge %s", name),
+		Name:            name,
+		Type:            "bridge",
+		AddressMethod:   method,
+		Address:         address,
+		Gateway:         gateway,
+		IPv6Address:     ipv6Address,
+		IPv6Gateway:     ipv6Gateway,
+		IPv6Method:      "static",
+		BridgePorts:     strings.Join(ports, " "),
+		BridgeSTP:       "off",
+		BridgeFD:        "0",
+		BridgeVLANAware: vlanAware,
+		Auto:            true,
+		Comment:         fmt.Sprintf("# Bridge %s", name),
 	}
 
 	// Set bridge ports to manual (no IP, bridge takes over)

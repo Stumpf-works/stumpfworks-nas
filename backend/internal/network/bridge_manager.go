@@ -176,27 +176,30 @@ func GetPersistedBridges() ([]models.NetworkBridge, error) {
 }
 
 // convertCIDRToNetmask converts CIDR notation to netmask (e.g., "24" -> "255.255.255.0")
+// This is now algorithmic instead of using a lookup table
 func convertCIDRToNetmask(cidr string) string {
-	// Common CIDR to netmask conversions
-	cidrMap := map[string]string{
-		"8":  "255.0.0.0",
-		"16": "255.255.0.0",
-		"24": "255.255.255.0",
-		"25": "255.255.255.128",
-		"26": "255.255.255.192",
-		"27": "255.255.255.224",
-		"28": "255.255.255.240",
-		"29": "255.255.255.248",
-		"30": "255.255.255.252",
-		"32": "255.255.255.255",
+	// Parse CIDR prefix length
+	prefixLen := 0
+	fmt.Sscanf(cidr, "%d", &prefixLen)
+
+	// Validate range
+	if prefixLen < 0 || prefixLen > 32 {
+		logger.Warn("Invalid CIDR prefix length, defaulting to /24",
+			zap.String("cidr", cidr))
+		prefixLen = 24
 	}
 
-	if netmask, ok := cidrMap[cidr]; ok {
-		return netmask
-	}
+	// Calculate netmask algorithmically
+	// Create a 32-bit mask with prefixLen ones from the left
+	mask := uint32(0xFFFFFFFF << (32 - prefixLen))
 
-	// Default to /24 if unknown
-	return "255.255.255.0"
+	// Convert to dotted-decimal notation
+	octet1 := byte((mask >> 24) & 0xFF)
+	octet2 := byte((mask >> 16) & 0xFF)
+	octet3 := byte((mask >> 8) & 0xFF)
+	octet4 := byte(mask & 0xFF)
+
+	return fmt.Sprintf("%d.%d.%d.%d", octet1, octet2, octet3, octet4)
 }
 
 // ============================================================================
@@ -206,7 +209,7 @@ func convertCIDRToNetmask(cidr string) string {
 // CreateBridgeWithPendingChanges creates a bridge configuration in the database
 // WITHOUT applying it to the system. Changes must be applied via ApplyPendingChanges.
 // This is the Proxmox-style workflow: Create -> Review -> Apply -> Connectivity Check -> Commit or Rollback
-func CreateBridgeWithPendingChanges(name string, ports []string, ipAddress string, gateway string, description string) error {
+func CreateBridgeWithPendingChanges(name string, ports []string, ipAddress string, gateway string, ipv6Address string, ipv6Gateway string, vlanAware bool, autostart bool, description string) error {
 	// Check if bridge already exists in database
 	var existing models.NetworkBridge
 	if err := database.DB.Where("name = ?", name).First(&existing).Error; err == nil {
@@ -215,15 +218,18 @@ func CreateBridgeWithPendingChanges(name string, ports []string, ipAddress strin
 
 	// Save to database with pending status (NOT YET APPLIED TO SYSTEM)
 	bridge := models.NetworkBridge{
-		ID:                uuid.New().String(),
-		Name:              name,
-		Description:       description,
-		Status:            "pending", // NOT YET APPLIED
-		HasPendingChanges: true,
-		PendingPorts:      strings.Join(ports, ","),
-		PendingIPAddress:  ipAddress,
-		PendingGateway:    gateway,
-		Autostart:         true,
+		ID:                 uuid.New().String(),
+		Name:               name,
+		Description:        description,
+		Status:             "pending", // NOT YET APPLIED
+		HasPendingChanges:  true,
+		PendingPorts:       strings.Join(ports, ","),
+		PendingIPAddress:   ipAddress,
+		PendingGateway:     gateway,
+		PendingIPv6Address: ipv6Address,
+		PendingIPv6Gateway: ipv6Gateway,
+		PendingVLANAware:   vlanAware,
+		Autostart:          autostart,
 	}
 
 	if err := database.DB.Create(&bridge).Error; err != nil {
@@ -232,12 +238,15 @@ func CreateBridgeWithPendingChanges(name string, ports []string, ipAddress strin
 
 	// Add to universal pending changes tracking
 	pendingConfig := map[string]interface{}{
-		"name":        name,
-		"description": description,
-		"ports":       ports,
-		"ip_address":  ipAddress,
-		"gateway":     gateway,
-		"autostart":   true,
+		"name":         name,
+		"description":  description,
+		"ports":        ports,
+		"ip_address":   ipAddress,
+		"gateway":      gateway,
+		"ipv6_address": ipv6Address,
+		"ipv6_gateway": ipv6Gateway,
+		"vlan_aware":   vlanAware,
+		"autostart":    autostart,
 	}
 
 	desc := fmt.Sprintf("Create bridge %s", name)
@@ -261,7 +270,7 @@ func CreateBridgeWithPendingChanges(name string, ports []string, ipAddress strin
 
 // UpdateBridgeWithPendingChanges updates a bridge configuration in the database
 // WITHOUT applying it to the system. Changes must be applied via ApplyPendingChanges.
-func UpdateBridgeWithPendingChanges(name string, ports []string, ipAddress string, gateway string) error {
+func UpdateBridgeWithPendingChanges(name string, ports []string, ipAddress string, gateway string, ipv6Address string, ipv6Gateway string, vlanAware bool, autostart bool) error {
 	var bridge models.NetworkBridge
 	if err := database.DB.Where("name = ?", name).First(&bridge).Error; err != nil {
 		return fmt.Errorf("bridge %s not found in database", name)
@@ -269,25 +278,35 @@ func UpdateBridgeWithPendingChanges(name string, ports []string, ipAddress strin
 
 	// Current configuration
 	currentConfig := map[string]interface{}{
-		"ports":      bridge.Ports,
-		"ip_address": bridge.IPAddress,
-		"gateway":    bridge.Gateway,
+		"ports":        bridge.Ports,
+		"ip_address":   bridge.IPAddress,
+		"gateway":      bridge.Gateway,
+		"ipv6_address": bridge.IPv6Address,
+		"ipv6_gateway": bridge.IPv6Gateway,
+		"vlan_aware":   bridge.VLANAware,
 	}
 
 	// Pending configuration
 	pendingConfig := map[string]interface{}{
-		"ports":      ports,
-		"ip_address": ipAddress,
-		"gateway":    gateway,
+		"ports":        ports,
+		"ip_address":   ipAddress,
+		"gateway":      gateway,
+		"ipv6_address": ipv6Address,
+		"ipv6_gateway": ipv6Gateway,
+		"vlan_aware":   vlanAware,
+		"autostart":    autostart,
 	}
 
 	// Store pending changes
 	updates := map[string]interface{}{
-		"has_pending_changes": true,
-		"pending_ports":       strings.Join(ports, ","),
-		"pending_ip_address":  ipAddress,
-		"pending_gateway":     gateway,
-		"status":              "pending_changes",
+		"has_pending_changes":  true,
+		"pending_ports":        strings.Join(ports, ","),
+		"pending_ip_address":   ipAddress,
+		"pending_gateway":      gateway,
+		"pending_ipv6_address": ipv6Address,
+		"pending_ipv6_gateway": ipv6Gateway,
+		"pending_vlan_aware":   vlanAware,
+		"status":               "pending_changes",
 	}
 
 	if err := database.DB.Model(&bridge).Updates(updates).Error; err != nil {
@@ -299,10 +318,12 @@ func UpdateBridgeWithPendingChanges(name string, ports []string, ipAddress strin
 	if err := AddPendingChange("bridge", "update", name, desc, pendingConfig, currentConfig); err != nil {
 		// Rollback updates if we can't add pending change
 		database.DB.Model(&bridge).Updates(map[string]interface{}{
-			"has_pending_changes": false,
-			"pending_ports":       "",
-			"pending_ip_address":  "",
-			"pending_gateway":     "",
+			"has_pending_changes":  false,
+			"pending_ports":        "",
+			"pending_ip_address":   "",
+			"pending_gateway":      "",
+			"pending_ipv6_address": "",
+			"pending_ipv6_gateway": "",
 		})
 		return fmt.Errorf("failed to add pending change: %w", err)
 	}
@@ -498,15 +519,21 @@ func ApplyPendingChanges(bridgeName string) error {
 
 	// Step 5: Changes applied successfully - commit them to database
 	updates := map[string]interface{}{
-		"has_pending_changes": false,
-		"ports":               bridge.PendingPorts,
-		"ip_address":          bridge.PendingIPAddress,
-		"gateway":             bridge.PendingGateway,
-		"status":              "active",
-		"last_error":          "",
-		"pending_ports":       "",
-		"pending_ip_address":  "",
-		"pending_gateway":     "",
+		"has_pending_changes":  false,
+		"ports":                bridge.PendingPorts,
+		"ip_address":           bridge.PendingIPAddress,
+		"gateway":              bridge.PendingGateway,
+		"ipv6_address":         bridge.PendingIPv6Address,
+		"ipv6_gateway":         bridge.PendingIPv6Gateway,
+		"vlan_aware":           bridge.PendingVLANAware,
+		"status":               "active",
+		"last_error":           "",
+		"pending_ports":        "",
+		"pending_ip_address":   "",
+		"pending_gateway":      "",
+		"pending_ipv6_address": "",
+		"pending_ipv6_gateway": "",
+		"pending_vlan_aware":   false,
 	}
 
 	if err := database.DB.Model(&bridge).Updates(updates).Error; err != nil {
@@ -586,11 +613,14 @@ func RollbackToSnapshot(snapshotID string) error {
 	var bridge models.NetworkBridge
 	if err := database.DB.Where("name = ?", snapshot.BridgeName).First(&bridge).Error; err == nil {
 		database.DB.Model(&bridge).Updates(map[string]interface{}{
-			"has_pending_changes": false,
-			"status":              "active",
-			"pending_ports":       "",
-			"pending_ip_address":  "",
-			"pending_gateway":     "",
+			"has_pending_changes":  false,
+			"status":               "active",
+			"pending_ports":        "",
+			"pending_ip_address":   "",
+			"pending_gateway":      "",
+			"pending_ipv6_address": "",
+			"pending_ipv6_gateway": "",
+			"pending_vlan_aware":   false,
 		})
 	}
 
@@ -615,11 +645,14 @@ func DiscardPendingChanges(bridgeName string) error {
 	}
 
 	updates := map[string]interface{}{
-		"has_pending_changes": false,
-		"pending_ports":       "",
-		"pending_ip_address":  "",
-		"pending_gateway":     "",
-		"status":              bridge.Status, // Keep current status
+		"has_pending_changes":  false,
+		"pending_ports":        "",
+		"pending_ip_address":   "",
+		"pending_gateway":      "",
+		"pending_ipv6_address": "",
+		"pending_ipv6_gateway": "",
+		"pending_vlan_aware":   false,
+		"status":               bridge.Status, // Keep current status
 	}
 
 	if err := database.DB.Model(&bridge).Updates(updates).Error; err != nil {

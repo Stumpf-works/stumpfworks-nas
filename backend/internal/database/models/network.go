@@ -12,8 +12,18 @@ type NetworkBridge struct {
 	Name        string    `gorm:"uniqueIndex;not null" json:"name"` // e.g., br0, vmbr0, vmbr1
 	Description string    `json:"description"`
 	Ports       string    `gorm:"type:text" json:"ports"` // Comma-separated list of interface names (e.g., "ens18,ens19")
+
+	// IPv4 configuration
 	IPAddress   string    `json:"ip_address,omitempty"` // Optional static IP (CIDR notation: 192.168.1.10/24)
 	Gateway     string    `json:"gateway,omitempty"`    // Optional gateway
+
+	// IPv6 configuration (Proxmox-style)
+	IPv6Address string    `json:"ipv6_address,omitempty"` // Optional static IPv6 (CIDR notation: 2001:db8::1/64)
+	IPv6Gateway string    `json:"ipv6_gateway,omitempty"` // Optional IPv6 gateway
+
+	// Bridge-specific settings
+	VLANAware   bool      `gorm:"default:false" json:"vlan_aware"` // VLAN aware bridge (Proxmox feature)
+
 	Autostart   bool      `gorm:"default:true" json:"autostart"` // Auto-create on system boot
 	Status      string    `gorm:"default:pending" json:"status"` // pending, pending_changes, active, error, rollback
 	LastError   string    `gorm:"type:text" json:"last_error,omitempty"`
@@ -23,6 +33,9 @@ type NetworkBridge struct {
 	PendingPorts      string    `gorm:"type:text" json:"pending_ports,omitempty"` // Pending ports to apply
 	PendingIPAddress  string    `json:"pending_ip_address,omitempty"` // Pending IP to apply
 	PendingGateway    string    `json:"pending_gateway,omitempty"` // Pending gateway to apply
+	PendingIPv6Address string   `json:"pending_ipv6_address,omitempty"` // Pending IPv6 to apply
+	PendingIPv6Gateway string   `json:"pending_ipv6_gateway,omitempty"` // Pending IPv6 gateway to apply
+	PendingVLANAware   bool     `json:"pending_vlan_aware,omitempty"` // Pending VLAN aware setting
 
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
@@ -38,8 +51,16 @@ type NetworkInterface struct {
 	ID        string    `gorm:"primaryKey" json:"id"`
 	Name      string    `gorm:"uniqueIndex;not null" json:"name"` // e.g., ens18, eth0
 	Method    string    `gorm:"default:dhcp" json:"method"` // dhcp, static, manual
+
+	// IPv4 configuration
 	IPAddress string    `json:"ip_address,omitempty"` // CIDR notation
 	Gateway   string    `json:"gateway,omitempty"`
+
+	// IPv6 configuration
+	IPv6Address string  `json:"ipv6_address,omitempty"` // CIDR notation
+	IPv6Gateway string  `json:"ipv6_gateway,omitempty"`
+	IPv6Method  string  `gorm:"default:auto" json:"ipv6_method"` // auto, dhcp, static, manual
+
 	DNS       string    `gorm:"type:text" json:"dns,omitempty"` // Comma-separated DNS servers
 	MTU       int       `json:"mtu,omitempty"`
 	Autostart bool      `gorm:"default:true" json:"autostart"`

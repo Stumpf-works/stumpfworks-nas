@@ -555,6 +555,10 @@ func (h *NetworkHandler) CreateBridgeWithPendingChanges(w http.ResponseWriter, r
 		Ports       []string `json:"ports"`
 		IPAddress   string   `json:"ip_address,omitempty"`
 		Gateway     string   `json:"gateway,omitempty"`
+		IPv6Address string   `json:"ipv6_address,omitempty"` // NEW: IPv6 support
+		IPv6Gateway string   `json:"ipv6_gateway,omitempty"` // NEW: IPv6 gateway
+		VLANAware   bool     `json:"vlan_aware,omitempty"`   // NEW: VLAN aware
+		Autostart   bool     `json:"autostart"`
 		Description string   `json:"description,omitempty"`
 	}
 
@@ -568,7 +572,17 @@ func (h *NetworkHandler) CreateBridgeWithPendingChanges(w http.ResponseWriter, r
 		return
 	}
 
-	if err := network.CreateBridgeWithPendingChanges(req.Name, req.Ports, req.IPAddress, req.Gateway, req.Description); err != nil {
+	if err := network.CreateBridgeWithPendingChanges(
+		req.Name,
+		req.Ports,
+		req.IPAddress,
+		req.Gateway,
+		req.IPv6Address,
+		req.IPv6Gateway,
+		req.VLANAware,
+		req.Autostart,
+		req.Description,
+	); err != nil {
 		utils.RespondError(w, errors.InternalServerError("Failed to create bridge configuration", err))
 		return
 	}
@@ -586,9 +600,13 @@ func (h *NetworkHandler) UpdateBridgeWithPendingChanges(w http.ResponseWriter, r
 	name := chi.URLParam(r, "name")
 
 	var req struct {
-		Ports     []string `json:"ports"`
-		IPAddress string   `json:"ip_address,omitempty"`
-		Gateway   string   `json:"gateway,omitempty"`
+		Ports       []string `json:"ports"`
+		IPAddress   string   `json:"ip_address,omitempty"`
+		Gateway     string   `json:"gateway,omitempty"`
+		IPv6Address string   `json:"ipv6_address,omitempty"` // NEW: IPv6 support
+		IPv6Gateway string   `json:"ipv6_gateway,omitempty"` // NEW: IPv6 gateway
+		VLANAware   bool     `json:"vlan_aware,omitempty"`   // NEW: VLAN aware
+		Autostart   bool     `json:"autostart"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -596,7 +614,16 @@ func (h *NetworkHandler) UpdateBridgeWithPendingChanges(w http.ResponseWriter, r
 		return
 	}
 
-	if err := network.UpdateBridgeWithPendingChanges(name, req.Ports, req.IPAddress, req.Gateway); err != nil {
+	if err := network.UpdateBridgeWithPendingChanges(
+		name,
+		req.Ports,
+		req.IPAddress,
+		req.Gateway,
+		req.IPv6Address,
+		req.IPv6Gateway,
+		req.VLANAware,
+		req.Autostart,
+	); err != nil {
 		utils.RespondError(w, errors.InternalServerError("Failed to update bridge configuration", err))
 		return
 	}
