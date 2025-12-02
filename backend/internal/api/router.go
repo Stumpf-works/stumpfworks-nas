@@ -451,7 +451,10 @@ func NewRouter(cfg *config.Config) http.Handler {
 				r.Get("/images", dockerHandler.ListImages)
 				r.Get("/images/search", dockerHandler.SearchImages)
 				r.Post("/images/pull", dockerHandler.PullImage)
+				r.Post("/images/build", dockerHandler.BuildImage)
 				r.Get("/images/{id}", dockerHandler.InspectImage)
+				r.Post("/images/{id}/tag", dockerHandler.TagImage)
+				r.Post("/images/{id}/push", dockerHandler.PushImage)
 				r.Delete("/images/{id}", dockerHandler.RemoveImage)
 
 				// Volume routes

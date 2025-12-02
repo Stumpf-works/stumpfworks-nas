@@ -1,4 +1,4 @@
-// Revision: 2025-11-16 | Author: Claude | Version: 1.1.1
+// Revision: 2025-12-02 | Author: Claude | Version: 1.2.0
 package handlers
 
 import (
@@ -303,6 +303,98 @@ func (h *DockerHandler) RemoveImage(w http.ResponseWriter, r *http.Request) {
 
 	logger.Info("Image removed", zap.String("image", imageID))
 	utils.RespondSuccess(w, map[string]string{"message": "Image removed successfully"})
+}
+
+// BuildImage builds an image from a Dockerfile
+func (h *DockerHandler) BuildImage(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Dockerfile string              `json:"dockerfile"`
+		Tags       []string            `json:"tags"`
+		BuildArgs  map[string]*string  `json:"buildArgs"`
+		Labels     map[string]string   `json:"labels"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.RespondError(w, errors.BadRequest("Invalid request body", err))
+		return
+	}
+
+	if req.Dockerfile == "" {
+		utils.RespondError(w, errors.BadRequest("Dockerfile is required", nil))
+		return
+	}
+
+	if len(req.Tags) == 0 {
+		utils.RespondError(w, errors.BadRequest("At least one tag is required", nil))
+		return
+	}
+
+	output, err := h.service.BuildImage(r.Context(), []byte(req.Dockerfile), req.Tags, req.BuildArgs, req.Labels)
+	if err != nil {
+		logger.Error("Failed to build image", zap.Error(err), zap.Strings("tags", req.Tags))
+		utils.RespondError(w, errors.InternalServerError("Failed to build image", err))
+		return
+	}
+
+	logger.Info("Image built successfully", zap.Strings("tags", req.Tags))
+	utils.RespondSuccess(w, map[string]string{"output": output})
+}
+
+// TagImage tags an image
+func (h *DockerHandler) TagImage(w http.ResponseWriter, r *http.Request) {
+	imageID := chi.URLParam(r, "id")
+
+	var req struct {
+		Repo string `json:"repo"`
+		Tag  string `json:"tag"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.RespondError(w, errors.BadRequest("Invalid request body", err))
+		return
+	}
+
+	if req.Repo == "" {
+		utils.RespondError(w, errors.BadRequest("Repository name is required", nil))
+		return
+	}
+
+	if req.Tag == "" {
+		req.Tag = "latest"
+	}
+
+	if err := h.service.TagImage(r.Context(), imageID, req.Repo, req.Tag); err != nil {
+		logger.Error("Failed to tag image", zap.Error(err), zap.String("image", imageID), zap.String("repo", req.Repo), zap.String("tag", req.Tag))
+		utils.RespondError(w, errors.InternalServerError("Failed to tag image", err))
+		return
+	}
+
+	logger.Info("Image tagged successfully", zap.String("image", imageID), zap.String("repo", req.Repo), zap.String("tag", req.Tag))
+	utils.RespondSuccess(w, map[string]string{"message": "Image tagged successfully"})
+}
+
+// PushImage pushes an image to a registry
+func (h *DockerHandler) PushImage(w http.ResponseWriter, r *http.Request) {
+	imageID := chi.URLParam(r, "id")
+
+	var req struct {
+		RegistryAuth string `json:"registryAuth"` // Base64 encoded auth config
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.RespondError(w, errors.BadRequest("Invalid request body", err))
+		return
+	}
+
+	output, err := h.service.PushImage(r.Context(), imageID, req.RegistryAuth)
+	if err != nil {
+		logger.Error("Failed to push image", zap.Error(err), zap.String("image", imageID))
+		utils.RespondError(w, errors.InternalServerError("Failed to push image", err))
+		return
+	}
+
+	logger.Info("Image pushed successfully", zap.String("image", imageID))
+	utils.RespondSuccess(w, map[string]string{"output": output})
 }
 
 // Volume Handlers

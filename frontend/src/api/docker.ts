@@ -182,6 +182,31 @@ export const dockerApi = {
     return response.data;
   },
 
+  async buildImage(
+    dockerfile: string,
+    tags: string[],
+    buildArgs?: Record<string, string>,
+    labels?: Record<string, string>
+  ): Promise<ApiResponse<{ output: string }>> {
+    const response = await client.post('/docker/images/build', {
+      dockerfile,
+      tags,
+      buildArgs,
+      labels,
+    });
+    return response.data;
+  },
+
+  async tagImage(id: string, repo: string, tag: string): Promise<ApiResponse<any>> {
+    const response = await client.post(`/docker/images/${id}/tag`, { repo, tag });
+    return response.data;
+  },
+
+  async pushImage(id: string, registryAuth?: string): Promise<ApiResponse<{ output: string }>> {
+    const response = await client.post(`/docker/images/${id}/push`, { registryAuth });
+    return response.data;
+  },
+
   // Volumes
   async listVolumes(): Promise<ApiResponse<DockerVolume[]>> {
     const response = await client.get('/docker/volumes');

@@ -15,6 +15,12 @@ export default function ImageManager() {
   const [pulling, setPulling] = useState(false);
   const [deleteModal, setDeleteModal] = useState<DockerImage | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [buildModal, setBuildModal] = useState(false);
+  const [buildDockerfile, setBuildDockerfile] = useState('');
+  const [buildTags, setBuildTags] = useState('');
+  const [building, setBuilding] = useState(false);
+  const [pushModal, setPushModal] = useState<DockerImage | null>(null);
+  const [pushing, setPushing] = useState(false);
 
   useEffect(() => {
     loadImages();
@@ -78,6 +84,54 @@ export default function ImageManager() {
     }
   };
 
+  const handleBuild = async () => {
+    if (!buildDockerfile.trim()) {
+      alert('Please enter a Dockerfile');
+      return;
+    }
+
+    if (!buildTags.trim()) {
+      alert('Please enter at least one tag (e.g., myimage:latest)');
+      return;
+    }
+
+    setBuilding(true);
+    try {
+      const tags = buildTags.split(',').map((t) => t.trim()).filter((t) => t);
+      const response = await dockerApi.buildImage(buildDockerfile, tags);
+      if (response.success) {
+        setBuildModal(false);
+        setBuildDockerfile('');
+        setBuildTags('');
+        loadImages();
+        alert('Image built successfully!');
+      } else {
+        alert(response.error?.message || 'Failed to build image');
+      }
+    } catch (err) {
+      alert(getErrorMessage(err));
+    } finally {
+      setBuilding(false);
+    }
+  };
+
+  const handlePush = async (image: DockerImage) => {
+    setPushing(true);
+    try {
+      const response = await dockerApi.pushImage(image.id);
+      if (response.success) {
+        setPushModal(null);
+        alert('Image pushed successfully!');
+      } else {
+        alert(response.error?.message || 'Failed to push image');
+      }
+    } catch (err) {
+      alert(getErrorMessage(err));
+    } finally {
+      setPushing(false);
+    }
+  };
+
   const formatSize = (bytes: number) => {
     if (bytes === 0) return '0 B';
     const k = 1024;
@@ -117,7 +171,10 @@ export default function ImageManager() {
 
       {/* Controls */}
       <div className="flex items-center justify-between">
-        <Button onClick={() => setPullModal(true)}>⬇️ Pull Image</Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setPullModal(true)}>⬇️ Pull Image</Button>
+          <Button onClick={() => setBuildModal(true)} variant="secondary">🔨 Build Image</Button>
+        </div>
         <div className="text-sm text-gray-600 dark:text-gray-400">
           {images.length} image{images.length !== 1 ? 's' : ''}
         </div>
@@ -197,15 +254,26 @@ export default function ImageManager() {
                 )}
 
                 {/* Actions */}
-                <Button
-                  size="sm"
-                  variant="danger"
-                  onClick={() => setDeleteModal(image)}
-                  disabled={actionLoading === image.id}
-                  className="w-full"
-                >
-                  🗑️ Delete
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => setPushModal(image)}
+                    disabled={actionLoading === image.id}
+                    className="flex-1"
+                  >
+                    ⬆️ Push
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    onClick={() => setDeleteModal(image)}
+                    disabled={actionLoading === image.id}
+                    className="flex-1"
+                  >
+                    🗑️ Delete
+                  </Button>
+                </div>
               </div>
             </Card>
           ))}
@@ -310,6 +378,123 @@ export default function ImageManager() {
                   disabled={actionLoading === deleteModal.id}
                 >
                   {actionLoading === deleteModal.id ? 'Deleting...' : 'Delete'}
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Build Image Modal */}
+      <AnimatePresence>
+        {buildModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={() => !building && setBuildModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white dark:bg-macos-dark-100 rounded-lg shadow-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+            >
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+                Build Docker Image
+              </h2>
+
+              <div className="mb-4">
+                <Input
+                  label="Image Tag(s)"
+                  value={buildTags}
+                  onChange={(e) => setBuildTags(e.target.value)}
+                  placeholder="myimage:latest, myimage:v1.0"
+                  required
+                  disabled={building}
+                />
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                  Enter one or more tags separated by commas
+                </p>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Dockerfile Content <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={buildDockerfile}
+                  onChange={(e) => setBuildDockerfile(e.target.value)}
+                  placeholder={'FROM node:18-alpine\nWORKDIR /app\nCOPY . .\nRUN npm install\nCMD ["npm", "start"]'}
+                  disabled={building}
+                  className="w-full h-64 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-macos-dark-50 text-gray-900 dark:text-gray-100 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-macos-blue resize-none"
+                />
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                  Paste your Dockerfile content here
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  variant="secondary"
+                  onClick={() => setBuildModal(false)}
+                  className="flex-1"
+                  disabled={building}
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleBuild} className="flex-1" disabled={building}>
+                  {building ? 'Building...' : 'Build Image'}
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Push Image Modal */}
+      <AnimatePresence>
+        {pushModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={() => !pushing && setPushModal(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white dark:bg-macos-dark-100 rounded-lg shadow-2xl p-6 w-full max-w-md"
+            >
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+                Push Image
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">
+                Push image <strong>{getImageTag(pushModal)}</strong> to registry?
+              </p>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mb-6">
+                Note: Make sure you're logged in to the registry using 'docker login' on the host system.
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  variant="secondary"
+                  onClick={() => setPushModal(null)}
+                  className="flex-1"
+                  disabled={pushing}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => handlePush(pushModal)}
+                  className="flex-1"
+                  disabled={pushing}
+                >
+                  {pushing ? 'Pushing...' : 'Push Image'}
                 </Button>
               </div>
             </motion.div>

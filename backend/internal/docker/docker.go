@@ -1,7 +1,8 @@
-// Revision: 2025-11-16 | Author: Claude | Version: 1.1.1
+// Revision: 2025-12-02 | Author: Claude | Version: 1.2.0
 package docker
 
 import (
+	"archive/tar"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -587,4 +588,96 @@ func (s *Service) GetContainerTop(ctx context.Context, containerID string) (cont
 	}
 
 	return top, nil
+}
+
+// BuildImage builds a Docker image from a Dockerfile
+func (s *Service) BuildImage(ctx context.Context, dockerfile []byte, tags []string, buildArgs map[string]*string, labels map[string]string) (string, error) {
+	if !s.available {
+		return "", fmt.Errorf("Docker is not available")
+	}
+
+	// Create a tar archive with the Dockerfile
+	pipeReader, pipeWriter := io.Pipe()
+
+	go func() {
+		defer pipeWriter.Close()
+		tw := tar.NewWriter(pipeWriter)
+		defer tw.Close()
+
+		// Add Dockerfile to tar
+		header := &tar.Header{
+			Name: "Dockerfile",
+			Mode: 0644,
+			Size: int64(len(dockerfile)),
+		}
+		if err := tw.WriteHeader(header); err != nil {
+			return
+		}
+		if _, err := tw.Write(dockerfile); err != nil {
+			return
+		}
+	}()
+
+	// Build options
+	buildOptions := types.ImageBuildOptions{
+		Tags:       tags,
+		Dockerfile: "Dockerfile",
+		Remove:     true, // Remove intermediate containers
+		BuildArgs:  buildArgs,
+		Labels:     labels,
+	}
+
+	// Build the image
+	response, err := s.client.ImageBuild(ctx, pipeReader, buildOptions)
+	if err != nil {
+		return "", fmt.Errorf("failed to build image: %w", err)
+	}
+	defer response.Body.Close()
+
+	// Read the build output
+	output, err := io.ReadAll(response.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read build output: %w", err)
+	}
+
+	return string(output), nil
+}
+
+// TagImage tags an image
+func (s *Service) TagImage(ctx context.Context, imageID string, repo string, tag string) error {
+	if !s.available {
+		return fmt.Errorf("Docker is not available")
+	}
+
+	err := s.client.ImageTag(ctx, imageID, repo+":"+tag)
+	if err != nil {
+		return fmt.Errorf("failed to tag image: %w", err)
+	}
+
+	return nil
+}
+
+// PushImage pushes an image to a registry
+func (s *Service) PushImage(ctx context.Context, imageName string, registryAuth string) (string, error) {
+	if !s.available {
+		return "", fmt.Errorf("Docker is not available")
+	}
+
+	options := image.PushOptions{
+		RegistryAuth: registryAuth, // Base64 encoded auth config JSON
+	}
+
+	reader, err := s.client.ImagePush(ctx, imageName, options)
+	if err != nil {
+		return "", fmt.Errorf("failed to push image: %w", err)
+	}
+	defer reader.Close()
+
+	// Read the push output
+	output, err := io.ReadAll(reader)
+	if err != nil {
+		return "", fmt.Errorf("failed to read push output: %w", err)
+	}
+
+	return string(output), nil
 }
