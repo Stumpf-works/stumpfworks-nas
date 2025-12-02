@@ -841,6 +841,33 @@ func NewRouter(cfg *config.Config) http.Handler {
 				r.Post("/monitoring/stop", upsHandler.StopMonitoring)
 			})
 
+			// Cloud Backup routes
+			r.Route("/cloudbackup", func(r chi.Router) {
+				cloudBackupHandler := handlers.NewCloudBackupHandler()
+				r.Use(cloudBackupHandler.CheckAvailability)
+				r.Use(mw.AdminOnly) // Cloud backup requires admin privileges
+
+				// Provider routes
+				r.Get("/providers", cloudBackupHandler.ListProviders)
+				r.Get("/providers/types", cloudBackupHandler.GetProviderTypes)
+				r.Post("/providers", cloudBackupHandler.CreateProvider)
+				r.Get("/providers/{id}", cloudBackupHandler.GetProvider)
+				r.Put("/providers/{id}", cloudBackupHandler.UpdateProvider)
+				r.Delete("/providers/{id}", cloudBackupHandler.DeleteProvider)
+				r.Post("/providers/{id}/test", cloudBackupHandler.TestProvider)
+
+				// Job routes
+				r.Get("/jobs", cloudBackupHandler.ListJobs)
+				r.Post("/jobs", cloudBackupHandler.CreateJob)
+				r.Get("/jobs/{id}", cloudBackupHandler.GetJob)
+				r.Put("/jobs/{id}", cloudBackupHandler.UpdateJob)
+				r.Delete("/jobs/{id}", cloudBackupHandler.DeleteJob)
+				r.Post("/jobs/{id}/run", cloudBackupHandler.RunJob)
+
+				// Log routes
+				r.Get("/logs", cloudBackupHandler.GetLogs)
+			})
+
 			// Terminal WebSocket endpoint
 			r.Route("/terminal", func(r chi.Router) {
 				r.Use(mw.AdminOnly) // Terminal access requires admin privileges

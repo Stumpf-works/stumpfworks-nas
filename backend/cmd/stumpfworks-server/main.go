@@ -21,6 +21,7 @@ import (
 	"github.com/Stumpf-works/stumpfworks-nas/internal/audit"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/auth"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/backup"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/cloudbackup"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/config"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/database/models"
@@ -307,6 +308,15 @@ func main() {
 		logger.Info("Backup service initialized")
 	}
 
+	// Initialize Cloud Backup service (non-fatal if fails)
+	if err := initializeCloudBackup(); err != nil {
+		logger.Warn("Cloud backup service initialization failed",
+			zap.Error(err),
+			zap.String("message", "Cloud backup features may be limited - ensure rclone is installed"))
+	} else {
+		logger.Info("Cloud backup service initialized")
+	}
+
 	// Initialize UPS service (non-fatal if fails)
 	if err := initializeUPS(); err != nil {
 		logger.Warn("UPS service initialization failed",
@@ -461,6 +471,12 @@ func initializePlugins() error {
 // Returns error if backup service fails to initialize, but this is non-fatal
 func initializeBackup() error {
 	_, err := backup.Initialize("")
+	return err
+}
+
+// initializeCloudBackup initializes the cloud backup service
+func initializeCloudBackup() error {
+	_, err := cloudbackup.Initialize()
 	return err
 }
 

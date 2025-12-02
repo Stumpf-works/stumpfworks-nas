@@ -50,6 +50,10 @@ func RunMigrations() error {
 		// UPS models
 		&models.UPSConfig{},
 		&models.UPSEvent{},
+		// Cloud backup models
+		&models.CloudProvider{},
+		&models.CloudSyncJob{},
+		&models.CloudSyncLog{},
 		// Add more models here as they are created
 	); err != nil {
 		return err
@@ -253,6 +257,32 @@ func AddPerformanceIndexes() error {
 		return err
 	}
 	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_lxc_containers_status ON lxc_containers(status)").Error; err != nil {
+		return err
+	}
+
+	// Cloud backup indexes
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_cloud_providers_type ON cloud_providers(type)").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_cloud_providers_enabled ON cloud_providers(enabled)").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_cloud_sync_jobs_provider ON cloud_sync_jobs(provider_id)").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_cloud_sync_jobs_enabled ON cloud_sync_jobs(enabled)").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_cloud_sync_jobs_status ON cloud_sync_jobs(last_status)").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_cloud_sync_logs_job ON cloud_sync_logs(job_id)").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_cloud_sync_logs_status ON cloud_sync_logs(status)").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_cloud_sync_logs_started ON cloud_sync_logs(started_at DESC)").Error; err != nil {
 		return err
 	}
 

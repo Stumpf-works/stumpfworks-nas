@@ -17,6 +17,7 @@ import { MonitoringSection } from './sections/MonitoringSection';
 import { BrandingSection } from './sections/BrandingSection';
 import { ActiveDirectorySection } from './sections/ActiveDirectorySection';
 import { UPSSection } from './sections/UPSSection';
+import { CloudBackupSection } from './sections/CloudBackupSection';
 import { UpdatesSection } from './sections/UpdatesSection';
 
 type SettingsSection = {
@@ -111,6 +112,13 @@ const sections: SettingsSection[] = [
     icon: '⚡',
     component: UPSSection,
     searchTerms: ['ups', 'power', 'battery', 'shutdown', 'nut'],
+  },
+  {
+    id: 'cloudbackup',
+    label: 'Cloud Backup',
+    icon: '☁️',
+    component: CloudBackupSection,
+    searchTerms: ['cloud', 'backup', 'sync', 'rclone', 's3', 'dropbox', 'gdrive', 'onedrive'],
   },
   {
     id: 'updates',
