@@ -1,4 +1,4 @@
-// Revision: 2025-12-02 | Author: Claude | Version: 1.0.0
+// Revision: 2025-12-02 | Author: Claude | Version: 1.0.1
 package network
 
 import (
