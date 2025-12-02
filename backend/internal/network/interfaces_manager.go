@@ -309,6 +309,7 @@ func AddBridgeToInterfaces(interfaces map[string]*InterfaceConfig, name string, 
 	}
 
 	// Set bridge ports to manual (no IP, bridge takes over)
+	// IMPORTANT: Must set Auto: true so interfaces are brought up automatically
 	for _, port := range ports {
 		if port == "" {
 			continue
@@ -317,6 +318,7 @@ func AddBridgeToInterfaces(interfaces map[string]*InterfaceConfig, name string, 
 			Name:          port,
 			Type:          "physical",
 			AddressMethod: "manual",
+			Auto:          true, // CRITICAL: Needed to bring interface UP
 			Comment:       fmt.Sprintf("# Port for bridge %s", name),
 		}
 	}
