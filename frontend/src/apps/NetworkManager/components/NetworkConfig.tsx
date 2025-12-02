@@ -358,11 +358,6 @@ export default function NetworkConfig() {
     return 'Unknown';
   };
 
-  const formatSpeed = (speed: string): string => {
-    if (!speed || speed === '0' || speed === 'unknown') return 'N/A';
-    return speed;
-  };
-
   return (
     <div className="flex flex-col h-full bg-white dark:bg-macos-dark-100">
       {/* Header */}
