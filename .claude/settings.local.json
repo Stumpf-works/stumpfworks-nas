@@ -26,7 +26,9 @@
       "Bash(rm:*)",
       "Bash(tar:*)",
       "Bash(echo:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(Select-Object -Last 10)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

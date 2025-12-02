@@ -98,3 +98,4 @@ plugins/*.tar.gz
 examples/plugins/*/hello-world
 examples/plugins/*/my-plugin
 examples/plugins/*/*.exe
+ANALYSIS_PROMPT.md
