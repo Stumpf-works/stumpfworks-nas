@@ -826,6 +826,21 @@ func NewRouter(cfg *config.Config) http.Handler {
 				})
 			})
 
+			// UPS Management routes
+			r.Route("/ups", func(r chi.Router) {
+				upsHandler := handlers.NewUPSHandler()
+				r.Use(upsHandler.CheckAvailability)
+				r.Use(mw.AdminOnly) // UPS management requires admin privileges
+
+				r.Get("/config", upsHandler.GetConfig)
+				r.Put("/config", upsHandler.UpdateConfig)
+				r.Get("/status", upsHandler.GetStatus)
+				r.Post("/test", upsHandler.TestConnection)
+				r.Get("/events", upsHandler.GetEvents)
+				r.Post("/monitoring/start", upsHandler.StartMonitoring)
+				r.Post("/monitoring/stop", upsHandler.StopMonitoring)
+			})
+
 			// Terminal WebSocket endpoint
 			r.Route("/terminal", func(r chi.Router) {
 				r.Use(mw.AdminOnly) // Terminal access requires admin privileges

@@ -47,6 +47,9 @@ func RunMigrations() error {
 		&models.PendingNetworkChange{},
 		// LXC container models
 		&models.LXCContainer{},
+		// UPS models
+		&models.UPSConfig{},
+		&models.UPSEvent{},
 		// Add more models here as they are created
 	); err != nil {
 		return err

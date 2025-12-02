@@ -38,6 +38,7 @@ import (
 	"github.com/Stumpf-works/stumpfworks-nas/internal/system/vm"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/system/vpn"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/twofa"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/ups"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/updates"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/usergroups"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/users"
@@ -306,6 +307,15 @@ func main() {
 		logger.Info("Backup service initialized")
 	}
 
+	// Initialize UPS service (non-fatal if fails)
+	if err := initializeUPS(); err != nil {
+		logger.Warn("UPS service initialization failed",
+			zap.Error(err),
+			zap.String("message", "UPS monitoring features may be limited"))
+	} else {
+		logger.Info("UPS service initialized")
+	}
+
 	// Initialize Active Directory service (non-fatal if fails)
 	if err := initializeAD(); err != nil {
 		logger.Warn("Active Directory service initialization failed",
@@ -494,6 +504,13 @@ func initializeUpdateService() error {
 // Returns error if service fails to initialize, but this is non-fatal
 func initializeAlertService() error {
 	_, err := alerts.Initialize()
+	return err
+}
+
+// initializeUPS initializes the UPS monitoring service
+// Returns error if service fails to initialize, but this is non-fatal
+func initializeUPS() error {
+	_, err := ups.Initialize()
 	return err
 }
 
