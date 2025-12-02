@@ -90,8 +90,8 @@ func ParseInterfacesFile() (map[string]*InterfaceConfig, error) {
 			parts := strings.Fields(trimmed)
 			if len(parts) >= 4 {
 				ifaceName := parts[1]
-				addressFamily := parts[2] // "inet" or "inet6"
-				method := parts[3]        // "static", "dhcp", "manual", "loopback"
+				_ = parts[2]       // addressFamily: "inet" or "inet6" (not used yet)
+				method := parts[3] // "static", "dhcp", "manual", "loopback"
 
 				currentIface = &InterfaceConfig{
 					Name:          ifaceName,
