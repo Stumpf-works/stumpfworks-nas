@@ -16,6 +16,7 @@ import { TasksSection } from './sections/TasksSection';
 import { MonitoringSection } from './sections/MonitoringSection';
 import { BrandingSection } from './sections/BrandingSection';
 import { ActiveDirectorySection } from './sections/ActiveDirectorySection';
+import { UPSSection } from './sections/UPSSection';
 import { UpdatesSection } from './sections/UpdatesSection';
 
 type SettingsSection = {
@@ -103,6 +104,13 @@ const sections: SettingsSection[] = [
     icon: '🔐',
     component: ActiveDirectorySection,
     searchTerms: ['active directory', 'ad', 'ldap', 'authentication'],
+  },
+  {
+    id: 'ups',
+    label: 'UPS',
+    icon: '⚡',
+    component: UPSSection,
+    searchTerms: ['ups', 'power', 'battery', 'shutdown', 'nut'],
   },
   {
     id: 'updates',
