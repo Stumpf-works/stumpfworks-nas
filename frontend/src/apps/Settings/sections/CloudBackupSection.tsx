@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { cloudBackupApi, CloudProvider, CloudSyncJob, CloudSyncLog } from '@/api/cloudbackup';
 import { getErrorMessage } from '@/api/client';
 import Card from '@/components/ui/Card';
-import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import { Cloud, Plus, Play, Trash2, Edit, CheckCircle, AlertTriangle, Clock, Upload, Download, RefreshCw, Server } from 'lucide-react';
 
@@ -10,16 +9,9 @@ export function CloudBackupSection() {
   const [providers, setProviders] = useState<CloudProvider[]>([]);
   const [jobs, setJobs] = useState<CloudSyncJob[]>([]);
   const [logs, setLogs] = useState<CloudSyncLog[]>([]);
-  const [providerTypes, setProviderTypes] = useState<any>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<'providers' | 'jobs' | 'logs'>('providers');
-
-  // Modals
-  const [showProviderModal, setShowProviderModal] = useState(false);
-  const [showJobModal, setShowJobModal] = useState(false);
-  const [editingProvider, setEditingProvider] = useState<CloudProvider | null>(null);
-  const [editingJob, setEditingJob] = useState<CloudSyncJob | null>(null);
 
   useEffect(() => {
     loadData();
@@ -28,16 +20,10 @@ export function CloudBackupSection() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [providersRes, typesRes] = await Promise.all([
-        cloudBackupApi.listProviders(),
-        cloudBackupApi.getProviderTypes(),
-      ]);
+      const providersRes = await cloudBackupApi.listProviders();
 
       if (providersRes.success && providersRes.data) {
         setProviders(providersRes.data);
-      }
-      if (typesRes.success && typesRes.data) {
-        setProviderTypes(typesRes.data);
       }
 
       if (activeTab === 'jobs') {
@@ -227,7 +213,7 @@ export function CloudBackupSection() {
             <p className="text-sm text-gray-600 dark:text-gray-400">
               Configure cloud storage providers for backups
             </p>
-            <Button onClick={() => { setEditingProvider(null); setShowProviderModal(true); }}>
+            <Button onClick={() => alert('Provider creation UI coming soon. Use API directly for now.')}>
               <Plus className="w-4 h-4 mr-2" />
               Add Provider
             </Button>
@@ -238,7 +224,7 @@ export function CloudBackupSection() {
               <div className="p-8 text-center">
                 <Cloud className="w-12 h-12 mx-auto text-gray-400 mb-4" />
                 <p className="text-gray-600 dark:text-gray-400 mb-4">No cloud providers configured</p>
-                <Button onClick={() => setShowProviderModal(true)}>
+                <Button onClick={() => alert('Provider creation UI coming soon. Use API directly for now.')}>
                   <Plus className="w-4 h-4 mr-2" />
                   Add Your First Provider
                 </Button>
@@ -295,7 +281,7 @@ export function CloudBackupSection() {
                       <Button
                         variant="secondary"
                         size="sm"
-                        onClick={() => { setEditingProvider(provider); setShowProviderModal(true); }}
+                        onClick={() => alert('Provider editing UI coming soon. Use API directly for now.')}
                       >
                         <Edit className="w-3 h-3" />
                       </Button>
@@ -322,7 +308,7 @@ export function CloudBackupSection() {
             <p className="text-sm text-gray-600 dark:text-gray-400">
               Manage scheduled and manual sync jobs
             </p>
-            <Button onClick={() => { setEditingJob(null); setShowJobModal(true); }} disabled={providers.length === 0}>
+            <Button onClick={() => alert('Job creation UI coming soon. Use API directly for now.')} disabled={providers.length === 0}>
               <Plus className="w-4 h-4 mr-2" />
               Add Sync Job
             </Button>
@@ -334,7 +320,7 @@ export function CloudBackupSection() {
                 <RefreshCw className="w-12 h-12 mx-auto text-gray-400 mb-4" />
                 <p className="text-gray-600 dark:text-gray-400 mb-4">No sync jobs configured</p>
                 {providers.length > 0 && (
-                  <Button onClick={() => setShowJobModal(true)}>
+                  <Button onClick={() => alert('Job creation UI coming soon. Use API directly for now.')}>
                     <Plus className="w-4 h-4 mr-2" />
                     Create Your First Sync Job
                   </Button>
@@ -416,7 +402,7 @@ export function CloudBackupSection() {
                       <Button
                         variant="secondary"
                         size="sm"
-                        onClick={() => { setEditingJob(job); setShowJobModal(true); }}
+                        onClick={() => alert('Job editing UI coming soon. Use API directly for now.')}
                       >
                         <Edit className="w-3 h-3" />
                       </Button>
