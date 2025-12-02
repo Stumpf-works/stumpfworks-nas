@@ -21,12 +21,14 @@ func CreateBridgePersistent(name string, ports []string, ipAddress string, gatew
 		return fmt.Errorf("bridge %s already exists in database", name)
 	}
 
-	// Step 2: Create the bridge in the system
-	if err := CreateBridge(name, ports); err != nil {
+	// Step 2: Create the bridge WITHOUT ports first (safe mode)
+	// This prevents network loss if a port has IP addresses
+	if err := CreateBridge(name, []string{}); err != nil {
 		return fmt.Errorf("failed to create bridge in system: %w", err)
 	}
 
-	// Step 3: Apply IP configuration if specified
+	// Step 3: Apply IP configuration BEFORE adding ports
+	// This ensures the bridge has connectivity before we remove IPs from ports
 	if ipAddress != "" {
 		// Parse CIDR to get address and netmask
 		parts := strings.Split(ipAddress, "/")
@@ -34,7 +36,26 @@ func CreateBridgePersistent(name string, ports []string, ipAddress string, gatew
 			addr := parts[0]
 			netmask := parts[1]
 			if err := ConfigureStaticIP(name, addr, convertCIDRToNetmask(netmask), gateway); err != nil {
-				logger.Warn("Failed to apply IP configuration to bridge", zap.Error(err), zap.String("bridge", name))
+				// If IP configuration fails, clean up the bridge
+				DeleteBridge(name)
+				return fmt.Errorf("failed to apply IP configuration to bridge: %w", err)
+			}
+		}
+	}
+
+	// Step 4: Now it's safe to add ports to the bridge
+	// If ports have IPs and bridge has IPs, the migration will be safe
+	if len(ports) > 0 {
+		for _, port := range ports {
+			if port == "" {
+				continue
+			}
+			if err := AttachPortToBridge(name, port); err != nil {
+				// Log warning but don't fail - bridge is still functional
+				logger.Warn("Failed to attach port to bridge",
+					zap.Error(err),
+					zap.String("bridge", name),
+					zap.String("port", port))
 			}
 		}
 	}
