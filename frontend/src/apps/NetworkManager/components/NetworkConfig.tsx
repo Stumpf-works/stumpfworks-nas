@@ -1,4 +1,4 @@
-// Revision: 2025-11-16 | Author: StumpfWorks AI | Version: 1.1.0
+// Revision: 2025-12-02 | Author: StumpfWorks AI | Version: 2.0.0
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
@@ -13,8 +13,10 @@ import {
   Link2,
   Trash2,
   GitBranch,
+  AlertTriangle,
+  CheckCircle2,
 } from 'lucide-react';
-import { networkApi, type NetworkInterface } from '@/api/network';
+import { networkApi, type NetworkInterface, type PendingChangesResponse } from '@/api/network';
 import { syslibApi, type CreateBondRequest, type CreateVLANRequest } from '@/api/syslib';
 
 type DialogType = 'none' | 'bond' | 'vlan' | 'bridge';
@@ -23,6 +25,8 @@ export default function NetworkConfig() {
   const [interfaces, setInterfaces] = useState<NetworkInterface[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dialogType, setDialogType] = useState<DialogType>('none');
+  const [pendingChanges, setPendingChanges] = useState<PendingChangesResponse>({ has_pending: false, count: 0, changes: [] });
+  const [isApplying, setIsApplying] = useState(false);
 
   const [bondFormData, setBondFormData] = useState<CreateBondRequest>({
     name: 'bond0',
@@ -37,7 +41,11 @@ export default function NetworkConfig() {
 
   const [bridgeFormData, setBridgeFormData] = useState({
     name: 'br0',
+    description: '',
     ports: [] as string[],
+    ipAddress: '',
+    gateway: '',
+    autostart: true,
   });
 
   // Bond modes
@@ -66,8 +74,21 @@ export default function NetworkConfig() {
     }
   };
 
+  // Fetch pending changes
+  const fetchPendingChanges = async () => {
+    try {
+      const response = await networkApi.getPendingChanges();
+      if (response.success && response.data) {
+        setPendingChanges(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch pending changes:', error);
+    }
+  };
+
   useEffect(() => {
     fetchInterfaces();
+    fetchPendingChanges();
   }, []);
 
   const handleCreateBond = async () => {
@@ -178,16 +199,61 @@ export default function NetworkConfig() {
     }
 
     try {
-      const response = await networkApi.createBridge(bridgeFormData.name, bridgeFormData.ports);
+      const response = await networkApi.createBridgeWithPendingChanges(
+        bridgeFormData.name,
+        bridgeFormData.description,
+        bridgeFormData.ports,
+        bridgeFormData.ipAddress || undefined,
+        bridgeFormData.gateway || undefined,
+        bridgeFormData.autostart
+      );
       if (response.success) {
-        alert(`Bridge interface created: ${bridgeFormData.name}`);
+        alert(`Bridge "${bridgeFormData.name}" added to pending changes. Click "Apply Configuration" to create it.`);
         setDialogType('none');
-        setBridgeFormData({ name: 'br0', ports: [] });
-        fetchInterfaces();
+        setBridgeFormData({ name: 'br0', description: '', ports: [], ipAddress: '', gateway: '', autostart: true });
+        fetchPendingChanges();
       }
     } catch (error) {
       console.error('Failed to create bridge:', error);
       alert('Failed to create bridge interface');
+    }
+  };
+
+  const handleApplyChanges = async () => {
+    if (!confirm(`Apply ${pendingChanges.count} pending network change(s)? This will modify your network configuration.`)) {
+      return;
+    }
+
+    setIsApplying(true);
+    try {
+      const response = await networkApi.applyPendingChanges();
+      if (response.success) {
+        alert('All pending changes applied successfully!');
+        fetchPendingChanges();
+        fetchInterfaces();
+      }
+    } catch (error) {
+      console.error('Failed to apply changes:', error);
+      alert('Failed to apply pending changes. Network configuration has been rolled back.');
+    } finally {
+      setIsApplying(false);
+    }
+  };
+
+  const handleDiscardChanges = async () => {
+    if (!confirm(`Discard all ${pendingChanges.count} pending change(s)? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const response = await networkApi.discardPendingChanges();
+      if (response.success) {
+        alert('All pending changes discarded.');
+        fetchPendingChanges();
+      }
+    } catch (error) {
+      console.error('Failed to discard changes:', error);
+      alert('Failed to discard pending changes');
     }
   };
 
@@ -279,6 +345,87 @@ export default function NetworkConfig() {
           </button>
         </div>
       </div>
+
+      {/* Pending Changes Banner */}
+      {pendingChanges.has_pending && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mx-6 mt-4 bg-gradient-to-r from-orange-50 to-yellow-50 dark:from-orange-900/20 dark:to-yellow-900/20 border-2 border-orange-200 dark:border-orange-800 rounded-xl p-4"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-orange-100 dark:bg-orange-900/40 rounded-lg">
+                <AlertTriangle className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 dark:text-gray-100">
+                  {pendingChanges.count} Pending Network Change{pendingChanges.count !== 1 ? 's' : ''}
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Review and apply your changes to modify the network configuration
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleDiscardChanges}
+                disabled={isApplying}
+                className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-macos-dark-200 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-macos-dark-300 transition-colors border border-gray-300 dark:border-gray-600 disabled:opacity-50"
+              >
+                <X className="w-4 h-4" />
+                Discard All
+              </button>
+              <button
+                onClick={handleApplyChanges}
+                disabled={isApplying}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 transition-all shadow-lg disabled:opacity-50"
+              >
+                {isApplying ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                    Applying...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    Apply Configuration
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Pending Changes List */}
+          <div className="mt-4 space-y-2">
+            {pendingChanges.changes.map((change) => (
+              <div
+                key={change.id}
+                className="bg-white dark:bg-macos-dark-100 rounded-lg p-3 border border-orange-200 dark:border-orange-800"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="px-2 py-1 bg-macos-blue/10 dark:bg-macos-blue/20 text-macos-blue text-xs font-medium rounded">
+                      {change.change_type}
+                    </span>
+                    <span className="px-2 py-1 bg-gray-100 dark:bg-macos-dark-200 text-gray-700 dark:text-gray-300 text-xs font-medium rounded">
+                      {change.action}
+                    </span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {change.resource_id}
+                    </span>
+                  </div>
+                  {change.description && (
+                    <span className="text-xs text-gray-600 dark:text-gray-400">
+                      {change.description}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-6">
@@ -707,6 +854,66 @@ export default function NetworkConfig() {
                 />
               </div>
 
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Description (optional)
+                </label>
+                <input
+                  type="text"
+                  value={bridgeFormData.description}
+                  onChange={(e) => setBridgeFormData({ ...bridgeFormData, description: e.target.value })}
+                  placeholder="e.g., Main network bridge"
+                  className="w-full px-3 py-2 bg-gray-50 dark:bg-macos-dark-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* IP Address Configuration */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    IP Address (optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={bridgeFormData.ipAddress}
+                    onChange={(e) => setBridgeFormData({ ...bridgeFormData, ipAddress: e.target.value })}
+                    placeholder="192.168.1.10/24"
+                    className="w-full px-3 py-2 bg-gray-50 dark:bg-macos-dark-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Gateway (optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={bridgeFormData.gateway}
+                    onChange={(e) => setBridgeFormData({ ...bridgeFormData, gateway: e.target.value })}
+                    placeholder="192.168.1.1"
+                    className="w-full px-3 py-2 bg-gray-50 dark:bg-macos-dark-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Autostart */}
+              <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-macos-dark-200 rounded-lg">
+                <input
+                  type="checkbox"
+                  checked={bridgeFormData.autostart}
+                  onChange={(e) => setBridgeFormData({ ...bridgeFormData, autostart: e.target.checked })}
+                  className="w-4 h-4 text-cyan-500 rounded focus:ring-2 focus:ring-cyan-500"
+                />
+                <div>
+                  <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    Auto-start on system boot
+                  </label>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    Automatically create and configure this bridge when the system starts
+                  </p>
+                </div>
+              </div>
+
               {/* Port Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -765,14 +972,15 @@ export default function NetworkConfig() {
                 <div className="flex gap-2">
                   <Info className="w-5 h-5 text-cyan-600 dark:text-cyan-400 flex-shrink-0" />
                   <div className="text-sm text-gray-700 dark:text-gray-300">
-                    <p className="font-medium mb-1">Proxmox-Style Bridge Configuration:</p>
+                    <p className="font-medium mb-1">Proxmox-Style Pending Changes Workflow:</p>
                     <ul className="list-disc list-inside space-y-1 text-xs">
-                      <li><strong>Automatic IP Migration:</strong> IP addresses from selected ports will be transferred to the bridge</li>
-                      <li><strong>Safe Operation:</strong> Network connectivity is maintained during bridge creation</li>
+                      <li><strong>Create Without Applying:</strong> Configuration is saved but NOT applied to the system</li>
+                      <li><strong>Review Changes:</strong> All pending changes are shown in a banner above</li>
+                      <li><strong>Apply Configuration:</strong> Click "Apply Configuration" to apply all changes atomically</li>
+                      <li><strong>Automatic Rollback:</strong> If anything fails, all changes are rolled back automatically</li>
+                      <li><strong>Safe Operation:</strong> Network connectivity is protected during changes</li>
                       <li>Perfect for VMs and containers to share the same network as the host</li>
                       <li>Empty bridges are useful for isolated VM networks (like OPNsense WAN/LAN)</li>
-                      <li>Use names like br0, br1, vmbr0, vmbr1 for compatibility</li>
-                      <li>Example: Adding ens18 to br0 → br0 gets ens18's IP, ens18 becomes a bridge port</li>
                     </ul>
                   </div>
                 </div>
@@ -809,7 +1017,7 @@ export default function NetworkConfig() {
                 onClick={handleCreateBridge}
                 className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors"
               >
-                Create Bridge
+                Add to Pending Changes
               </button>
             </div>
           </motion.div>

@@ -57,6 +57,45 @@ export interface FirewallStatus {
   rules: FirewallRule[];
 }
 
+export interface NetworkBridge {
+  id: string;
+  name: string;
+  description: string;
+  ports: string;
+  ip_address?: string;
+  gateway?: string;
+  autostart: boolean;
+  status: string;
+  last_error?: string;
+  has_pending_changes: boolean;
+  pending_ports?: string;
+  pending_ip_address?: string;
+  pending_gateway?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PendingNetworkChange {
+  id: string;
+  change_type: string;
+  action: string;
+  resource_id: string;
+  current_config?: string;
+  pending_config: string;
+  description?: string;
+  created_by?: string;
+  priority: number;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PendingChangesResponse {
+  has_pending: boolean;
+  count: number;
+  changes: PendingNetworkChange[];
+}
+
 export interface DiagnosticResult {
   command: string;
   output: string;
@@ -218,6 +257,69 @@ export const networkApi = {
 
   async detachPortFromBridge(port: string): Promise<ApiResponse<any>> {
     const response = await client.post(`/network/bridges/detach`, { port });
+    return response.data;
+  },
+
+  // Proxmox-style pending changes workflow
+  async getPendingChanges(): Promise<ApiResponse<PendingChangesResponse>> {
+    const response = await client.get('/network/pending-changes');
+    return response.data;
+  },
+
+  async createBridgeWithPendingChanges(
+    name: string,
+    description: string,
+    ports: string[],
+    ipAddress?: string,
+    gateway?: string,
+    autostart: boolean = true
+  ): Promise<ApiResponse<NetworkBridge>> {
+    const response = await client.post('/network/bridges/pending', {
+      name,
+      description,
+      ports,
+      ip_address: ipAddress,
+      gateway,
+      autostart,
+    });
+    return response.data;
+  },
+
+  async updateBridgeWithPendingChanges(
+    name: string,
+    description?: string,
+    ports?: string[],
+    ipAddress?: string,
+    gateway?: string,
+    autostart?: boolean
+  ): Promise<ApiResponse<NetworkBridge>> {
+    const response = await client.put(`/network/bridges/${name}/pending`, {
+      description,
+      ports,
+      ip_address: ipAddress,
+      gateway,
+      autostart,
+    });
+    return response.data;
+  },
+
+  async applyPendingChanges(): Promise<ApiResponse<any>> {
+    const response = await client.post('/network/apply-changes', {});
+    return response.data;
+  },
+
+  async discardPendingChanges(changeId?: string): Promise<ApiResponse<any>> {
+    const response = await client.post('/network/discard-changes', { change_id: changeId });
+    return response.data;
+  },
+
+  async rollbackToSnapshot(snapshotId: string): Promise<ApiResponse<any>> {
+    const response = await client.post('/network/rollback', { snapshot_id: snapshotId });
+    return response.data;
+  },
+
+  async getStoredBridges(): Promise<ApiResponse<NetworkBridge[]>> {
+    const response = await client.get('/network/bridges/stored');
     return response.data;
   },
 };
