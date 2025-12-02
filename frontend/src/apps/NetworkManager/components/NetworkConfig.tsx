@@ -25,6 +25,7 @@ export default function NetworkConfig() {
   const [interfaces, setInterfaces] = useState<NetworkInterface[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dialogType, setDialogType] = useState<DialogType>('none');
+  const [showCreateMenu, setShowCreateMenu] = useState(false);
   const [pendingChanges, setPendingChanges] = useState<PendingChangesResponse>({ has_pending: false, count: 0, changes: [] });
   const [isApplying, setIsApplying] = useState(false);
 
@@ -380,27 +381,82 @@ export default function NetworkConfig() {
             <RefreshCw className="w-4 h-4" />
             Refresh
           </button>
-          <button
-            onClick={() => setDialogType('bond')}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
-          >
-            <Link2 className="w-4 h-4" />
-            Create Bond
-          </button>
-          <button
-            onClick={() => setDialogType('vlan')}
-            className="flex items-center gap-2 px-4 py-2 bg-macos-blue text-white rounded-lg hover:bg-blue-600 transition-colors"
-          >
-            <Layers className="w-4 h-4" />
-            Create VLAN
-          </button>
-          <button
-            onClick={() => setDialogType('bridge')}
-            className="flex items-center gap-2 px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors"
-          >
-            <GitBranch className="w-4 h-4" />
-            Create Bridge
-          </button>
+
+          {/* Proxmox-style Create Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setShowCreateMenu(!showCreateMenu)}
+              className="flex items-center gap-2 px-4 py-2 bg-macos-blue text-white rounded-lg hover:bg-blue-600 transition-colors"
+            >
+              Create
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {/* Dropdown Menu */}
+            {showCreateMenu && (
+              <>
+                {/* Backdrop */}
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setShowCreateMenu(false)}
+                />
+
+                {/* Menu */}
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="absolute right-0 mt-2 w-56 bg-white dark:bg-macos-dark-100 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-20 overflow-hidden"
+                >
+                  {/* Linux Bridge */}
+                  <button
+                    onClick={() => {
+                      setDialogType('bridge');
+                      setShowCreateMenu(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-100 dark:hover:bg-macos-dark-200 transition-colors text-left"
+                  >
+                    <GitBranch className="w-5 h-5 text-cyan-500" />
+                    <div>
+                      <div className="font-medium text-gray-900 dark:text-gray-100">Linux Bridge</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">Network bridge interface</div>
+                    </div>
+                  </button>
+
+                  {/* Linux Bond */}
+                  <button
+                    onClick={() => {
+                      setDialogType('bond');
+                      setShowCreateMenu(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-100 dark:hover:bg-macos-dark-200 transition-colors text-left border-t border-gray-200 dark:border-gray-700"
+                  >
+                    <Link2 className="w-5 h-5 text-purple-500" />
+                    <div>
+                      <div className="font-medium text-gray-900 dark:text-gray-100">Linux Bond</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">Link aggregation</div>
+                    </div>
+                  </button>
+
+                  {/* Linux VLAN */}
+                  <button
+                    onClick={() => {
+                      setDialogType('vlan');
+                      setShowCreateMenu(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-100 dark:hover:bg-macos-dark-200 transition-colors text-left border-t border-gray-200 dark:border-gray-700"
+                  >
+                    <Layers className="w-5 h-5 text-orange-500" />
+                    <div>
+                      <div className="font-medium text-gray-900 dark:text-gray-100">Linux VLAN</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">VLAN interface (802.1Q)</div>
+                    </div>
+                  </button>
+                </motion.div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
