@@ -1,4 +1,4 @@
-// Revision: 2025-12-02 | Author: Claude | Version: 2.0.0
+// Revision: 2025-12-02 | Author: Claude | Version: 2.0.1
 package network
 
 import (
@@ -230,6 +230,27 @@ func CreateBridgeWithPendingChanges(name string, ports []string, ipAddress strin
 		return fmt.Errorf("failed to save bridge configuration to database: %w", err)
 	}
 
+	// Add to universal pending changes tracking
+	pendingConfig := map[string]interface{}{
+		"name":        name,
+		"description": description,
+		"ports":       ports,
+		"ip_address":  ipAddress,
+		"gateway":     gateway,
+		"autostart":   true,
+	}
+
+	desc := fmt.Sprintf("Create bridge %s", name)
+	if description != "" {
+		desc = fmt.Sprintf("Create bridge %s (%s)", name, description)
+	}
+
+	if err := AddPendingChange("bridge", "create", name, desc, pendingConfig, nil); err != nil {
+		// Rollback bridge creation if we can't add pending change
+		database.DB.Delete(&bridge)
+		return fmt.Errorf("failed to add pending change: %w", err)
+	}
+
 	logger.Info("Bridge configuration saved (pending application)",
 		zap.String("name", name),
 		zap.String("id", bridge.ID),
@@ -246,6 +267,20 @@ func UpdateBridgeWithPendingChanges(name string, ports []string, ipAddress strin
 		return fmt.Errorf("bridge %s not found in database", name)
 	}
 
+	// Current configuration
+	currentConfig := map[string]interface{}{
+		"ports":      bridge.Ports,
+		"ip_address": bridge.IPAddress,
+		"gateway":    bridge.Gateway,
+	}
+
+	// Pending configuration
+	pendingConfig := map[string]interface{}{
+		"ports":      ports,
+		"ip_address": ipAddress,
+		"gateway":    gateway,
+	}
+
 	// Store pending changes
 	updates := map[string]interface{}{
 		"has_pending_changes": true,
@@ -257,6 +292,19 @@ func UpdateBridgeWithPendingChanges(name string, ports []string, ipAddress strin
 
 	if err := database.DB.Model(&bridge).Updates(updates).Error; err != nil {
 		return fmt.Errorf("failed to update bridge configuration: %w", err)
+	}
+
+	// Add to universal pending changes tracking
+	desc := fmt.Sprintf("Update bridge %s", name)
+	if err := AddPendingChange("bridge", "update", name, desc, pendingConfig, currentConfig); err != nil {
+		// Rollback updates if we can't add pending change
+		database.DB.Model(&bridge).Updates(map[string]interface{}{
+			"has_pending_changes": false,
+			"pending_ports":       "",
+			"pending_ip_address":  "",
+			"pending_gateway":     "",
+		})
+		return fmt.Errorf("failed to add pending change: %w", err)
 	}
 
 	logger.Info("Bridge configuration updated (pending application)",
