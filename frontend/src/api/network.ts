@@ -62,15 +62,25 @@ export interface NetworkBridge {
   name: string;
   description: string;
   ports: string;
+  // IPv4
   ip_address?: string;
   gateway?: string;
+  // IPv6 (Proxmox-style)
+  ipv6_address?: string;
+  ipv6_gateway?: string;
+  // Bridge settings
+  vlan_aware?: boolean;
   autostart: boolean;
   status: string;
   last_error?: string;
+  // Pending changes
   has_pending_changes: boolean;
   pending_ports?: string;
   pending_ip_address?: string;
   pending_gateway?: string;
+  pending_ipv6_address?: string;
+  pending_ipv6_gateway?: string;
+  pending_vlan_aware?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -272,6 +282,9 @@ export const networkApi = {
     ports: string[],
     ipAddress?: string,
     gateway?: string,
+    ipv6Address?: string,
+    ipv6Gateway?: string,
+    vlanAware: boolean = false,
     autostart: boolean = true
   ): Promise<ApiResponse<NetworkBridge>> {
     const response = await client.post('/network/bridges/pending', {
@@ -280,6 +293,9 @@ export const networkApi = {
       ports,
       ip_address: ipAddress,
       gateway,
+      ipv6_address: ipv6Address,
+      ipv6_gateway: ipv6Gateway,
+      vlan_aware: vlanAware,
       autostart,
     });
     return response.data;
@@ -291,6 +307,9 @@ export const networkApi = {
     ports?: string[],
     ipAddress?: string,
     gateway?: string,
+    ipv6Address?: string,
+    ipv6Gateway?: string,
+    vlanAware?: boolean,
     autostart?: boolean
   ): Promise<ApiResponse<NetworkBridge>> {
     const response = await client.put(`/network/bridges/${name}/pending`, {
@@ -298,6 +317,9 @@ export const networkApi = {
       ports,
       ip_address: ipAddress,
       gateway,
+      ipv6_address: ipv6Address,
+      ipv6_gateway: ipv6Gateway,
+      vlan_aware: vlanAware,
       autostart,
     });
     return response.data;

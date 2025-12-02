@@ -45,6 +45,9 @@ export default function NetworkConfig() {
     ports: [] as string[],
     ipAddress: '',
     gateway: '',
+    ipv6Address: '',
+    ipv6Gateway: '',
+    vlanAware: false,
     autostart: true,
   });
 
@@ -192,9 +195,51 @@ export default function NetworkConfig() {
     }));
   };
 
+  // CIDR validation helper
+  const validateCIDR = (cidr: string): boolean => {
+    if (!cidr) return true; // Empty is valid (optional field)
+    const cidrRegex = /^(\d{1,3}\.){3}\d{1,3}\/\d{1,2}$/;
+    if (!cidrRegex.test(cidr)) return false;
+
+    // Validate IP octets
+    const [ip, prefix] = cidr.split('/');
+    const octets = ip.split('.').map(Number);
+    if (octets.some(o => o < 0 || o > 255)) return false;
+
+    // Validate prefix
+    const prefixNum = parseInt(prefix);
+    if (prefixNum < 0 || prefixNum > 32) return false;
+
+    return true;
+  };
+
+  const validateIPv6CIDR = (cidr: string): boolean => {
+    if (!cidr) return true; // Empty is valid (optional field)
+    // Basic IPv6 CIDR validation (simplified)
+    const ipv6CidrRegex = /^([0-9a-fA-F:]+)\/\d{1,3}$/;
+    if (!ipv6CidrRegex.test(cidr)) return false;
+
+    const [, prefix] = cidr.split('/');
+    const prefixNum = parseInt(prefix);
+    if (prefixNum < 0 || prefixNum > 128) return false;
+
+    return true;
+  };
+
   const handleCreateBridge = async () => {
     if (!bridgeFormData.name) {
       alert('Please provide bridge name');
+      return;
+    }
+
+    // Validate CIDR formats
+    if (!validateCIDR(bridgeFormData.ipAddress)) {
+      alert('Invalid IPv4 CIDR format. Use format: 192.168.1.10/24');
+      return;
+    }
+
+    if (!validateIPv6CIDR(bridgeFormData.ipv6Address)) {
+      alert('Invalid IPv6 CIDR format. Use format: 2001:db8::1/64');
       return;
     }
 
@@ -205,12 +250,25 @@ export default function NetworkConfig() {
         bridgeFormData.ports,
         bridgeFormData.ipAddress || undefined,
         bridgeFormData.gateway || undefined,
+        bridgeFormData.ipv6Address || undefined,
+        bridgeFormData.ipv6Gateway || undefined,
+        bridgeFormData.vlanAware,
         bridgeFormData.autostart
       );
       if (response.success) {
         alert(`Bridge "${bridgeFormData.name}" added to pending changes. Click "Apply Configuration" to create it.`);
         setDialogType('none');
-        setBridgeFormData({ name: 'br0', description: '', ports: [], ipAddress: '', gateway: '', autostart: true });
+        setBridgeFormData({
+          name: 'br0',
+          description: '',
+          ports: [],
+          ipAddress: '',
+          gateway: '',
+          ipv6Address: '',
+          ipv6Gateway: '',
+          vlanAware: false,
+          autostart: true
+        });
         fetchPendingChanges();
       }
     } catch (error) {
@@ -868,31 +926,87 @@ export default function NetworkConfig() {
                 />
               </div>
 
-              {/* IP Address Configuration */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    IP Address (optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={bridgeFormData.ipAddress}
-                    onChange={(e) => setBridgeFormData({ ...bridgeFormData, ipAddress: e.target.value })}
-                    placeholder="192.168.1.10/24"
-                    className="w-full px-3 py-2 bg-gray-50 dark:bg-macos-dark-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-sm"
-                  />
+              {/* IPv4 Configuration (Proxmox-style) */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                  IPv4 Configuration
+                </h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      IPv4/CIDR (optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={bridgeFormData.ipAddress}
+                      onChange={(e) => setBridgeFormData({ ...bridgeFormData, ipAddress: e.target.value })}
+                      placeholder="192.168.1.10/24"
+                      className="w-full px-3 py-2 bg-gray-50 dark:bg-macos-dark-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-sm font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Gateway (IPv4)
+                    </label>
+                    <input
+                      type="text"
+                      value={bridgeFormData.gateway}
+                      onChange={(e) => setBridgeFormData({ ...bridgeFormData, gateway: e.target.value })}
+                      placeholder="192.168.1.1"
+                      className="w-full px-3 py-2 bg-gray-50 dark:bg-macos-dark-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-sm font-mono"
+                    />
+                  </div>
                 </div>
+              </div>
+
+              {/* IPv6 Configuration (Proxmox-style) */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                  IPv6 Configuration
+                </h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      IPv6/CIDR (optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={bridgeFormData.ipv6Address}
+                      onChange={(e) => setBridgeFormData({ ...bridgeFormData, ipv6Address: e.target.value })}
+                      placeholder="2001:db8::1/64"
+                      className="w-full px-3 py-2 bg-gray-50 dark:bg-macos-dark-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-sm font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Gateway (IPv6)
+                    </label>
+                    <input
+                      type="text"
+                      value={bridgeFormData.ipv6Gateway}
+                      onChange={(e) => setBridgeFormData({ ...bridgeFormData, ipv6Gateway: e.target.value })}
+                      placeholder="2001:db8::ffff"
+                      className="w-full px-3 py-2 bg-gray-50 dark:bg-macos-dark-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-sm font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* VLAN Aware (Proxmox feature) */}
+              <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-macos-dark-200 rounded-lg">
+                <input
+                  type="checkbox"
+                  checked={bridgeFormData.vlanAware}
+                  onChange={(e) => setBridgeFormData({ ...bridgeFormData, vlanAware: e.target.checked })}
+                  className="w-4 h-4 text-cyan-500 rounded focus:ring-2 focus:ring-cyan-500"
+                />
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Gateway (optional)
+                  <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    VLAN aware
                   </label>
-                  <input
-                    type="text"
-                    value={bridgeFormData.gateway}
-                    onChange={(e) => setBridgeFormData({ ...bridgeFormData, gateway: e.target.value })}
-                    placeholder="192.168.1.1"
-                    className="w-full px-3 py-2 bg-gray-50 dark:bg-macos-dark-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-sm"
-                  />
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    Enable if you want to use VLANs on this bridge (Proxmox feature)
+                  </p>
                 </div>
               </div>
 
