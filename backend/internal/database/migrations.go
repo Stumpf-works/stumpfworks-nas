@@ -44,6 +44,7 @@ func RunMigrations() error {
 		&models.NetworkBridge{},
 		&models.NetworkInterface{},
 		&models.NetworkSnapshot{},
+		&models.PendingNetworkChange{},
 		// LXC container models
 		&models.LXCContainer{},
 		// Add more models here as they are created
@@ -213,6 +214,31 @@ func AddPerformanceIndexes() error {
 		return err
 	}
 	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_network_interfaces_autostart ON network_interfaces(autostart)").Error; err != nil {
+		return err
+	}
+
+	// Network snapshot indexes
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_network_snapshots_bridge ON network_snapshots(bridge_name)").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_network_snapshots_status ON network_snapshots(status)").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_network_snapshots_created ON network_snapshots(created_at DESC)").Error; err != nil {
+		return err
+	}
+
+	// Pending network changes indexes
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_pending_changes_type ON pending_network_changes(change_type)").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_pending_changes_status ON pending_network_changes(status)").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_pending_changes_resource ON pending_network_changes(resource_id)").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_pending_changes_priority ON pending_network_changes(priority ASC)").Error; err != nil {
 		return err
 	}
 

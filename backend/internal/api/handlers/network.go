@@ -609,55 +609,59 @@ func (h *NetworkHandler) UpdateBridgeWithPendingChanges(w http.ResponseWriter, r
 }
 
 // GetPendingChanges handles GET /api/network/pending-changes
-// Returns all network configurations with pending changes
+// Returns ALL pending network changes (bridges, interfaces, routes, firewall, etc.)
 func (h *NetworkHandler) GetPendingChanges(w http.ResponseWriter, r *http.Request) {
-	bridges, err := network.GetPendingChanges()
+	// Get ALL pending network changes
+	changes, err := network.GetAllPendingChanges()
 	if err != nil {
 		utils.RespondError(w, errors.InternalServerError("Failed to get pending changes", err))
 		return
 	}
 
+	// Also check if there are any pending changes
+	hasPending, count, _ := network.HasPendingChanges()
+
 	utils.RespondSuccess(w, map[string]interface{}{
-		"count":   len(bridges),
-		"bridges": bridges,
+		"has_pending": hasPending,
+		"count":       count,
+		"changes":     changes,
 	})
 }
 
 // ApplyPendingChanges handles POST /api/network/apply-changes
-// Applies all pending network changes with automatic rollback on failure
-// This is the critical "Apply Configuration" button
+// Applies ALL pending network changes with automatic rollback on failure
+// This is the critical "Apply Configuration" button for the ENTIRE network section
 func (h *NetworkHandler) ApplyPendingChanges(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		BridgeName string `json:"bridge_name"` // Which bridge to apply changes for
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		utils.RespondError(w, errors.BadRequest("Invalid request", err))
+	// Check if there are pending changes
+	hasPending, count, err := network.HasPendingChanges()
+	if err != nil {
+		utils.RespondError(w, errors.InternalServerError("Failed to check pending changes", err))
 		return
 	}
 
-	if req.BridgeName == "" {
-		utils.RespondError(w, errors.BadRequest("Bridge name is required", nil))
+	if !hasPending {
+		utils.RespondError(w, errors.BadRequest("No pending network changes to apply", nil))
 		return
 	}
 
-	// Apply changes with automatic rollback on failure
-	if err := network.ApplyPendingChanges(req.BridgeName); err != nil {
+	// Apply ALL pending changes with automatic rollback on failure
+	if err := network.ApplyAllPendingChanges(); err != nil {
 		utils.RespondError(w, errors.InternalServerError("Failed to apply changes", err))
 		return
 	}
 
 	utils.RespondSuccess(w, map[string]interface{}{
-		"message": "Network changes applied successfully",
-		"bridge":  req.BridgeName,
+		"message": "All network changes applied successfully",
+		"count":   count,
 	})
 }
 
 // DiscardPendingChanges handles POST /api/network/discard-changes
-// Discards pending changes without applying them
+// Discards ALL pending changes or a specific change
 func (h *NetworkHandler) DiscardPendingChanges(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		BridgeName string `json:"bridge_name"`
+		ChangeID string `json:"change_id,omitempty"` // Optional: specific change to discard
+		All      bool   `json:"all,omitempty"`       // If true, discard all pending changes
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -665,19 +669,33 @@ func (h *NetworkHandler) DiscardPendingChanges(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	if req.BridgeName == "" {
-		utils.RespondError(w, errors.BadRequest("Bridge name is required", nil))
+	if req.All {
+		// Discard ALL pending changes
+		if err := network.DiscardAllPendingChanges(); err != nil {
+			utils.RespondError(w, errors.InternalServerError("Failed to discard all changes", err))
+			return
+		}
+
+		utils.RespondSuccess(w, map[string]interface{}{
+			"message": "All pending changes discarded",
+		})
 		return
 	}
 
-	if err := network.DiscardPendingChanges(req.BridgeName); err != nil {
-		utils.RespondError(w, errors.InternalServerError("Failed to discard changes", err))
+	if req.ChangeID == "" {
+		utils.RespondError(w, errors.BadRequest("Either 'change_id' or 'all: true' is required", nil))
+		return
+	}
+
+	// Discard specific change
+	if err := network.DiscardPendingChange(req.ChangeID); err != nil {
+		utils.RespondError(w, errors.InternalServerError("Failed to discard change", err))
 		return
 	}
 
 	utils.RespondSuccess(w, map[string]interface{}{
-		"message": "Pending changes discarded",
-		"bridge":  req.BridgeName,
+		"message":   "Pending change discarded",
+		"change_id": req.ChangeID,
 	})
 }
 

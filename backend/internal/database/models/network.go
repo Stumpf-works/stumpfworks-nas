@@ -66,10 +66,33 @@ type NetworkSnapshot struct {
 	// Interface states before changes
 	InterfaceStates  string    `gorm:"type:text" json:"interface_states"` // JSON: map[interface]state
 	RouteTable       string    `gorm:"type:text" json:"route_table"` // Output of "ip route show"
+	FirewallRules    string    `gorm:"type:text" json:"firewall_rules"` // Output of "iptables -L -n"
 
 	// Metadata
 	CreatedAt        time.Time `json:"created_at"`
 	AppliedAt        time.Time `json:"applied_at,omitempty"` // When changes were applied
 	RolledBackAt     time.Time `json:"rolled_back_at,omitempty"` // When rollback occurred
 	Status           string    `gorm:"default:active" json:"status"` // active, applied, rolled_back
+}
+
+// PendingNetworkChange represents a pending change to the network configuration
+// This tracks ALL types of network changes: bridges, interfaces, routes, firewall, DNS, etc.
+type PendingNetworkChange struct {
+	ID          string    `gorm:"primaryKey" json:"id"`
+	ChangeType  string    `gorm:"index;not null" json:"change_type"` // bridge, interface, route, firewall, dns
+	Action      string    `gorm:"not null" json:"action"` // create, update, delete
+	ResourceID  string    `gorm:"index" json:"resource_id"` // ID/name of the resource being changed
+
+	// Change details (JSON format for flexibility)
+	CurrentConfig string    `gorm:"type:text" json:"current_config,omitempty"` // JSON: current state
+	PendingConfig string    `gorm:"type:text" json:"pending_config"` // JSON: desired state
+
+	// User and metadata
+	Description   string    `json:"description,omitempty"` // User-friendly description
+	CreatedBy     string    `json:"created_by,omitempty"` // User who created the change
+	Priority      int       `gorm:"default:100" json:"priority"` // Lower number = higher priority
+	Status        string    `gorm:"default:pending" json:"status"` // pending, applied, failed, discarded
+
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }
