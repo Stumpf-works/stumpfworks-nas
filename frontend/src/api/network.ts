@@ -325,6 +325,26 @@ export const networkApi = {
     return response.data;
   },
 
+  async updateInterfaceWithPendingChanges(
+    name: string,
+    ipAddress?: string,
+    gateway?: string,
+    ipv6Address?: string,
+    ipv6Gateway?: string,
+    autostart: boolean = true,
+    comment?: string
+  ): Promise<ApiResponse<any>> {
+    const response = await client.put(`/network/interfaces/${name}/pending`, {
+      ip_address: ipAddress,
+      gateway,
+      ipv6_address: ipv6Address,
+      ipv6_gateway: ipv6Gateway,
+      autostart,
+      comment,
+    });
+    return response.data;
+  },
+
   async applyPendingChanges(): Promise<ApiResponse<any>> {
     const response = await client.post('/network/apply-changes', {});
     return response.data;

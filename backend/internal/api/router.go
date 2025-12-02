@@ -415,6 +415,7 @@ func NewRouter(cfg *config.Config) http.Handler {
 					// Proxmox-style pending changes workflow
 					r.Post("/bridges/pending", netHandler.CreateBridgeWithPendingChanges)
 					r.Put("/bridges/{name}/pending", netHandler.UpdateBridgeWithPendingChanges)
+					r.Put("/interfaces/{name}/pending", netHandler.UpdateInterfaceWithPendingChanges)
 					r.Get("/pending-changes", netHandler.GetPendingChanges)
 					r.Post("/apply-changes", netHandler.ApplyPendingChanges)
 					r.Post("/discard-changes", netHandler.DiscardPendingChanges)

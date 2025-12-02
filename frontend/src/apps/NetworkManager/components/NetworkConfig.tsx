@@ -1384,10 +1384,26 @@ export default function NetworkConfig() {
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  // TODO: Implement interface update API call
-                  alert('Interface configuration will be saved to pending changes');
-                  setDialogType('none');
+                onClick={async () => {
+                  try {
+                    const response = await networkApi.updateInterfaceWithPendingChanges(
+                      interfaceFormData.name,
+                      interfaceFormData.ipAddress || undefined,
+                      interfaceFormData.gateway || undefined,
+                      interfaceFormData.ipv6Address || undefined,
+                      interfaceFormData.ipv6Gateway || undefined,
+                      interfaceFormData.autostart,
+                      interfaceFormData.comment || undefined
+                    );
+                    if (response.success) {
+                      alert(`Interface "${interfaceFormData.name}" configuration added to pending changes. Click "Apply Configuration" to activate.`);
+                      setDialogType('none');
+                      fetchPendingChanges();
+                    }
+                  } catch (error) {
+                    console.error('Failed to update interface:', error);
+                    alert('Failed to update interface configuration');
+                  }
                 }}
                 className="px-4 py-2 bg-macos-blue text-white rounded-lg hover:bg-blue-600 transition-colors"
               >

@@ -635,6 +635,52 @@ func (h *NetworkHandler) UpdateBridgeWithPendingChanges(w http.ResponseWriter, r
 	})
 }
 
+// UpdateInterfaceWithPendingChanges handles PUT /api/network/interfaces/{name}/pending
+// Updates physical network interface configuration WITHOUT applying it to the system
+func (h *NetworkHandler) UpdateInterfaceWithPendingChanges(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+
+	var req struct {
+		IPAddress   string `json:"ip_address,omitempty"`
+		Gateway     string `json:"gateway,omitempty"`
+		IPv6Address string `json:"ipv6_address,omitempty"`
+		IPv6Gateway string `json:"ipv6_gateway,omitempty"`
+		Autostart   bool   `json:"autostart"`
+		Comment     string `json:"comment,omitempty"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.RespondError(w, errors.BadRequest("Invalid request", err))
+		return
+	}
+
+	// Create pending change for interface update
+	pendingConfig := map[string]interface{}{
+		"ip_address":   req.IPAddress,
+		"gateway":      req.Gateway,
+		"ipv6_address": req.IPv6Address,
+		"ipv6_gateway": req.IPv6Gateway,
+		"autostart":    req.Autostart,
+		"comment":      req.Comment,
+	}
+
+	desc := "Update interface " + name
+	if req.Comment != "" {
+		desc = desc + " (" + req.Comment + ")"
+	}
+
+	if err := network.AddPendingChange("interface", "update", name, desc, pendingConfig, nil); err != nil {
+		utils.RespondError(w, errors.InternalServerError("Failed to add pending change", err))
+		return
+	}
+
+	utils.RespondSuccess(w, map[string]interface{}{
+		"message": "Interface configuration updated. Click 'Apply Configuration' to activate.",
+		"name":    name,
+		"pending": true,
+	})
+}
+
 // GetPendingChanges handles GET /api/network/pending-changes
 // Returns ALL pending network changes (bridges, interfaces, routes, firewall, etc.)
 func (h *NetworkHandler) GetPendingChanges(w http.ResponseWriter, r *http.Request) {

@@ -386,29 +386,67 @@ func applyBridgeChange(change *models.PendingNetworkChange) error {
 
 // applyInterfaceChange applies an interface configuration change
 func applyInterfaceChange(change *models.PendingNetworkChange) error {
+	// Parse pending config
 	var config map[string]interface{}
 	if err := json.Unmarshal([]byte(change.PendingConfig), &config); err != nil {
 		return fmt.Errorf("failed to parse interface config: %w", err)
 	}
 
 	interfaceName := change.ResourceID
-	method, _ := config["method"].(string)
-	ipAddress, _ := config["ip_address"].(string)
-	gateway, _ := config["gateway"].(string)
 
-	switch method {
-	case "static":
+	// Read current /etc/network/interfaces
+	interfaces, err := ParseInterfacesFile()
+	if err != nil {
+		return fmt.Errorf("failed to parse interfaces file: %w", err)
+	}
+
+	switch change.Action {
+	case "create", "update":
+		// Extract configuration
+		ipAddress, _ := config["ip_address"].(string)
+		gateway, _ := config["gateway"].(string)
+		ipv6Address, _ := config["ipv6_address"].(string)
+		ipv6Gateway, _ := config["ipv6_gateway"].(string)
+		autostart, _ := config["autostart"].(bool)
+		comment, _ := config["comment"].(string)
+
+		// Determine address method
+		method := "dhcp"
 		if ipAddress != "" {
-			if err := ConfigureStaticIP(interfaceName, ipAddress, "", gateway); err != nil {
-				return fmt.Errorf("failed to configure static IP: %w", err)
-			}
+			method = "static"
 		}
-	case "dhcp":
-		// Enable DHCP on interface
-		cmd := exec.Command("dhclient", interfaceName)
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to enable DHCP: %w", err)
+
+		// Update or create interface configuration
+		interfaces[interfaceName] = &InterfaceConfig{
+			Name:          interfaceName,
+			Type:          "physical",
+			AddressMethod: method,
+			Address:       ipAddress,
+			Gateway:       gateway,
+			IPv6Address:   ipv6Address,
+			IPv6Gateway:   ipv6Gateway,
+			IPv6Method:    "static",
+			Auto:          autostart,
+			Comment:       comment,
 		}
+
+		logger.Info("Updating interface in /etc/network/interfaces",
+			zap.String("interface", interfaceName),
+			zap.String("method", method),
+			zap.String("ipv4_address", ipAddress),
+			zap.String("ipv6_address", ipv6Address))
+
+	case "delete":
+		// Remove interface configuration
+		delete(interfaces, interfaceName)
+
+		logger.Info("Removing interface from /etc/network/interfaces",
+			zap.String("interface", interfaceName))
+	}
+
+	// Write updated interfaces file
+	if err := WriteInterfacesFile(interfaces); err != nil {
+		return fmt.Errorf("failed to write interfaces file: %w", err)
 	}
 
 	return nil
