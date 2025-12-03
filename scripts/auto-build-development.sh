@@ -222,6 +222,16 @@ done
 
 cd "$REPO_BASE"
 
+# Sign Release file with GPG
+log "${YELLOW}🔐 Signing Release file with GPG...${NC}"
+GPG_KEY="FA34748EEC84485A45EB3F176DAB9F2A27355D71"
+cd dists/$REPO_TYPE
+gpg --batch --yes --default-key "$GPG_KEY" -abs -o Release.gpg Release 2>> "$LOG_FILE"
+gpg --batch --yes --default-key "$GPG_KEY" --clearsign -o InRelease Release 2>> "$LOG_FILE"
+cd "$REPO_BASE"
+log "${GREEN}✓ Release file signed${NC}"
+log ""
+
 log "${GREEN}✓ Repository metadata updated${NC}"
 log ""
 

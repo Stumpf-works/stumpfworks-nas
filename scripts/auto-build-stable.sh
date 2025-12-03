@@ -176,6 +176,14 @@ find main -type f \( -name "Packages" -o -name "Packages.gz" \) -exec sha1sum {}
 echo "SHA256:" >> Release
 find main -type f \( -name "Packages" -o -name "Packages.gz" \) -exec sha256sum {} \; | sed 's|main/| |' >> Release
 
+# Sign Release file with GPG
+log "${YELLOW}🔐 Signing Release file with GPG...${NC}"
+GPG_KEY="FA34748EEC84485A45EB3F176DAB9F2A27355D71"
+gpg --batch --yes --default-key "$GPG_KEY" -abs -o Release.gpg Release 2>> "$LOG_FILE"
+gpg --batch --yes --default-key "$GPG_KEY" --clearsign -o InRelease Release 2>> "$LOG_FILE"
+log "${GREEN}✓ Release file signed${NC}"
+log ""
+
 log "${GREEN}✓ Packages deployed${NC}"
 log ""
 
