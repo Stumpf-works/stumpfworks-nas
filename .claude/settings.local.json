@@ -1,7 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(\"c:\\Users\\gamin\\Documents\\GitHub\\stumpfworks-nas\\frontend\\src\\apps\\Monitoring\\components\\AlertExecutions.tsx\" <<'EOFMARKER'\nexport function AlertExecutions() {\n  return (\n    <div className=\"p-6\">\n      <h2 className=\"text-xl font-bold\">Alert History</h2>\n      <p className=\"text-gray-500\">Alert execution history coming soon...</p>\n    </div>\n  );\n}\nEOFMARKER)"
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []
