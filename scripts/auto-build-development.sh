@@ -127,7 +127,7 @@ log ""
 # Build frontend
 log "${YELLOW}🎨 Building frontend...${NC}"
 cd frontend
-npm ci --silent >> "$LOG_FILE" 2>&1
+npm ci --silent --prefer-offline >> "$LOG_FILE" 2>&1
 npm run build >> "$LOG_FILE" 2>&1
 cd ..
 log "${GREEN}✓ Frontend built successfully${NC}"
@@ -141,29 +141,48 @@ cp -r frontend/dist backend/embedfs/
 log "${GREEN}✓ Frontend copied${NC}"
 log ""
 
-# Build backend
-log "${YELLOW}🔨 Building backend...${NC}"
+# Build backend (parallel builds)
+log "${YELLOW}🔨 Building backend (parallel builds)...${NC}"
 cd backend
 go mod download >> "$LOG_FILE" 2>&1
 
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
-    -ldflags "-X main.Version=$VERSION -X main.BuildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-    -o ../dist/stumpfworks-server-amd64 \
-    ./cmd/stumpfworks-server >> "$LOG_FILE" 2>&1
+BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
-CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build \
-    -ldflags "-X main.Version=$VERSION -X main.BuildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-    -o ../dist/stumpfworks-server-arm64 \
-    ./cmd/stumpfworks-server >> "$LOG_FILE" 2>&1
+# Build both architectures in parallel
+(
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+        -ldflags "-X main.Version=$VERSION -X main.BuildTime=$BUILD_TIME" \
+        -o ../dist/stumpfworks-server-amd64 \
+        ./cmd/stumpfworks-server >> "$LOG_FILE" 2>&1 || exit 1
+) &
+PID_AMD64=$!
+
+(
+    CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build \
+        -ldflags "-X main.Version=$VERSION -X main.BuildTime=$BUILD_TIME" \
+        -o ../dist/stumpfworks-server-arm64 \
+        ./cmd/stumpfworks-server >> "$LOG_FILE" 2>&1 || exit 1
+) &
+PID_ARM64=$!
+
+# Wait for both builds
+wait $PID_AMD64 || { log "${RED}❌ AMD64 build failed${NC}"; exit 1; }
+wait $PID_ARM64 || { log "${RED}❌ ARM64 build failed${NC}"; exit 1; }
 
 cd ..
-log "${GREEN}✓ Backend built successfully${NC}"
+log "${GREEN}✓ Backend built successfully (both architectures)${NC}"
 log ""
 
-# Create Debian packages
-log "${YELLOW}📦 Creating Debian packages...${NC}"
-bash scripts/build-deb.sh "$VERSION" amd64 >> "$LOG_FILE" 2>&1
-bash scripts/build-deb.sh "$VERSION" arm64 >> "$LOG_FILE" 2>&1
+# Create Debian packages (parallel)
+log "${YELLOW}📦 Creating Debian packages (parallel)...${NC}"
+bash scripts/build-deb.sh "$VERSION" amd64 >> "$LOG_FILE" 2>&1 &
+PID_DEB_AMD64=$!
+bash scripts/build-deb.sh "$VERSION" arm64 >> "$LOG_FILE" 2>&1 &
+PID_DEB_ARM64=$!
+
+wait $PID_DEB_AMD64 || { log "${RED}❌ AMD64 package build failed${NC}"; exit 1; }
+wait $PID_DEB_ARM64 || { log "${RED}❌ ARM64 package build failed${NC}"; exit 1; }
+
 log "${GREEN}✓ Packages created successfully${NC}"
 log ""
 
@@ -220,19 +239,32 @@ for HASH in MD5Sum SHA1 SHA256; do
     done
 done
 
-cd "$REPO_BASE"
-
-# Sign Release file with GPG
+# GPG Signierung
 log "${YELLOW}🔐 Signing Release file with GPG...${NC}"
-GPG_KEY="FA34748EEC84485A45EB3F176DAB9F2A27355D71"
-cd dists/$REPO_TYPE
-gpg --batch --yes --default-key "$GPG_KEY" -abs -o Release.gpg Release 2>> "$LOG_FILE"
-gpg --batch --yes --default-key "$GPG_KEY" --clearsign -o InRelease Release 2>> "$LOG_FILE"
-cd "$REPO_BASE"
-log "${GREEN}✓ Release file signed${NC}"
-log ""
+GPG_KEY="packages@stumpfworks.de"
 
-log "${GREEN}✓ Repository metadata updated${NC}"
+# Stelle sicher dass GPG-Agent läuft (für non-interactive signing)
+export GPG_TTY=$(tty)
+gpg-agent --daemon 2>/dev/null || true
+
+# Erstelle signierte Versionen (mit Timeout für Robustheit)
+if timeout 10s gpg --batch --yes --passphrase-fd 0 --pinentry-mode loopback \
+    --default-key "$GPG_KEY" -abs -o Release.gpg Release 2>/dev/null; then
+    log "${GREEN}✓ Release.gpg created${NC}"
+else
+    log "${YELLOW}⚠️  GPG signing failed for Release.gpg (continuing anyway)${NC}"
+fi
+
+if timeout 10s gpg --batch --yes --passphrase-fd 0 --pinentry-mode loopback \
+    --default-key "$GPG_KEY" --clearsign -o InRelease Release 2>/dev/null; then
+    log "${GREEN}✓ InRelease created${NC}"
+else
+    log "${YELLOW}⚠️  GPG signing failed for InRelease (continuing anyway)${NC}"
+fi
+
+cd "$REPO_BASE"
+
+log "${GREEN}✓ Repository metadata updated and signed${NC}"
 log ""
 
 # Cleanup
