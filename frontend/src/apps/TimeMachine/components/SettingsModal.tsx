@@ -54,7 +54,7 @@ export default function SettingsModal({ config, isOpen, onClose, onSuccess }: Se
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Time Machine Settings" size="large">
+    <Modal isOpen={isOpen} onClose={onClose} title="Time Machine Settings">
       <form onSubmit={handleSubmit}>
         <div className="space-y-6">
           {/* Error Message */}

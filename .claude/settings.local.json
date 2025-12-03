@@ -14,7 +14,8 @@
       "Bash(ssh:*)",
       "Bash(dir:*)",
       "Bash(findstr:*)",
-      "Bash(git am:*)"
+      "Bash(git am:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []

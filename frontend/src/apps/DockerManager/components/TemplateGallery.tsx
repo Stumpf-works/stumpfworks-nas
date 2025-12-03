@@ -6,7 +6,7 @@ import Card from '@/components/ui/Card';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
-import { Play, Info, Tag, User, Calendar, ExternalLink } from 'lucide-react';
+import { Play, Info, Tag, User, Calendar } from 'lucide-react';
 
 interface Template {
   id: string;
@@ -53,7 +53,7 @@ function DeployModal({ template, isOpen, onClose, onDeploy }: DeployModalProps) 
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`Deploy ${template.name}`} size="large">
+    <Modal isOpen={isOpen} onClose={onClose} title={`Deploy ${template.name}`}>
       <div className="space-y-6">
         {/* Stack Name */}
         <div>
@@ -343,7 +343,6 @@ export default function TemplateGallery() {
           isOpen={showDetailsModal}
           onClose={() => setShowDetailsModal(false)}
           title={selectedTemplate.name}
-          size="large"
         >
           <div className="space-y-4">
             <p className="text-gray-600 dark:text-gray-400">{selectedTemplate.description}</p>

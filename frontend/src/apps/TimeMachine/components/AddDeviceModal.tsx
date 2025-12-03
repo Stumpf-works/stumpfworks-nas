@@ -64,7 +64,7 @@ export default function AddDeviceModal({ isOpen, onClose, onSuccess, defaultQuot
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Add Time Machine Device" size="large">
+    <Modal isOpen={isOpen} onClose={onClose} title="Add Time Machine Device">
       <form onSubmit={handleSubmit}>
         <div className="space-y-6">
           {/* Error Message */}

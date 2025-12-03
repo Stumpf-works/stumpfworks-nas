@@ -63,7 +63,7 @@ export default function EditDeviceModal({ device, isOpen, onClose, onSuccess }: 
   if (!device) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`Edit ${device.device_name}`} size="large">
+    <Modal isOpen={isOpen} onClose={onClose} title={`Edit ${device.device_name}`}>
       <form onSubmit={handleSubmit}>
         <div className="space-y-6">
           {/* Error Message */}
