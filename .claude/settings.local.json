@@ -28,7 +28,8 @@
       "Bash(echo:*)",
       "Bash(cat:*)",
       "Bash(Select-Object -Last 10)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(npm run dev:*)"
     ],
     "deny": [],
     "ask": []

@@ -5,7 +5,7 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { Cloud, Plus, Play, Trash2, Edit, CheckCircle, AlertTriangle, Clock, Upload, Download, RefreshCw, Server } from 'lucide-react';
 
-export function CloudBackupSection() {
+export function CloudBackupSection(_props: { user: any; systemInfo: any }) {
   const [providers, setProviders] = useState<CloudProvider[]>([]);
   const [jobs, setJobs] = useState<CloudSyncJob[]>([]);
   const [logs, setLogs] = useState<CloudSyncLog[]>([]);

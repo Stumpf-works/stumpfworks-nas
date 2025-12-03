@@ -6,7 +6,7 @@ import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import { Battery, Zap, Power, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 
-export function UPSSection() {
+export function UPSSection(_props: { user: any; systemInfo: any }) {
   const [config, setConfig] = useState<UPSConfig | null>(null);
   const [status, setStatus] = useState<UPSStatus | null>(null);
   const [events, setEvents] = useState<UPSEvent[]>([]);
