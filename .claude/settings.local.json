@@ -13,7 +13,8 @@
       "Bash(ssh root@46.4.25.15 \"cd ~/stumpfworks-nas && pwd && ls -la scripts/*.sh | head -5\")",
       "Bash(ssh:*)",
       "Bash(dir:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(git am:*)"
     ],
     "deny": [],
     "ask": []
