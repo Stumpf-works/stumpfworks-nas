@@ -9,7 +9,11 @@
       "Bash(go mod tidy:*)",
       "Bash(paste:*)",
       "Bash(ls:*)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(ssh root@46.4.25.15 \"cd ~/stumpfworks-nas && pwd && ls -la scripts/*.sh | head -5\")",
+      "Bash(ssh:*)",
+      "Bash(dir:*)",
+      "Bash(findstr:*)"
     ],
     "deny": [],
     "ask": []

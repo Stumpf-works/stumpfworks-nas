@@ -234,3 +234,90 @@ func (h *ComposeHandler) GetComposeFile(w http.ResponseWriter, r *http.Request) 
 
 	utils.RespondSuccess(w, content)
 }
+
+// ===== Template Management =====
+
+// ListTemplates lists all available Docker Compose templates
+func (h *ComposeHandler) ListTemplates(w http.ResponseWriter, r *http.Request) {
+	category := r.URL.Query().Get("category")
+
+	var templates []docker.ComposeTemplate
+	if category != "" {
+		templates = docker.GetTemplatesByCategory(category)
+	} else {
+		templates = docker.BuiltinTemplates
+	}
+
+	utils.RespondSuccess(w, templates)
+}
+
+// GetTemplate gets a specific template by ID
+func (h *ComposeHandler) GetTemplate(w http.ResponseWriter, r *http.Request) {
+	templateID := chi.URLParam(r, "id")
+
+	template := docker.GetTemplateByID(templateID)
+	if template == nil {
+		utils.RespondError(w, errors.NotFound("Template not found", nil))
+		return
+	}
+
+	utils.RespondSuccess(w, template)
+}
+
+// GetTemplateCategories returns all unique template categories
+func (h *ComposeHandler) GetTemplateCategories(w http.ResponseWriter, r *http.Request) {
+	categories := docker.GetAllCategories()
+	utils.RespondSuccess(w, categories)
+}
+
+// DeployTemplate deploys a template with user-provided variables
+func (h *ComposeHandler) DeployTemplate(w http.ResponseWriter, r *http.Request) {
+	templateID := chi.URLParam(r, "id")
+
+	var req struct {
+		StackName string            `json:"stack_name"`
+		Variables map[string]string `json:"variables"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.RespondError(w, errors.BadRequest("Invalid request body", err))
+		return
+	}
+
+	if req.StackName == "" {
+		utils.RespondError(w, errors.BadRequest("Stack name is required", nil))
+		return
+	}
+
+	// Get template
+	template := docker.GetTemplateByID(templateID)
+	if template == nil {
+		utils.RespondError(w, errors.NotFound("Template not found", nil))
+		return
+	}
+
+	// Render template with variables
+	composeContent := docker.RenderTemplate(template, req.Variables)
+
+	// Create stack from rendered template
+	if err := h.service.CreateStack(r.Context(), h.stacksDir, req.StackName, composeContent); err != nil {
+		logger.Error("Failed to create stack from template", zap.Error(err), zap.String("template", templateID), zap.String("stack", req.StackName))
+		utils.RespondError(w, errors.InternalServerError("Failed to deploy template", err))
+		return
+	}
+
+	// Deploy the stack
+	stackPath := filepath.Join(h.stacksDir, req.StackName)
+	if err := h.service.DeployStack(r.Context(), stackPath); err != nil {
+		logger.Error("Failed to deploy stack", zap.Error(err), zap.String("stack", req.StackName))
+		utils.RespondError(w, errors.InternalServerError("Failed to deploy template", err))
+		return
+	}
+
+	logger.Info("Template deployed successfully", zap.String("template", templateID), zap.String("stack", req.StackName))
+	utils.RespondSuccess(w, map[string]interface{}{
+		"message":     "Template deployed successfully",
+		"template_id": templateID,
+		"stack_name":  req.StackName,
+	})
+}

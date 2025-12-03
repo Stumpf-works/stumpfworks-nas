@@ -286,4 +286,33 @@ export const dockerApi = {
     const response = await client.post('/docker/containers', request);
     return response.data;
   },
+
+  // Template Management
+  async listTemplates(category?: string): Promise<ApiResponse<any[]>> {
+    const params = category ? { category } : undefined;
+    const response = await client.get('/docker/templates', { params });
+    return response.data;
+  },
+
+  async getTemplate(id: string): Promise<ApiResponse<any>> {
+    const response = await client.get(`/docker/templates/${id}`);
+    return response.data;
+  },
+
+  async getTemplateCategories(): Promise<ApiResponse<string[]>> {
+    const response = await client.get('/docker/templates/categories');
+    return response.data;
+  },
+
+  async deployTemplate(
+    templateId: string,
+    stackName: string,
+    variables: Record<string, string>
+  ): Promise<ApiResponse<any>> {
+    const response = await client.post(`/docker/templates/${templateId}/deploy`, {
+      stack_name: stackName,
+      variables,
+    });
+    return response.data;
+  },
 };

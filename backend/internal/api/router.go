@@ -489,6 +489,12 @@ func NewRouter(cfg *config.Config) http.Handler {
 				r.Post("/stacks/{name}/remove", composeHandler.RemoveStack)
 				r.Get("/stacks/{name}/logs", composeHandler.GetStackLogs)
 				r.Get("/stacks/{name}/compose", composeHandler.GetComposeFile)
+
+				// Docker Compose Template routes
+				r.Get("/templates", composeHandler.ListTemplates)
+				r.Get("/templates/categories", composeHandler.GetTemplateCategories)
+				r.Get("/templates/{id}", composeHandler.GetTemplate)
+				r.Post("/templates/{id}/deploy", composeHandler.DeployTemplate)
 			})
 
 			// Backup routes
