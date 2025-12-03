@@ -54,6 +54,9 @@ func RunMigrations() error {
 		&models.CloudProvider{},
 		&models.CloudSyncJob{},
 		&models.CloudSyncLog{},
+		// Alert rules models
+		&models.AlertRule{},
+		&models.AlertRuleExecution{},
 		// Add more models here as they are created
 	); err != nil {
 		return err
@@ -283,6 +286,26 @@ func AddPerformanceIndexes() error {
 		return err
 	}
 	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_cloud_sync_logs_started ON cloud_sync_logs(started_at DESC)").Error; err != nil {
+		return err
+	}
+
+	// Alert rules indexes
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_alert_rules_enabled ON alert_rules(enabled)").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_alert_rules_metric_type ON alert_rules(metric_type)").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_alert_rule_executions_rule_id ON alert_rule_executions(rule_id)").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_alert_rule_executions_triggered ON alert_rule_executions(triggered)").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_alert_rule_executions_acknowledged ON alert_rule_executions(acknowledged)").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_alert_rule_executions_created ON alert_rule_executions(created_at DESC)").Error; err != nil {
 		return err
 	}
 

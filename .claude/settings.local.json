@@ -1,35 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(ssh root@46.4.25.15 \"hostname\")",
-      "Bash(go mod tidy:*)",
-      "Bash(chmod:*)",
-      "Bash(npm install:*)",
-      "Bash(npm run build:*)",
-      "Bash(CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build:*)",
-      "Bash(bash scripts/build-deb.sh:*)",
-      "Bash(ssh:*)",
-      "Bash(scp:*)",
-      "Bash(git describe:*)",
-      "Bash(bash scripts/build-multiarch.sh:*)",
-      "Bash(git add:*)",
-      "Bash(mkdir:*)",
-      "Bash(git checkout:*)",
-      "Bash(go build:*)",
-      "Bash(git tag:*)",
-      "Bash(git commit:*)",
-      "Bash(git push)",
-      "Bash($env:CGO_ENABLED=\"0\")",
-      "Bash($env:GOOS=\"linux\")",
-      "Bash($env:GOARCH=\"amd64\")",
-      "Bash(git push:*)",
-      "Bash(rm:*)",
-      "Bash(tar:*)",
-      "Bash(echo:*)",
-      "Bash(cat:*)",
-      "Bash(Select-Object -Last 10)",
-      "Bash(find:*)",
-      "Bash(npm run dev:*)"
+      "Bash(\"c:\\Users\\gamin\\Documents\\GitHub\\stumpfworks-nas\\frontend\\src\\apps\\Monitoring\\components\\AlertExecutions.tsx\" <<'EOFMARKER'\nexport function AlertExecutions() {\n  return (\n    <div className=\"p-6\">\n      <h2 className=\"text-xl font-bold\">Alert History</h2>\n      <p className=\"text-gray-500\">Alert execution history coming soon...</p>\n    </div>\n  );\n}\nEOFMARKER)"
     ],
     "deny": [],
     "ask": []

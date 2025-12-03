@@ -757,6 +757,22 @@ func NewRouter(cfg *config.Config) http.Handler {
 				r.Put("/config", handlers.UpdateMonitoringConfig)
 			})
 
+			// Alert Rules routes
+			r.Route("/alert-rules", func(r chi.Router) {
+				alertRulesHandler := handlers.NewAlertRulesHandler()
+
+				// Alert rules management (admin only)
+				r.Use(mw.AdminOnly)
+				r.Get("/", alertRulesHandler.ListRules)
+				r.Post("/", alertRulesHandler.CreateRule)
+				r.Get("/{id}", alertRulesHandler.GetRule)
+				r.Put("/{id}", alertRulesHandler.UpdateRule)
+				r.Delete("/{id}", alertRulesHandler.DeleteRule)
+				r.Get("/{id}/executions", alertRulesHandler.GetExecutions)
+				r.Get("/executions/recent", alertRulesHandler.GetRecentExecutions)
+				r.Post("/executions/{id}/acknowledge", alertRulesHandler.AcknowledgeExecution)
+			})
+
 			// Scheduler/Task routes
 			r.Route("/tasks", func(r chi.Router) {
 				schedulerHandler := handlers.NewSchedulerHandler()

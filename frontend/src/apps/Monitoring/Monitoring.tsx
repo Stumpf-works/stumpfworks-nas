@@ -1,14 +1,19 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Activity, AlertCircle, RefreshCw } from 'lucide-react';
+import { Activity, AlertCircle, RefreshCw, Bell, BarChart3 } from 'lucide-react';
 import { monitoringApi, type SystemMetrics, type HealthScore } from '@/api/monitoring';
 import { getErrorMessage } from '@/api/client';
 import Card from '@/components/ui/Card';
 import MetricsOverview from './components/MetricsOverview';
 import HealthScoreCard from './components/HealthScoreCard';
 import MetricsCharts from './components/MetricsCharts';
+import { AlertRules } from './components/AlertRules';
+import { AlertExecutions } from './components/AlertExecutions';
+
+type Tab = 'metrics' | 'rules' | 'executions';
 
 export function Monitoring() {
+  const [activeTab, setActiveTab] = useState<Tab>('metrics');
   const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
   const [healthScore, setHealthScore] = useState<HealthScore | null>(null);
   const [loading, setLoading] = useState(true);
@@ -84,63 +89,112 @@ export function Monitoring() {
     );
   }
 
+  const tabs = [
+    { id: 'metrics' as Tab, label: 'System Metrics', icon: BarChart3 },
+    { id: 'rules' as Tab, label: 'Alert Rules', icon: Bell },
+    { id: 'executions' as Tab, label: 'Alert History', icon: Activity },
+  ];
+
   return (
-    <div className="h-full overflow-auto bg-gray-50 dark:bg-macos-dark-100">
-      <div className="p-6 space-y-6">
-        {/* Header */}
+    <div className="flex flex-col h-full bg-gray-50 dark:bg-macos-dark-100">
+      {/* Header */}
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Activity className="w-8 h-8 text-macos-blue" />
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">System Monitoring</h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Real-time system metrics and health status</p>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Monitoring & Alerting</h1>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                System metrics, alert rules, and alert history
+              </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-              <input
-                type="checkbox"
-                checked={autoRefresh}
-                onChange={(e) => setAutoRefresh(e.target.checked)}
-                className="rounded"
-              />
-              Auto-refresh (5s)
-            </label>
+          {activeTab === 'metrics' && (
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                <input
+                  type="checkbox"
+                  checked={autoRefresh}
+                  onChange={(e) => setAutoRefresh(e.target.checked)}
+                  className="rounded"
+                />
+                Auto-refresh (5s)
+              </label>
 
-            <button
-              onClick={handleRefresh}
-              disabled={loading}
-              className="p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-macos-dark-200 rounded-lg transition-colors disabled:opacity-50"
-              title="Refresh metrics"
-            >
-              <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
+              <button
+                onClick={handleRefresh}
+                disabled={loading}
+                className="p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-macos-dark-200 rounded-lg transition-colors disabled:opacity-50"
+                title="Refresh metrics"
+              >
+                <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
+          )}
         </div>
+      </div>
 
-        {/* Error banner */}
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
-          >
-            <div className="flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-red-500" />
-              <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
-            </div>
-          </motion.div>
+      {/* Tabs */}
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div className="px-6">
+          <nav className="flex space-x-8" aria-label="Tabs">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`
+                    flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors
+                    ${
+                      isActive
+                        ? 'border-macos-blue text-macos-blue'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                    }
+                  `}
+                >
+                  <Icon className="w-4 h-4" />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-auto">
+        {activeTab === 'metrics' && (
+          <div className="p-6 space-y-6">
+            {/* Error banner */}
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
+              >
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-red-500" />
+                  <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Health Score */}
+            {healthScore && <HealthScoreCard healthScore={healthScore} />}
+
+            {/* Metrics Overview */}
+            {metrics && <MetricsOverview metrics={metrics} />}
+
+            {/* Metrics Charts */}
+            {metrics && <MetricsCharts />}
+          </div>
         )}
 
-        {/* Health Score */}
-        {healthScore && <HealthScoreCard healthScore={healthScore} />}
-
-        {/* Metrics Overview */}
-        {metrics && <MetricsOverview metrics={metrics} />}
-
-        {/* Metrics Charts */}
-        {metrics && <MetricsCharts />}
+        {activeTab === 'rules' && <AlertRules />}
+        {activeTab === 'executions' && <AlertExecutions />}
       </div>
     </div>
   );

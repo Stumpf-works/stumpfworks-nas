@@ -16,6 +16,7 @@ import (
 	"github.com/Stumpf-works/stumpfworks-nas/internal/ad"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/addons"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/alerts"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/alertrules"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/api"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/api/handlers"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/audit"
@@ -407,6 +408,15 @@ func main() {
 		logger.Info("Metrics service initialized and started")
 	}
 
+	// Initialize Alert Rules service
+	if err := initializeAlertRules(); err != nil {
+		logger.Warn("Alert Rules service initialization failed",
+			zap.Error(err),
+			zap.String("message", "Custom alert rules may be disabled"))
+	} else {
+		logger.Info("Alert Rules service initialized and started")
+	}
+
 	// Create HTTP router
 	router := api.NewRouter(cfg)
 
@@ -571,6 +581,16 @@ func initializeUnixGroupManager() error {
 // Returns error if service fails to initialize, but this is non-fatal
 func initializeMetrics() error {
 	service, err := metrics.Initialize()
+	if err != nil {
+		return err
+	}
+	return service.Start()
+}
+
+// initializeAlertRules initializes the Alert Rules evaluation service and starts it
+// Returns error if service fails to initialize, but this is non-fatal
+func initializeAlertRules() error {
+	service, err := alertrules.Initialize()
 	if err != nil {
 		return err
 	}
