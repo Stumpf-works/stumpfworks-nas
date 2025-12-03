@@ -39,6 +39,7 @@ import (
 	"github.com/Stumpf-works/stumpfworks-nas/internal/system/lxc"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/system/vm"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/system/vpn"
+	"github.com/Stumpf-works/stumpfworks-nas/internal/timemachine"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/twofa"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/ups"
 	"github.com/Stumpf-works/stumpfworks-nas/internal/updates"
@@ -281,6 +282,12 @@ func main() {
 	} else {
 		logger.Info("VPN Manager initialized")
 	}
+
+	// Initialize Time Machine (always enabled)
+	initializeTimeMachine()
+
+	// Schedule Time Machine usage updates (every 6 hours)
+	scheduleTimeMachineUsageUpdates()
 
 	// Initialize Docker service (non-fatal if not available)
 	if err := initializeDocker(); err != nil {
@@ -697,6 +704,45 @@ func initializeVPNManager() error {
 	vpnManager := vpn.NewVPNManager(shell)
 	handlers.InitVPNManager(vpnManager)
 	return nil
+}
+
+// initializeTimeMachine initializes the Time Machine service
+// This is always enabled and manages macOS Time Machine backups
+func initializeTimeMachine() {
+	shell := system.MustGet().Shell
+	tmManager := timemachine.NewManager(shell)
+	handlers.InitTimeMachineHandler(tmManager)
+	logger.Info("Time Machine service initialized")
+}
+
+// scheduleTimeMachineUsageUpdates creates a scheduled task to update device usage
+func scheduleTimeMachineUsageUpdates() {
+	// Check if task already exists
+	var existingTask models.ScheduledTask
+	result := database.DB.Where("name = ?", "time-machine-usage-update").First(&existingTask)
+
+	if result.Error == nil {
+		// Task already exists
+		logger.Info("Time Machine usage update task already scheduled")
+		return
+	}
+
+	// Create new scheduled task
+	task := &models.ScheduledTask{
+		Name:           "time-machine-usage-update",
+		Description:    "Update storage usage for all Time Machine devices",
+		TaskType:       "maintenance",
+		CronExpression: "0 */6 * * *", // Every 6 hours at minute 0
+		Enabled:        true,
+	}
+
+	if err := database.DB.Create(task).Error; err != nil {
+		logger.Warn("Failed to create Time Machine usage update task",
+			zap.Error(err))
+		return
+	}
+
+	logger.Info("Time Machine usage update task created (every 6 hours)")
 }
 
 // checkDependencies checks and optionally installs system dependencies

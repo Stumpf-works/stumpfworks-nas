@@ -226,25 +226,25 @@
 
 ### P0 - Media & Collaboration 🎬
 
-#### 2.1 Media Server Templates (2-3 weeks)
+#### 2.1 Media Server Templates (2-3 weeks) ✅ **COMPLETED December 2025**
 **Why:** High user demand, low implementation cost
 **Deliverables:**
-- [ ] **Plex Docker Template** with pre-configured:
-  - [ ] Network settings
-  - [ ] Volume mappings
-  - [ ] Transcoding directories
-  - [ ] UI integration (launch button)
-- [ ] **Jellyfin Template**
-- [ ] **Sonarr/Radarr Templates** (media automation)
-- [ ] **Media Library Manager** in File Manager
-  - [ ] Media folder structure
-  - [ ] Permission presets
-- [ ] One-click setup wizard
+- [x] **Plex Docker Template** with pre-configured:
+  - [x] Network settings
+  - [x] Volume mappings
+  - [x] Transcoding directories
+  - [x] UI integration (launch button)
+- [x] **Jellyfin Template**
+- [x] **Sonarr/Radarr Templates** (media automation)
+- [x] **Prowlarr, Transmission, qBittorrent Templates**
+- [x] **Complete Media Stack Template** (all-in-one)
+- [x] One-click deployment from Template Gallery
 
 **Implementation:**
-- Backend: Extend App Store with media templates
-- Frontend: Media category in App Store
-- Templates: `backend/templates/media/*.yaml`
+- ✅ Backend: `backend/internal/docker/templates.go` with 8 templates
+- ✅ Frontend: Template Gallery in Docker Manager
+- ✅ API Routes: 4 endpoints for template management
+- ✅ Features: Variable substitution, category filtering, deployment workflow
 
 #### 2.2 Photo Management Application (6-8 weeks) 📸 SYNOLOGY PHOTOS KILLER
 **Why:** Competitive feature, high value for users

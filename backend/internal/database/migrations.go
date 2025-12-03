@@ -57,6 +57,9 @@ func RunMigrations() error {
 		// Alert rules models
 		&models.AlertRule{},
 		&models.AlertRuleExecution{},
+		// Time Machine models
+		&models.TimeMachineDevice{},
+		&models.TimeMachineConfig{},
 		// Add more models here as they are created
 	); err != nil {
 		return err
@@ -306,6 +309,20 @@ func AddPerformanceIndexes() error {
 		return err
 	}
 	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_alert_rule_executions_created ON alert_rule_executions(created_at DESC)").Error; err != nil {
+		return err
+	}
+
+	// Time Machine indexes
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_tm_devices_name ON time_machine_devices(device_name)").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_tm_devices_mac ON time_machine_devices(mac_address)").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_tm_devices_enabled ON time_machine_devices(enabled)").Error; err != nil {
+		return err
+	}
+	if err := DB.Exec("CREATE INDEX IF NOT EXISTS idx_tm_devices_last_backup ON time_machine_devices(last_backup DESC)").Error; err != nil {
 		return err
 	}
 

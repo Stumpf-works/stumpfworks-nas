@@ -730,6 +730,28 @@ func NewRouter(cfg *config.Config) http.Handler {
 				})
 			})
 
+			// Time Machine routes (macOS Time Machine backup server)
+			r.Route("/timemachine", func(r chi.Router) {
+				r.Use(mw.AdminOnly)
+
+				// Configuration
+				r.Get("/config", handlers.GetTimeMachineConfig)
+				r.Put("/config", handlers.UpdateTimeMachineConfig)
+				r.Post("/enable", handlers.EnableTimeMachine)
+				r.Post("/disable", handlers.DisableTimeMachine)
+
+				// Device management
+				r.Get("/devices", handlers.ListTimeMachineDevices)
+				r.Post("/devices", handlers.CreateTimeMachineDevice)
+				r.Get("/devices/{id}", handlers.GetTimeMachineDevice)
+				r.Put("/devices/{id}", handlers.UpdateTimeMachineDevice)
+				r.Delete("/devices/{id}", handlers.DeleteTimeMachineDevice)
+
+				// Usage monitoring
+				r.Post("/devices/{id}/update-usage", handlers.UpdateTimeMachineDeviceUsage)
+				r.Post("/devices/update-all-usage", handlers.UpdateAllTimeMachineDeviceUsages)
+			})
+
 			// Failed Login Tracking routes
 			r.Route("/security", func(r chi.Router) {
 				failedLoginHandler := handlers.NewFailedLoginHandler()
