@@ -5,8 +5,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Stumpf-works/stumpfworks-nas/internal/database"
-	"github.com/Stumpf-works/stumpfworks-nas/internal/database/models"
 	"github.com/Stumpf-works/stumpfworks-nas/pkg/logger"
 	"go.uber.org/zap"
 )
@@ -20,11 +18,6 @@ const (
 // configureSamba configures Samba for Time Machine support
 func (m *Manager) configureSamba() error {
 	logger.Info("Configuring Samba for Time Machine")
-
-	config, err := m.GetConfig()
-	if err != nil {
-		return err
-	}
 
 	devices, err := m.ListDevices()
 	if err != nil {

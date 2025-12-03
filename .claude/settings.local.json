@@ -15,7 +15,8 @@
       "Bash(dir:*)",
       "Bash(findstr:*)",
       "Bash(git am:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(go build:*)"
     ],
     "deny": [],
     "ask": []

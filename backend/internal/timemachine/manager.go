@@ -157,14 +157,22 @@ func (m *Manager) CreateDevice(device *models.TimeMachineDevice) error {
 		device.SharePath = filepath.Join(config.BasePath, sanitizeDeviceName(device.DeviceName))
 	}
 
+	// Set default username if not specified
+	if device.Username == "" {
+		device.Username = "stumpfs"
+	}
+
 	// Create device directory
 	if err := os.MkdirAll(device.SharePath, 0700); err != nil {
 		return fmt.Errorf("failed to create device directory: %w", err)
 	}
 
-	// Set proper ownership (stumpfs user)
-	if err := m.shell.Execute("chown", "-R", "stumpfs:stumpfs", device.SharePath); err != nil {
-		logger.Warn("Failed to set directory ownership", zap.Error(err))
+	// Set proper ownership to the device's configured user
+	ownerSpec := fmt.Sprintf("%s:%s", device.Username, device.Username)
+	if _, err := m.shell.Execute("chown", "-R", ownerSpec, device.SharePath); err != nil {
+		logger.Warn("Failed to set directory ownership",
+			zap.String("user", device.Username),
+			zap.Error(err))
 	}
 
 	// Save to database
