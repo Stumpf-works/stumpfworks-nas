@@ -2,7 +2,14 @@
   "permissions": {
     "allow": [
       "Bash(curl:*)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Bash(go test:*)",
+      "Bash(go get:*)",
+      "Bash(chmod:*)",
+      "Bash(go mod tidy:*)",
+      "Bash(paste:*)",
+      "Bash(ls:*)",
+      "Bash(done)"
     ],
     "deny": [],
     "ask": []

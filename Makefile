@@ -28,7 +28,14 @@ help:
 	@echo "  make upgrade        - Upgrade existing installation (auto-detects location)"
 	@echo "  make uninstall      - Remove system installation"
 	@echo ""
-	@echo "  make test          - Run all tests"
+	@echo "Testing:"
+	@echo "  make test          - Run comprehensive test suite with coverage"
+	@echo "  make test-quick    - Run quick tests (no coverage)"
+	@echo "  make test-backend  - Run backend tests only"
+	@echo "  make test-frontend - Run frontend tests only"
+	@echo "  make test-coverage - Generate coverage report"
+	@echo "  make test-race     - Run tests with race detector"
+	@echo ""
 	@echo "  make lint          - Run linters"
 	@echo "  make format        - Format code"
 	@echo "  make clean         - Clean build artifacts"
@@ -81,11 +88,33 @@ build:
 
 # Run tests
 test:
+	@echo "Running comprehensive test suite..."
+	@./scripts/run-tests.sh
+
+# Run quick tests (no coverage)
+test-quick:
+	@echo "Running quick tests..."
+	@./scripts/test-quick.sh
+
+# Run backend tests only
+test-backend:
 	@echo "Running backend tests..."
-	cd backend && go test ./...
+	@./scripts/run-tests.sh --backend
+
+# Run frontend tests only
+test-frontend:
 	@echo "Running frontend tests..."
-	cd frontend && npm run test
-	@echo "✓ All tests passed"
+	@./scripts/run-tests.sh --frontend
+
+# Generate coverage report
+test-coverage:
+	@echo "Generating coverage report..."
+	@./scripts/run-tests.sh --coverage
+
+# Run tests with race detector
+test-race:
+	@echo "Running tests with race detector..."
+	@./scripts/run-tests.sh --race
 
 # Run linters
 lint:
