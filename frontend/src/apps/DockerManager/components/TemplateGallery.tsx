@@ -8,6 +8,7 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { Play, Info, Tag, User, Calendar, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import HubStatus from './HubStatus';
 
 interface Template {
   id: string;
@@ -247,12 +248,15 @@ export default function TemplateGallery() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Template Gallery</h2>
-        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-          One-click deployment of popular media servers and applications
-        </p>
+      {/* Header with Hub Status */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Template Gallery</h2>
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+            One-click deployment of popular media servers and applications
+          </p>
+        </div>
+        <HubStatus />
       </div>
 
       {/* Category Filter */}

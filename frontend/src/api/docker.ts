@@ -315,4 +315,15 @@ export const dockerApi = {
     });
     return response.data;
   },
+
+  // Hub Status
+  async getHubStatus(): Promise<ApiResponse<{
+    hub_url: string;
+    is_online: boolean;
+    template_count: number;
+    error: string | null;
+  }>> {
+    const response = await client.get('/docker/hub/status');
+    return response.data;
+  },
 };
