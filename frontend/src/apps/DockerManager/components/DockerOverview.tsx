@@ -41,14 +41,15 @@ export default function DockerOverview() {
       ]);
 
       if (containers.success && containers.data) {
-        const running = containers.data.filter((c) => c.state === 'running').length;
-        const stopped = containers.data.filter((c) => c.state === 'exited').length;
-        const paused = containers.data.filter((c) => c.state === 'paused').length;
+        const data = containers.data;
+        const running = data.filter((c) => c.state === 'running').length;
+        const stopped = data.filter((c) => c.state === 'exited').length;
+        const paused = data.filter((c) => c.state === 'paused').length;
 
         setStats((prev) => ({
           ...prev,
           containers: {
-            total: containers.data.length,
+            total: data.length,
             running,
             stopped,
             paused,
@@ -57,27 +58,30 @@ export default function DockerOverview() {
       }
 
       if (images.success && images.data) {
-        const totalSize = images.data.reduce((acc, img) => acc + (img.size || 0), 0);
+        const data = images.data;
+        const totalSize = data.reduce((acc, img) => acc + (img.size || 0), 0);
         setStats((prev) => ({
           ...prev,
           images: {
-            total: images.data.length,
+            total: data.length,
             size: totalSize,
           },
         }));
       }
 
       if (volumes.success && volumes.data) {
+        const data = volumes.data;
         setStats((prev) => ({
           ...prev,
-          volumes: { total: volumes.data.length },
+          volumes: { total: data.length },
         }));
       }
 
       if (networks.success && networks.data) {
+        const data = networks.data;
         setStats((prev) => ({
           ...prev,
-          networks: { total: networks.data.length },
+          networks: { total: data.length },
         }));
       }
     } catch (err) {
