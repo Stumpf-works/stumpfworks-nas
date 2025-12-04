@@ -194,8 +194,8 @@ func (s *Service) DeployStack(ctx context.Context, stackPath string) error {
 		return fmt.Errorf("Docker is not available")
 	}
 
-	// Run docker-compose up -d
-	cmd := exec.CommandContext(ctx, "docker-compose", "up", "-d")
+	// Run docker compose up -d
+	cmd := exec.CommandContext(ctx, "docker", "compose", "up", "-d")
 	cmd.Dir = stackPath
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -211,8 +211,8 @@ func (s *Service) StopStack(ctx context.Context, stackPath string) error {
 		return fmt.Errorf("Docker is not available")
 	}
 
-	// Run docker-compose stop
-	cmd := exec.CommandContext(ctx, "docker-compose", "stop")
+	// Run docker compose stop
+	cmd := exec.CommandContext(ctx, "docker", "compose", "stop")
 	cmd.Dir = stackPath
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -228,13 +228,13 @@ func (s *Service) RemoveStack(ctx context.Context, stackPath string, removeVolum
 		return fmt.Errorf("Docker is not available")
 	}
 
-	// Run docker-compose down
-	args := []string{"down"}
+	// Run docker compose down
+	args := []string{"compose", "down"}
 	if removeVolumes {
 		args = append(args, "-v")
 	}
 
-	cmd := exec.CommandContext(ctx, "docker-compose", args...)
+	cmd := exec.CommandContext(ctx, "docker", args...)
 	cmd.Dir = stackPath
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -250,12 +250,12 @@ func (s *Service) GetStackLogs(ctx context.Context, stackPath string, tail int) 
 		return "", fmt.Errorf("Docker is not available")
 	}
 
-	args := []string{"logs"}
+	args := []string{"compose", "logs"}
 	if tail > 0 {
 		args = append(args, "--tail", fmt.Sprintf("%d", tail))
 	}
 
-	cmd := exec.CommandContext(ctx, "docker-compose", args...)
+	cmd := exec.CommandContext(ctx, "docker", args...)
 	cmd.Dir = stackPath
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -271,8 +271,8 @@ func (s *Service) RestartStack(ctx context.Context, stackPath string) error {
 		return fmt.Errorf("Docker is not available")
 	}
 
-	// Run docker-compose restart
-	cmd := exec.CommandContext(ctx, "docker-compose", "restart")
+	// Run docker compose restart
+	cmd := exec.CommandContext(ctx, "docker", "compose", "restart")
 	cmd.Dir = stackPath
 	output, err := cmd.CombinedOutput()
 	if err != nil {
