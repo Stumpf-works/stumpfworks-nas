@@ -245,7 +245,7 @@ func (h *ComposeHandler) ListTemplates(w http.ResponseWriter, r *http.Request) {
 	if category != "" {
 		templates = docker.GetTemplatesByCategory(category)
 	} else {
-		templates = docker.BuiltinTemplates
+		templates = docker.ListAllTemplates()
 	}
 
 	utils.RespondSuccess(w, templates)

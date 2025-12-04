@@ -1,26 +1,40 @@
 // Package docker provides Docker management functionality
 package docker
 
+import (
+	"context"
+	"time"
+)
+
 // ComposeTemplate represents a pre-configured Docker Compose template
 type ComposeTemplate struct {
-	ID          string            `json:"id"`
-	Name        string            `json:"name"`
-	Description string            `json:"description"`
-	Icon        string            `json:"icon"`
-	Category    string            `json:"category"` // media, download, automation, monitoring, etc.
-	Author      string            `json:"author"`
-	Version     string            `json:"version"`
-	Compose     string            `json:"compose"`      // Docker Compose YAML content
-	Variables   map[string]string `json:"variables"`    // User-customizable variables
-	Requirements struct {
-		MinMemoryMB int      `json:"min_memory_mb"`
-		MinDiskGB   int      `json:"min_disk_gb"`
-		Ports       []int    `json:"ports"`
-		Notes       []string `json:"notes"`
-	} `json:"requirements"`
+	ID          string                   `json:"id"`
+	Name        string                   `json:"name"`
+	Description string                   `json:"description"`
+	Icon        string                   `json:"icon"`
+	Category    string                   `json:"category"` // media, download, automation, monitoring, etc.
+	Author      string                   `json:"author"`
+	Version     string                   `json:"version"`
+	Compose     string                   `json:"compose"`      // Docker Compose YAML content
+	Variables   map[string]string        `json:"variables"`    // User-customizable variables
+	Requirements TemplateRequirements    `json:"requirements,omitempty"`
+	CreatedAt   time.Time                `json:"created_at,omitempty"`
+	UpdatedAt   time.Time                `json:"updated_at,omitempty"`
+	Tags        []string                 `json:"tags,omitempty"`
+	Screenshots []string                 `json:"screenshots,omitempty"`
+}
+
+// TemplateRequirements specifies system requirements for a template
+type TemplateRequirements struct {
+	MinMemoryMB int      `json:"min_memory_mb,omitempty"`
+	MinDiskGB   int      `json:"min_disk_gb,omitempty"`
+	Ports       []int    `json:"ports,omitempty"`
+	Notes       []string `json:"notes,omitempty"`
 }
 
 // BuiltinTemplates contains all pre-configured templates
+// DEPRECATED: Templates are now fetched from Stumpfworks Hub
+// This is kept for backward compatibility and fallback only
 var BuiltinTemplates = []ComposeTemplate{
 	{
 		ID:          "plex",
@@ -387,20 +401,44 @@ services:
 	},
 }
 
-// GetTemplateByID returns a template by its ID
+// GetTemplateByID returns a template by its ID from Stumpfworks Hub
 func GetTemplateByID(id string) *ComposeTemplate {
-	for _, tpl := range BuiltinTemplates {
-		if tpl.ID == id {
-			return &tpl
+	hub := GetHubClient()
+	ctx := context.Background()
+
+	tpl, err := hub.GetTemplate(ctx, id)
+	if err != nil {
+		// Fallback to builtin templates if hub is unavailable
+		for _, builtin := range BuiltinTemplates {
+			if builtin.ID == id {
+				return &builtin
+			}
 		}
+		return nil
 	}
-	return nil
+	return tpl
 }
 
 // GetTemplatesByCategory returns all templates in a category
+// DEPRECATED: Use ListAllTemplates and filter client-side
 func GetTemplatesByCategory(category string) []ComposeTemplate {
+	hub := GetHubClient()
+	ctx := context.Background()
+
+	templates, err := hub.ListTemplates(ctx)
+	if err != nil {
+		// Fallback to builtin templates
+		var result []ComposeTemplate
+		for _, tpl := range BuiltinTemplates {
+			if tpl.Category == category {
+				result = append(result, tpl)
+			}
+		}
+		return result
+	}
+
 	var result []ComposeTemplate
-	for _, tpl := range BuiltinTemplates {
+	for _, tpl := range templates {
 		if tpl.Category == category {
 			result = append(result, tpl)
 		}
@@ -408,18 +446,39 @@ func GetTemplatesByCategory(category string) []ComposeTemplate {
 	return result
 }
 
-// GetAllCategories returns all unique template categories
+// GetAllCategories returns all unique template categories from Hub
 func GetAllCategories() []string {
-	categoryMap := make(map[string]bool)
-	for _, tpl := range BuiltinTemplates {
-		categoryMap[tpl.Category] = true
-	}
+	hub := GetHubClient()
+	ctx := context.Background()
 
-	var categories []string
-	for cat := range categoryMap {
-		categories = append(categories, cat)
+	categories, err := hub.GetTemplateCategories(ctx)
+	if err != nil {
+		// Fallback to builtin templates
+		categoryMap := make(map[string]bool)
+		for _, tpl := range BuiltinTemplates {
+			categoryMap[tpl.Category] = true
+		}
+
+		var result []string
+		for cat := range categoryMap {
+			result = append(result, cat)
+		}
+		return result
 	}
 	return categories
+}
+
+// ListAllTemplates returns all templates from Hub
+func ListAllTemplates() []ComposeTemplate {
+	hub := GetHubClient()
+	ctx := context.Background()
+
+	templates, err := hub.ListTemplates(ctx)
+	if err != nil {
+		// Fallback to builtin templates
+		return BuiltinTemplates
+	}
+	return templates
 }
 
 // RenderTemplate replaces variables in the compose template with provided values

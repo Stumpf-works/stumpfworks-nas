@@ -1,28 +1,15 @@
 {
   "permissions": {
     "allow": [
-      "Bash(curl:*)",
-      "Bash(git log:*)",
-      "Bash(go test:*)",
-      "Bash(go get:*)",
-      "Bash(chmod:*)",
-      "Bash(go mod tidy:*)",
-      "Bash(paste:*)",
-      "Bash(ls:*)",
-      "Bash(done)",
-      "Bash(ssh root@46.4.25.15 \"cd ~/stumpfworks-nas && pwd && ls -la scripts/*.sh | head -5\")",
-      "Bash(ssh:*)",
-      "Bash(dir:*)",
-      "Bash(findstr:*)",
-      "Bash(git am:*)",
-      "Bash(npm run build:*)",
-      "Bash(go build:*)",
-      "Bash(ping:*)",
-      "Bash(open:*)",
-      "Bash(git -C /Users/sebastianstumpf/Documents/GitHub/stumpfworks-nas status:*)",
-      "Bash(git -C /Users/sebastianstumpf/Documents/GitHub/stumpfworks-nas diff .claude/settings.local.json)",
-      "Bash(git add:*)",
-      "Bash(git commit -m \"$(cat <<''EOF''\nfix: Update Docker Compose commands from standalone to plugin syntax\n\nChanged all docker-compose commands to use the newer docker compose syntax\n(Docker CLI plugin) to ensure compatibility with modern Docker installations.\n\nThe standalone docker-compose binary is deprecated in favor of the\ndocker compose subcommand that ships with Docker.\n\nChanges:\n- DeployStack: docker-compose up -d → docker compose up -d\n- StopStack: docker-compose stop → docker compose stop  \n- RemoveStack: docker-compose down → docker compose down\n- GetStackLogs: docker-compose logs → docker compose logs\n- RestartStack: docker-compose restart → docker compose restart\n\nThis fixes the 500 error when deploying templates on systems without\nthe standalone docker-compose binary installed.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+      "Bash(git commit:*)",
+      "Bash(cat:*)",
+      "Bash(ssh-keyscan:*)",
+      "Bash(~/.ssh/known_hosts)",
+      "Bash(find:*)",
+      "Bash(python3:*)",
+      "Bash(pkill:*)",
+      "Bash(./hub:*)",
+      "Bash(./deployment/deploy.sh:*)"
     ],
     "deny": [],
     "ask": []

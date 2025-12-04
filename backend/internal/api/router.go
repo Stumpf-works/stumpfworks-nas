@@ -483,9 +483,16 @@ func NewRouter(cfg *config.Config) http.Handler {
 				r.Get("/stacks/{name}", composeHandler.GetStack)
 				r.Put("/stacks/{name}", composeHandler.UpdateStack)
 				r.Delete("/stacks/{name}", composeHandler.DeleteStack)
-				r.Post("/stacks/{name}/deploy", composeHandler.DeployStack)
+
+				// Deploy/restart operations need longer timeout for image pulling
+				r.Group(func(r chi.Router) {
+					r.Use(middleware.Timeout(10 * time.Minute)) // 10 minutes for stack operations with image pulls
+					r.Post("/stacks/{name}/deploy", composeHandler.DeployStack)
+					r.Post("/stacks/{name}/restart", composeHandler.RestartStack)
+					r.Post("/templates/{id}/deploy", composeHandler.DeployTemplate)
+				})
+
 				r.Post("/stacks/{name}/stop", composeHandler.StopStack)
-				r.Post("/stacks/{name}/restart", composeHandler.RestartStack)
 				r.Post("/stacks/{name}/remove", composeHandler.RemoveStack)
 				r.Get("/stacks/{name}/logs", composeHandler.GetStackLogs)
 				r.Get("/stacks/{name}/compose", composeHandler.GetComposeFile)
@@ -494,7 +501,6 @@ func NewRouter(cfg *config.Config) http.Handler {
 				r.Get("/templates", composeHandler.ListTemplates)
 				r.Get("/templates/categories", composeHandler.GetTemplateCategories)
 				r.Get("/templates/{id}", composeHandler.GetTemplate)
-				r.Post("/templates/{id}/deploy", composeHandler.DeployTemplate)
 			})
 
 			// Backup routes
