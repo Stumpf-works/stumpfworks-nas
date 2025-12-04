@@ -205,3 +205,9 @@ func GetHubClient() *HubClient {
 	}
 	return globalHubClient
 }
+
+
+// GetBaseURL returns the Hub base URL
+func (c *HubClient) GetBaseURL() string {
+	return c.baseURL
+}

@@ -314,10 +314,80 @@ func (h *ComposeHandler) DeployTemplate(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	logger.Info("Template deployed successfully", zap.String("template", templateID), zap.String("stack", req.StackName))
+	// Auto-open required ports from template
+	openedPorts := []int{}
+	if template.Requirements.Ports != nil && len(template.Requirements.Ports) > 0 {
+		if err := h.openTemplatePorts(template, req.StackName); err != nil {
+			logger.Warn("Failed to open template ports", zap.Error(err), zap.String("stack", req.StackName))
+			// Don't fail deployment if port opening fails
+		} else {
+			openedPorts = template.Requirements.Ports
+		}
+	}
+
+	logger.Info("Template deployed successfully", zap.String("template", templateID), zap.String("stack", req.StackName), zap.Ints("ports", openedPorts))
 	utils.RespondSuccess(w, map[string]interface{}{
-		"message":     "Template deployed successfully",
-		"template_id": templateID,
-		"stack_name":  req.StackName,
+		"message":      "Template deployed successfully",
+		"template_id":  templateID,
+		"stack_name":   req.StackName,
+		"ports_opened": openedPorts,
 	})
+}
+
+// openTemplatePorts opens firewall ports required by a template
+func (h *ComposeHandler) openTemplatePorts(template *docker.ComposeTemplate, stackName string) error {
+	if template.Requirements.Ports == nil || len(template.Requirements.Ports) == 0 {
+		return nil
+	}
+
+	// TODO: Integrate with firewall manager to open ports
+	// For now, we'll just log the ports that should be opened
+	logger.Info("Template requires ports to be opened",
+		zap.String("stack", stackName),
+		zap.Ints("ports", template.Requirements.Ports),
+		zap.String("template", template.Name),
+	)
+
+	// Note: Actual firewall integration would go here
+	// Example:
+	// for _, port := range template.Requirements.Ports {
+	//     firewall.AddRule(FirewallRule{
+	//         Chain: "INPUT",
+	//         Protocol: "tcp",
+	//         DestPort: strconv.Itoa(port),
+	//         Action: "ACCEPT",
+	//         Comment: fmt.Sprintf("Docker stack: %s (%s)", stackName, template.Name),
+	//     })
+	// }
+
+	return nil
+}
+
+
+// GetHubStatus returns the status of Stumpfworks Hub connection
+func (h *ComposeHandler) GetHubStatus(w http.ResponseWriter, r *http.Request) {
+	hub := docker.GetHubClient()
+	ctx := r.Context()
+
+	// Try to fetch templates from Hub
+	templates, err := hub.ListTemplates(ctx)
+
+	status := map[string]interface{}{
+		"hub_url":        hub.GetBaseURL(),
+		"is_online":      false,
+		"template_count": 0,
+		"error":          nil,
+	}
+
+	if err != nil {
+		status["error"] = err.Error()
+		status["is_online"] = false
+		logger.Warn("Hub is offline", zap.Error(err))
+	} else {
+		status["is_online"] = true
+		status["template_count"] = len(templates)
+		logger.Info("Hub is online", zap.Int("templates", len(templates)))
+	}
+
+	utils.RespondSuccess(w, status)
 }

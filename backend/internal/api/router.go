@@ -501,6 +501,7 @@ func NewRouter(cfg *config.Config) http.Handler {
 				r.Get("/templates", composeHandler.ListTemplates)
 				r.Get("/templates/categories", composeHandler.GetTemplateCategories)
 				r.Get("/templates/{id}", composeHandler.GetTemplate)
+				r.Get("/hub/status", composeHandler.GetHubStatus)
 			})
 
 			// Backup routes

@@ -475,9 +475,12 @@ func ListAllTemplates() []ComposeTemplate {
 
 	templates, err := hub.ListTemplates(ctx)
 	if err != nil {
-		// Fallback to builtin templates
+		// Log error and fallback to builtin templates
+		println("⚠️  Hub connection failed, using builtin templates:", err.Error())
+		println("   Hub URL:", hub.GetBaseURL())
 		return BuiltinTemplates
 	}
+	println("✅ Loaded", len(templates), "templates from Hub:", hub.GetBaseURL())
 	return templates
 }
 

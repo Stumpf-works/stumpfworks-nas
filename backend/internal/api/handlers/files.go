@@ -543,69 +543,20 @@ func GetFilePermissions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, err := getSecurityContext(r)
-	if err != nil {
-		utils.RespondError(w, err)
-		return
-	}
-
-	permissions, err := fileService.GetPermissions(ctx, path)
-	if err != nil {
-		logger.Error("Failed to get permissions", zap.String("path", path), zap.Error(err))
-		utils.RespondError(w, err)
-		return
-	}
-
-	utils.RespondSuccess(w, permissions)
+	// TODO: Re-implement GetPermissions in files service
+	utils.RespondError(w, errors.InternalServerError("GetPermissions not yet implemented", nil))
 }
 
 // ChangeFilePermissions changes file permissions
 func ChangeFilePermissions(w http.ResponseWriter, r *http.Request) {
-	var req files.PermissionsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		utils.RespondError(w, errors.BadRequest("Invalid request", err))
-		return
-	}
-
-	ctx, err := getSecurityContext(r)
-	if err != nil {
-		utils.RespondError(w, err)
-		return
-	}
-
-	if err := fileService.ChangePermissions(ctx, &req); err != nil {
-		logger.Error("Failed to change permissions", zap.String("path", req.Path), zap.Error(err))
-		utils.RespondError(w, err)
-		return
-	}
-
-	utils.RespondSuccess(w, map[string]string{
-		"message": "Permissions changed successfully",
-	})
+	// TODO: Re-implement ChangePermissions in files service
+	utils.RespondError(w, errors.InternalServerError("ChangePermissions not yet implemented", nil))
 }
 
 // GetDiskUsage returns disk usage information
 func GetDiskUsage(w http.ResponseWriter, r *http.Request) {
-	path := r.URL.Query().Get("path")
-	if path == "" {
-		utils.RespondError(w, errors.BadRequest("Missing path parameter", nil))
-		return
-	}
-
-	ctx, err := getSecurityContext(r)
-	if err != nil {
-		utils.RespondError(w, err)
-		return
-	}
-
-	usage, err := fileService.GetDiskUsage(ctx, path)
-	if err != nil {
-		logger.Error("Failed to get disk usage", zap.String("path", path), zap.Error(err))
-		utils.RespondError(w, err)
-		return
-	}
-
-	utils.RespondSuccess(w, usage)
+	// TODO: Re-implement GetDiskUsage in files service
+	utils.RespondError(w, errors.InternalServerError("GetDiskUsage not yet implemented", nil))
 }
 
 // ===== Archive Handlers =====
