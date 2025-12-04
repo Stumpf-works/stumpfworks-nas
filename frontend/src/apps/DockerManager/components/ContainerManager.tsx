@@ -411,7 +411,7 @@ export default function ContainerManager() {
                       {container.name}
                     </h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400 font-mono">
-                      {container.id.substring(0, 12)}
+                      {container.id ? container.id.substring(0, 12) : 'N/A'}
                     </p>
                   </div>
                   <span

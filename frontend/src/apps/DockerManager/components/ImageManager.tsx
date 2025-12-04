@@ -202,7 +202,7 @@ export default function ImageManager() {
                     {getImageTag(image)}
                   </h3>
                   <p className="text-xs text-gray-600 dark:text-gray-400 font-mono">
-                    {image.id.replace('sha256:', '').substring(0, 12)}
+                    {image.id ? image.id.replace('sha256:', '').substring(0, 12) : 'N/A'}
                   </p>
                 </div>
 

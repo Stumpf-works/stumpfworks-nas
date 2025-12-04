@@ -117,7 +117,7 @@ export default function NetworkManager() {
                     {network.name}
                   </h3>
                   <p className="text-xs text-gray-600 dark:text-gray-400 font-mono mb-2">
-                    {network.id.substring(0, 12)}
+                    {network.id ? network.id.substring(0, 12) : 'N/A'}
                   </p>
                   <div className="flex gap-2">
                     <span
