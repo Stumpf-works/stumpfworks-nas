@@ -78,7 +78,7 @@ func (s *Service) Close() error {
 // Container Operations
 
 // ListContainers lists all containers
-func (s *Service) ListContainers(ctx context.Context, all bool) ([]types.Container, error) {
+func (s *Service) ListContainers(ctx context.Context, all bool) ([]ContainerResponse, error) {
 	if !s.available {
 		return nil, fmt.Errorf("Docker is not available")
 	}
@@ -88,7 +88,47 @@ func (s *Service) ListContainers(ctx context.Context, all bool) ([]types.Contain
 		return nil, fmt.Errorf("failed to list containers: %w", err)
 	}
 
-	return containers, nil
+	// Map to our response format
+	response := make([]ContainerResponse, len(containers))
+	for i, c := range containers {
+		// Map ports
+		ports := make([]PortMapping, 0, len(c.Ports))
+		for _, p := range c.Ports {
+			ports = append(ports, PortMapping{
+				PrivatePort: p.PrivatePort,
+				PublicPort:  p.PublicPort,
+				Type:        p.Type,
+			})
+		}
+
+		// Get first name (remove leading slash)
+		name := ""
+		if len(c.Names) > 0 {
+			name = c.Names[0]
+			if len(name) > 0 && name[0] == '/' {
+				name = name[1:]
+			}
+		}
+
+		response[i] = ContainerResponse{
+			ID:       c.ID,
+			Name:     name,
+			Image:    c.Image,
+			State:    c.State,
+			Status:   c.Status,
+			Created:  fmt.Sprintf("%d", c.Created),
+			Ports:    ports,
+			Labels:   c.Labels,
+			Networks: make(map[string]interface{}),
+		}
+
+		// Map networks
+		for netName, net := range c.NetworkSettings.Networks {
+			response[i].Networks[netName] = net
+		}
+	}
+
+	return response, nil
 }
 
 // StartContainer starts a container
@@ -174,7 +214,7 @@ func (s *Service) GetContainerLogs(ctx context.Context, containerID string) (str
 // Image Operations
 
 // ListImages lists all images
-func (s *Service) ListImages(ctx context.Context) ([]image.Summary, error) {
+func (s *Service) ListImages(ctx context.Context) ([]ImageResponse, error) {
 	if !s.available {
 		return nil, fmt.Errorf("Docker is not available")
 	}
@@ -184,7 +224,23 @@ func (s *Service) ListImages(ctx context.Context) ([]image.Summary, error) {
 		return nil, fmt.Errorf("failed to list images: %w", err)
 	}
 
-	return images, nil
+	// Map to our response format
+	response := make([]ImageResponse, len(images))
+	for i, img := range images {
+		response[i] = ImageResponse{
+			ID:          img.ID,
+			RepoTags:    img.RepoTags,
+			RepoDigests: img.RepoDigests,
+			Created:     img.Created,
+			Size:        img.Size,
+			VirtualSize: img.VirtualSize,
+			SharedSize:  img.SharedSize,
+			Labels:      img.Labels,
+			Containers:  img.Containers,
+		}
+	}
+
+	return response, nil
 }
 
 // PullImage pulls an image
@@ -225,7 +281,7 @@ func (s *Service) RemoveImage(ctx context.Context, imageID string) error {
 // Volume Operations
 
 // ListVolumes lists all volumes
-func (s *Service) ListVolumes(ctx context.Context) ([]*volume.Volume, error) {
+func (s *Service) ListVolumes(ctx context.Context) ([]VolumeResponse, error) {
 	if !s.available {
 		return nil, fmt.Errorf("Docker is not available")
 	}
@@ -235,7 +291,21 @@ func (s *Service) ListVolumes(ctx context.Context) ([]*volume.Volume, error) {
 		return nil, fmt.Errorf("failed to list volumes: %w", err)
 	}
 
-	return volumeList.Volumes, nil
+	// Map to our response format
+	response := make([]VolumeResponse, len(volumeList.Volumes))
+	for i, vol := range volumeList.Volumes {
+		response[i] = VolumeResponse{
+			Name:       vol.Name,
+			Driver:     vol.Driver,
+			Mountpoint: vol.Mountpoint,
+			CreatedAt:  vol.CreatedAt,
+			Labels:     vol.Labels,
+			Scope:      vol.Scope,
+			Options:    vol.Options,
+		}
+	}
+
+	return response, nil
 }
 
 // RemoveVolume removes a volume
@@ -254,7 +324,7 @@ func (s *Service) RemoveVolume(ctx context.Context, volumeName string) error {
 // Network Operations
 
 // ListNetworks lists all networks
-func (s *Service) ListNetworks(ctx context.Context) ([]network.Summary, error) {
+func (s *Service) ListNetworks(ctx context.Context) ([]NetworkResponse, error) {
 	if !s.available {
 		return nil, fmt.Errorf("Docker is not available")
 	}
@@ -264,7 +334,45 @@ func (s *Service) ListNetworks(ctx context.Context) ([]network.Summary, error) {
 		return nil, fmt.Errorf("failed to list networks: %w", err)
 	}
 
-	return networks, nil
+	// Map to our response format
+	response := make([]NetworkResponse, len(networks))
+	for i, net := range networks {
+		resp := NetworkResponse{
+			ID:         net.ID,
+			Name:       net.Name,
+			Driver:     net.Driver,
+			Scope:      net.Scope,
+			Internal:   net.Internal,
+			EnableIPv6: net.EnableIPv6,
+			Options:    net.Options,
+			Labels:     net.Labels,
+			CreatedAt:  net.Created,
+			Containers: make(map[string]interface{}),
+		}
+
+		// Map IPAM configuration
+		if net.IPAM.Driver != "" {
+			resp.IPAM = &IPAMConfig{
+				Driver: net.IPAM.Driver,
+				Config: make([]IPAMSubnet, 0, len(net.IPAM.Config)),
+			}
+			for _, cfg := range net.IPAM.Config {
+				resp.IPAM.Config = append(resp.IPAM.Config, IPAMSubnet{
+					Subnet:  cfg.Subnet,
+					Gateway: cfg.Gateway,
+				})
+			}
+		}
+
+		// Map containers
+		for containerID, containerInfo := range net.Containers {
+			resp.Containers[containerID] = containerInfo
+		}
+
+		response[i] = resp
+	}
+
+	return response, nil
 }
 
 // Advanced Container Operations (Portainer-like features)
