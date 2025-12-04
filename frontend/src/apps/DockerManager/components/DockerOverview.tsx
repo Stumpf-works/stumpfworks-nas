@@ -31,12 +31,6 @@ export default function DockerOverview() {
   });
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadStats();
-    const interval = setInterval(loadStats, 5000);
-    return () => clearInterval(interval);
-  }, []);
-
   const loadStats = async () => {
     try {
       const [containers, images, volumes, networks] = await Promise.all([
@@ -92,6 +86,13 @@ export default function DockerOverview() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadStats();
+    const interval = setInterval(loadStats, 5000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return '0 B';
