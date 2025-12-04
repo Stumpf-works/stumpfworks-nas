@@ -6,7 +6,8 @@ import Card from '@/components/ui/Card';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
-import { Play, Info, Tag, User, Calendar } from 'lucide-react';
+import { Play, Info, Tag, User, Calendar, Loader2 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 interface Template {
   id: string;
@@ -31,9 +32,10 @@ interface DeployModalProps {
   isOpen: boolean;
   onClose: () => void;
   onDeploy: (stackName: string, variables: Record<string, string>) => void;
+  deploying?: boolean;
 }
 
-function DeployModal({ template, isOpen, onClose, onDeploy }: DeployModalProps) {
+function DeployModal({ template, isOpen, onClose, onDeploy, deploying = false }: DeployModalProps) {
   const [stackName, setStackName] = useState('');
   const [variables, setVariables] = useState<Record<string, string>>({});
 
@@ -125,12 +127,25 @@ function DeployModal({ template, isOpen, onClose, onDeploy }: DeployModalProps) 
 
         {/* Actions */}
         <div className="flex justify-end gap-3 pt-4">
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose} disabled={deploying}>
             Cancel
           </Button>
-          <Button variant="primary" onClick={handleDeploy} disabled={!stackName.trim()}>
-            <Play className="w-4 h-4 mr-2" />
-            Deploy
+          <Button
+            variant="primary"
+            onClick={handleDeploy}
+            disabled={!stackName.trim() || deploying}
+          >
+            {deploying ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Deploying...
+              </>
+            ) : (
+              <>
+                <Play className="w-4 h-4 mr-2" />
+                Deploy
+              </>
+            )}
           </Button>
         </div>
       </div>
@@ -147,6 +162,7 @@ export default function TemplateGallery() {
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [showDeployModal, setShowDeployModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [deploying, setDeploying] = useState(false);
 
   useEffect(() => {
     fetchTemplates();
@@ -184,18 +200,25 @@ export default function TemplateGallery() {
   const handleDeploy = async (stackName: string, variables: Record<string, string>) => {
     if (!selectedTemplate) return;
 
+    setDeploying(true);
+    const toastId = toast.loading(`Deploying ${selectedTemplate.name}...`);
+
     try {
       const response = await dockerApi.deployTemplate(selectedTemplate.id, stackName, variables);
       if (response.success) {
+        toast.success(`Successfully deployed ${selectedTemplate.name} as "${stackName}"!`, { id: toastId });
         setShowDeployModal(false);
-        // TODO: Show success notification
-        // TODO: Navigate to stacks tab
+        setSelectedTemplate(null);
+
+        // Refresh templates after short delay
+        setTimeout(() => fetchTemplates(), 1000);
       } else {
-        // TODO: Show error notification
-        console.error('Failed to deploy template:', response.error);
+        toast.error(response.error?.message || 'Failed to deploy template', { id: toastId });
       }
     } catch (err) {
-      console.error('Failed to deploy template:', err);
+      toast.error(getErrorMessage(err), { id: toastId });
+    } finally {
+      setDeploying(false);
     }
   };
 
@@ -335,6 +358,7 @@ export default function TemplateGallery() {
         isOpen={showDeployModal}
         onClose={() => setShowDeployModal(false)}
         onDeploy={handleDeploy}
+        deploying={deploying}
       />
 
       {/* Details Modal */}
