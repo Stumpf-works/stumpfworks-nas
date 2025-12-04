@@ -8,13 +8,14 @@ import VolumeManager from './components/VolumeManager';
 import NetworkManager from './components/NetworkManager';
 import StackManager from './components/StackManager';
 import TemplateGallery from './components/TemplateGallery';
+import DockerOverview from './components/DockerOverview';
 import Card from '@/components/ui/Card';
-import { Disc, HardDrive, Network, Layers, Container as ContainerIcon, AlertCircle, RefreshCw, LayoutTemplate } from 'lucide-react';
+import { Disc, HardDrive, Network, Layers, Container as ContainerIcon, AlertCircle, RefreshCw, LayoutTemplate, LayoutDashboard } from 'lucide-react';
 
-type Tab = 'containers' | 'images' | 'volumes' | 'networks' | 'stacks' | 'templates';
+type Tab = 'overview' | 'containers' | 'images' | 'volumes' | 'networks' | 'stacks' | 'templates';
 
 export function DockerManager() {
-  const [activeTab, setActiveTab] = useState<Tab>('templates');
+  const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [dockerAvailable, setDockerAvailable] = useState<boolean | null>(null);
   const [dockerError, setDockerError] = useState<string>('');
 
@@ -38,6 +39,7 @@ export function DockerManager() {
   };
 
   const tabs = [
+    { id: 'overview' as Tab, name: 'Overview', icon: LayoutDashboard },
     { id: 'templates' as Tab, name: 'Templates', icon: LayoutTemplate },
     { id: 'containers' as Tab, name: 'Containers', icon: ContainerIcon },
     { id: 'images' as Tab, name: 'Images', icon: Disc },
@@ -157,6 +159,7 @@ export function DockerManager() {
 
       {/* Tab Content */}
       <div className="flex-1 overflow-auto p-4 md:p-6">
+        {activeTab === 'overview' && <DockerOverview />}
         {activeTab === 'templates' && <TemplateGallery />}
         {activeTab === 'containers' && <ContainerManager />}
         {activeTab === 'images' && <ImageManager />}
