@@ -602,26 +602,6 @@
 
 ---
 
-## 🎯 Marketing & Community
-
-### Q1 2025
-- [ ] Launch blog with technical articles
-- [ ] YouTube channel with tutorials
-- [ ] Reddit presence (r/homelab, r/selfhosted)
-- [ ] Discord server (already exists)
-
-### Q2 2025
-- [ ] Case studies from users
-- [ ] Comparison guide (vs Synology/QNAP/TrueNAS)
-- [ ] Partnership with hardware vendors
-
-### Q3-Q4 2025
-- [ ] Conference presentations
-- [ ] Podcast appearances
-- [ ] Community contributor program
-- [ ] Plugin marketplace launch
-
----
 
 ## 🔄 Continuous Improvements (Ongoing)
 
@@ -645,16 +625,7 @@
 
 ---
 
-## 🚫 Out of Scope (Not Planned)
 
-These features are explicitly **not** on the roadmap:
-- ❌ Built-in email server (use Docker containers instead)
-- ❌ VPN client (only VPN server)
-- ❌ Built-in antivirus (too resource-intensive)
-- ❌ Blockchain/crypto features (not NAS-related)
-- ❌ Gaming features (out of scope)
-
----
 
 ## 🤝 Contributing to the Roadmap
 
@@ -703,8 +674,8 @@ Features are prioritized based on:
 
 ---
 
-**Last Updated:** December 2, 2025
-**Next Review:** March 1, 2025
+**Last Updated:** 06.12.2025
+**Next Review:** 10.01.2026
 
 ---
 
